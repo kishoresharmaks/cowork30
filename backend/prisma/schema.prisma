@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -219,7 +219,7 @@ model Service {
   name                String
   slug                String   @unique
   shortDescription    String   @db.Text
-  detailedDescription String   @db.LongText
+  detailedDescription String   @db.Text
   startingPrice       Decimal  @default(5000.00) @db.Decimal(10, 2)
   iconClass           String?
   featuredImage       String?
@@ -525,7 +525,7 @@ model Page {
   id              Int      @id @default(autoincrement())
   title           String
   slug            String   @unique
-  content         String   @db.LongText
+  content         String   @db.Text
   metaTitle       String?
   metaDescription String?  @db.Text
   isActive        Boolean  @default(true)
