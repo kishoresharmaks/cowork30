@@ -1,0 +1,51 @@
+# ==============================================================================
+# MilesWeb Apache .htaccess — Cowork30 Master Reverse Proxy
+# Domain: https://v1dev.cowork30.com
+# Target Frontend: Port 3000 (Next.js App)
+# Target Backend:  Port 3001 (NestJS REST API & WebSockets)
+# ==============================================================================
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # ----------------------------------------------------------------------------
+  # 1. Force HTTPS (Redirect HTTP to HTTPS)
+  # ----------------------------------------------------------------------------
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # ----------------------------------------------------------------------------
+  # 2. WebSocket Support (Pass Upgrade headers for Socket.io)
+  # ----------------------------------------------------------------------------
+  RewriteCond %{HTTP:Upgrade} =websocket [NC]
+  RewriteRule ^socket.io/(.*) ws://127.0.0.1:3001/socket.io/$1 [P,L]
+
+  # ----------------------------------------------------------------------------
+  # 3. Backend API & Swagger Proxy Rules (Port 3001)
+  # ----------------------------------------------------------------------------
+  # Proxy /api/v1 requests -> NestJS Backend on Port 3001
+  RewriteRule ^api/v1/(.*)$ http://127.0.0.1:3001/api/v1/$1 [P,L]
+  RewriteRule ^api/v1$ http://127.0.0.1:3001/api/v1 [P,L]
+
+  # Proxy /api/docs Swagger Documentation -> NestJS Swagger on Port 3001
+  RewriteRule ^api/docs/(.*)$ http://127.0.0.1:3001/api/docs/$1 [P,L]
+  RewriteRule ^api/docs$ http://127.0.0.1:3001/api/docs [P,L]
+
+  # Proxy /uploads Static File Storage -> NestJS Uploads on Port 3001
+  RewriteRule ^uploads/(.*)$ http://127.0.0.1:3001/uploads/$1 [P,L]
+
+  # ----------------------------------------------------------------------------
+  # 4. Frontend Website Proxy Rules (Port 3000)
+  # ----------------------------------------------------------------------------
+  # Forward all remaining website routes to Next.js Frontend on Port 3000
+  RewriteCond %{REQUEST_URI} !^/api/
+  RewriteCond %{REQUEST_URI} !^/uploads/
+  RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
+</IfModule>
+
+# Enable Proxy Header Handling
+<IfModule mod_headers.c>
+  RequestHeader set X-Forwarded-Proto "https"
+  RequestHeader set X-Forwarded-Port "443"
+</IfModule>

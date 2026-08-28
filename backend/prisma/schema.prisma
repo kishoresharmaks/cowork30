@@ -1,0 +1,611 @@
+// Prisma Schema file for Cowork30 Platform (MySQL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  staff
+  member
+  guest
+}
+
+enum DeskType {
+  hot_desk
+  dedicated_desk
+  private_cabin
+  quiet_booth
+}
+
+enum DeskStatus {
+  available
+  occupied
+  reserved
+  maintenance
+}
+
+enum BookingType {
+  tour
+  membership_inquiry
+  direct_booking
+}
+
+enum BookingStatus {
+  unpaid
+  pending
+  confirmed
+  cancelled
+  completed
+  not_checked_in
+}
+
+enum PaymentStatus {
+  unpaid
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum PaymentMethod {
+  razorpay
+  wallet
+  credits
+  cash
+}
+
+enum ContactStatus {
+  unread
+  read
+  replied
+}
+
+enum AddonUnit {
+  per_booking
+  per_hour
+  per_person
+}
+
+enum AddonCategory {
+  catering
+  equipment
+  service
+}
+
+enum NavPlacement {
+  header
+  footer
+}
+
+enum GalleryCategory {
+  workspaces
+  amenities
+  events
+  meeting_rooms
+}
+
+model Branch {
+  id           Int       @id @default(autoincrement())
+  name         String
+  slug         String    @unique
+  address      String    @db.Text
+  city         String
+  state        String
+  zip          String
+  latitude     Float?
+  longitude    Float?
+  phone        String
+  email        String
+  openingTime  String    @default("08:00 AM")
+  closingTime  String    @default("08:00 PM")
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  users            User[]
+  floorMaps        FloorMap[]
+  services         Service[]
+  meetingRooms     MeetingRoom[]
+  bookings         Booking[]
+  meetingBookings  MeetingBooking[]
+  communityPosts   CommunityPost[]
+
+  @@map("branches")
+}
+
+model User {
+  id             Int       @id @default(autoincrement())
+  branchId       Int?
+  name           String
+  email          String    @unique
+  passwordHash   String
+  phone          String?
+  companyName    String?
+  gstin          String?
+  role           Role      @default(member)
+  avatarUrl      String?
+  bio            String?   @db.Text
+  skills         Json?     // Array of skill tags
+  linkedinUrl    String?
+  walletBalance  Decimal   @default(0.00) @db.Decimal(10, 2)
+  deskCreditsBalance    Decimal   @default(0.00) @db.Decimal(10, 2)
+  meetingCreditsBalance Decimal   @default(0.00) @db.Decimal(10, 2)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  branch             Branch?             @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  activityLogs       ActivityLog[]
+  bookings           Booking[]
+  meetingBookings    MeetingBooking[]
+  walletTransactions WalletTransaction[]
+  payments           Payment[]
+  invoices           Invoice[]
+  communityPosts     CommunityPost[]
+  reviews            Review[]
+  topupRequests      WalletTopupRequest[]
+
+  @@map("users")
+}
+
+model ActivityLog {
+  id          Int      @id @default(autoincrement())
+  userId      Int?
+  logName     String
+  description String   @db.Text
+  subjectType String?
+  subjectId   Int?
+  event       String
+  properties  Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("activity_logs")
+}
+
+model FloorMap {
+  id         Int      @id @default(autoincrement())
+  branchId   Int
+  floorName  String
+  floorLevel Int      @default(1)
+  mapSvgUrl  String?
+  canvasJson Json?
+  width      Int      @default(1200)
+  height     Int      @default(800)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  desks        Desk[]
+  meetingRooms MeetingRoom[]
+
+  @@map("floor_maps")
+}
+
+model Desk {
+  id             Int        @id @default(autoincrement())
+  floorMapId     Int
+  deskNumber     String
+  deskType       DeskType   @default(hot_desk)
+  xCoordinate    Float
+  yCoordinate    Float
+  width          Float      @default(60.0)
+  height         Float      @default(60.0)
+  hasPowerOutlet Boolean    @default(true)
+  hasWindowView  Boolean    @default(false)
+  status         DeskStatus @default(available)
+  imageUrl       String?    @db.Text
+  monthlyPrice   Decimal    @db.Decimal(10, 2)
+  dailyPrice     Decimal    @db.Decimal(10, 2)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  floorMap FloorMap @relation(fields: [floorMapId], references: [id], onDelete: Cascade)
+
+  @@map("desks")
+}
+
+model Service {
+  id                  Int      @id @default(autoincrement())
+  branchId            Int?
+  name                String
+  slug                String   @unique
+  shortDescription    String   @db.Text
+  detailedDescription String   @db.LongText
+  startingPrice       Decimal  @default(5000.00) @db.Decimal(10, 2)
+  iconClass           String?
+  featuredImage       String?
+  galleryImages       Json?    // Array of image URLs
+  isActive            Boolean  @default(true)
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  branch  Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  reviews Review[]
+
+  @@map("services")
+}
+
+model PricingPlan {
+  id                     Int      @id @default(autoincrement())
+  name                   String
+  slug                   String   @unique
+  tagline                String?
+  priceMonthly           Decimal  @db.Decimal(10, 2)
+  priceDaily             Decimal  @default(0.00) @db.Decimal(10, 2)
+  billingPeriod          String   @default("Monthly")
+  meetingCreditsIncluded Int      @default(0)
+  deskCreditsIncluded    Int      @default(0)
+  isPopular              Boolean  @default(false)
+  isActive               Boolean  @default(true)
+  sortOrder              Int      @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  features PricingFeature[]
+  bookings Booking[]
+
+  @@map("pricing_plans")
+}
+
+model PricingFeature {
+  id            Int     @id @default(autoincrement())
+  pricingPlanId Int
+  featureText   String
+  isIncluded    Boolean @default(true)
+  sortOrder     Int     @default(0)
+
+  pricingPlan PricingPlan @relation(fields: [pricingPlanId], references: [id], onDelete: Cascade)
+
+  @@map("pricing_features")
+}
+
+model MeetingRoom {
+  id          Int      @id @default(autoincrement())
+  branchId    Int
+  floorMapId  Int?
+  name        String
+  slug        String   @unique
+  description String   @db.Text
+  capacity           Int
+  minSeats           Int      @default(1)
+  maxSeats           Int      @default(10)
+  perSeatPrice       Decimal  @default(150.00) @db.Decimal(10, 2)
+  serviceChargeType  String   @default("fixed") // "fixed" or "percentage"
+  serviceChargeValue Decimal  @default(0.00) @db.Decimal(10, 2)
+  hourlyRate         Decimal  @db.Decimal(10, 2)
+  dailyRate          Decimal  @db.Decimal(10, 2)
+  startTime          String?
+  endTime            String?
+  category           String?  @default("Conference Room")
+  amenities   Json?    // Array of amenity strings (Wi-Fi, Projector, Whiteboard)
+  images      Json?    // Array of image URLs
+  xCoordinate Float?
+  yCoordinate Float?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branch          Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  floorMap        FloorMap?        @relation(fields: [floorMapId], references: [id], onDelete: SetNull)
+  meetingBookings MeetingBooking[]
+  reviews         Review[]
+
+  @@map("meeting_rooms")
+}
+
+model Addon {
+  id          Int           @id @default(autoincrement())
+  name        String
+  description String?       @db.Text
+  price       Decimal       @db.Decimal(10, 2)
+  unit        AddonUnit     @default(per_booking)
+  category    AddonCategory @default(catering)
+  imageUrl    String?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+
+  @@map("addons")
+}
+
+model Booking {
+  id                Int           @id @default(autoincrement())
+  bookingCode       String        @unique
+  branchId          Int
+  pricingPlanId     Int
+  userId            Int?
+  customerName      String
+  customerEmail     String
+  customerPhone     String
+  companyName       String?
+  gstin             String?
+  preferredDate     DateTime
+  preferredTimeSlot String?
+  bookingType       BookingType   @default(tour)
+  notes             String?       @db.Text
+  status            BookingStatus @default(pending)
+  paymentStatus     PaymentStatus @default(unpaid)
+  totalAmount       Decimal       @default(0.00) @db.Decimal(10, 2)
+  taxAmount         Decimal       @default(0.00) @db.Decimal(10, 2)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  branch          Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  pricingPlan     PricingPlan      @relation(fields: [pricingPlanId], references: [id], onDelete: Cascade)
+  user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  notesList       BookingNote[]
+  payments        Payment[]
+  inquiryMessages InquiryMessage[]
+
+  @@map("bookings")
+}
+
+model BookingNote {
+  id          Int      @id @default(autoincrement())
+  bookingId   Int
+  adminUserId Int
+  noteText    String   @db.Text
+  createdAt   DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("booking_notes")
+}
+
+model InquiryMessage {
+  id          Int      @id @default(autoincrement())
+  bookingId   Int
+  senderType  String   // "customer" | "admin" | "system"
+  senderId    Int?
+  senderName  String
+  message     String   @db.Text
+  createdAt   DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("inquiry_messages")
+}
+
+model MeetingBooking {
+  id             Int           @id @default(autoincrement())
+  bookingCode    String        @unique
+  branchId       Int
+  meetingRoomId  Int
+  userId         Int?
+  customerName   String
+  customerEmail  String
+  customerPhone  String
+  companyName    String?
+  gstin          String?
+  bookingDate    DateTime
+  startTime      DateTime
+  endTime        DateTime
+  totalHours          Float
+  attendeesCount      Int           @default(1)
+  seatsBooked         Int           @default(1)
+  serviceChargeAmount Decimal       @default(0.00) @db.Decimal(10, 2)
+  addonsSelected      Json?         // Array of selected addon objects
+  status         BookingStatus @default(pending)
+  paymentStatus  PaymentStatus @default(pending)
+  totalAmount    Decimal       @db.Decimal(10, 2)
+  creditsUsed    Int           @default(0)
+  taxAmount      Decimal       @default(0.00) @db.Decimal(10, 2)
+  qrAccessCode   String?       @db.Text
+  viewToken      String        @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  branch      Branch      @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  meetingRoom MeetingRoom @relation(fields: [meetingRoomId], references: [id], onDelete: Cascade)
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  payments    Payment[]
+
+  @@map("meeting_bookings")
+}
+
+model WalletTransaction {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  type         String   // credit_topup, debit_booking, refund, reward
+  amount       Decimal  @db.Decimal(10, 2)
+  balanceAfter Decimal  @db.Decimal(10, 2)
+  description  String
+  referenceId  String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallet_transactions")
+}
+
+model Payment {
+  id                Int           @id @default(autoincrement())
+  bookingId         Int?
+  meetingBookingId  Int?
+  userId            Int?
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  razorpaySignature String?
+  amount            Decimal       @db.Decimal(10, 2)
+  taxAmount         Decimal       @default(0.00) @db.Decimal(10, 2)
+  paymentMethod     PaymentMethod @default(razorpay)
+  status            PaymentStatus @default(pending)
+  rawResponse       Json?
+  createdAt         DateTime      @default(now())
+
+  booking        Booking?        @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  meetingBooking MeetingBooking? @relation(fields: [meetingBookingId], references: [id], onDelete: SetNull)
+  user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  invoices       Invoice[]
+
+  @@map("payments")
+}
+
+model Invoice {
+  id            Int      @id @default(autoincrement())
+  invoiceNumber String   @unique // INV-2026-XXXX
+  paymentId     Int
+  userId        Int?
+  customerName  String
+  customerGstin String?
+  companyName   String?
+  subtotal      Decimal  @db.Decimal(10, 2)
+  cgst          Decimal  @default(0.00) @db.Decimal(10, 2)
+  sgst          Decimal  @default(0.00) @db.Decimal(10, 2)
+  igst          Decimal  @default(0.00) @db.Decimal(10, 2)
+  totalAmount   Decimal  @db.Decimal(10, 2)
+  pdfUrl        String?
+  createdAt     DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("invoices")
+}
+
+model CommunityPost {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  branchId   Int?
+  title      String
+  content    String   @db.Text
+  category   String   @default("announcement") // announcement, networking, job_opportunity, perk
+  likesCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@map("community_posts")
+}
+
+model Review {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  meetingRoomId Int?
+  serviceId     Int?
+  rating        Int      @default(5)
+  comment       String?  @db.Text
+  isPublished   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meetingRoom MeetingRoom? @relation(fields: [meetingRoomId], references: [id], onDelete: SetNull)
+  service     Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@map("reviews")
+}
+
+model Slide {
+  id           Int      @id @default(autoincrement())
+  title        String
+  subtitle     String?  @db.Text
+  buttonText   String?
+  buttonUrl    String?
+  desktopImage String
+  mobileImage  String?
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+
+  @@map("slides")
+}
+
+model Page {
+  id              Int      @id @default(autoincrement())
+  title           String
+  slug            String   @unique
+  content         String   @db.LongText
+  metaTitle       String?
+  metaDescription String?  @db.Text
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("pages")
+}
+
+model Gallery {
+  id        Int             @id @default(autoincrement())
+  title     String
+  imageUrl  String
+  category  GalleryCategory @default(workspaces)
+  sortOrder Int             @default(0)
+  isActive  Boolean         @default(true)
+
+  @@map("gallery")
+}
+
+model NavigationMenuItem {
+  id        Int          @id @default(autoincrement())
+  label     String
+  url       String
+  parentId  Int?
+  placement NavPlacement @default(header)
+  sortOrder Int          @default(0)
+  isActive  Boolean      @default(true)
+
+  @@map("navigation_menu_items")
+}
+
+model LogoSetting {
+  id           Int     @id @default(autoincrement())
+  logoName     String  @default("Default")
+  lightLogoUrl String
+  darkLogoUrl  String
+  faviconUrl   String?
+  widthPx      Int     @default(180)
+  heightPx     Int     @default(50)
+  isActive     Boolean @default(true)
+
+  @@map("logo_settings")
+}
+
+model SiteSetting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String @db.Text
+
+  @@map("site_settings")
+}
+
+model Contact {
+  id        Int           @id @default(autoincrement())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String        @db.Text
+  status    ContactStatus @default(unread)
+  createdAt DateTime      @default(now())
+
+  @@map("contacts")
+}
+
+model WalletTopupRequest {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  amount          Decimal  @db.Decimal(10, 2)
+  bonus           Decimal  @default(0.00) @db.Decimal(10, 2)
+  paymentProofUrl String   @db.Text
+  referenceNumber String?
+  notes           String?  @db.Text
+  status          String   @default("pending") // pending, approved, rejected
+  rejectionReason String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallet_topup_requests")
+}
