@@ -47,9 +47,7 @@ async function bootstrap() {
   );
 
   // Global API Prefix
-  // In production (when proxied by mPanel path api/v1), default to empty string so MilesWeb forwarded routes match
-  const defaultPrefix = process.env.NODE_ENV === 'production' ? '' : 'api/v1';
-  const globalPrefix = process.env.GLOBAL_PREFIX !== undefined ? process.env.GLOBAL_PREFIX : defaultPrefix;
+  const globalPrefix = process.env.GLOBAL_PREFIX || 'api/v1';
   if (globalPrefix) {
     app.setGlobalPrefix(globalPrefix);
   }
@@ -76,7 +74,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
 
-  const port = process.env.PORT || 4000;
+  const port = process.env.BACKEND_PORT || 4000;
   await app.listen(port, '0.0.0.0');
   logger.log(`🚀 Server running on http://0.0.0.0:${port}/api/v1 (accessible locally & via local network IP)`);
   logger.log(`📚 Interactive Swagger API Docs available at http://localhost:${port}/api/docs`);
