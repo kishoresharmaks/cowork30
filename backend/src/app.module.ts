@@ -12,12 +12,15 @@ import { CmsModule } from './modules/cms/cms.module';
 import { WalletBillingModule } from './modules/wallet-billing/wallet-billing.module';
 import { ReportsModule } from './modules/reports/reports.module';
 
+import { HealthModule } from './modules/health/health.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
     PrismaModule,
+    HealthModule,
     AuthModule,
     BranchesModule,
     ServicesModule,
