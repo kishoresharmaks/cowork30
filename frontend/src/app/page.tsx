@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import {
@@ -412,31 +413,52 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#FAFAFC] text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative pt-6 pb-16 md:pt-10 md:pb-28 overflow-hidden">
-        {/* Subtle Gradient Backdrops */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute top-1/3 right-10 w-[400px] h-[400px] bg-pink-500/10 rounded-full blur-[140px] pointer-events-none" />
+      {/* Hero Section with Backdrop_header.png */}
+      <section className="relative min-h-[580px] sm:min-h-[640px] lg:min-h-[700px] flex items-center pt-8 pb-20 md:pt-14 md:pb-28 overflow-hidden bg-slate-950">
+        {/* 1. Base Photographic Backdrop */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/Backdrop_header.png"
+            alt="Cowork30 Premium Coworking Ambiance"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-right sm:object-[75%_center] lg:object-center"
+          />
+        </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* 2. Top Edge Fade (Behind Fixed/Floating Navbar) */}
+        <div className="absolute top-0 inset-x-0 h-32 sm:h-40 bg-gradient-to-b from-slate-950/95 via-slate-950/60 to-transparent pointer-events-none z-1" />
+
+        {/* 3. Directional Vignette / Text Readability Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-slate-950/45 lg:from-slate-950/90 lg:via-slate-950/60 lg:to-transparent pointer-events-none z-1" />
+
+        {/* 4. Subtle Radial Color Backdrops (Brand Ambience) */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[140px] pointer-events-none z-1" />
+        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-pink-500/15 rounded-full blur-[140px] pointer-events-none z-1" />
+
+        {/* 5. Bottom Dark Vignette Fade (Keeps photo deep, rich, and crisp with zero white fog) */}
+        <div className="absolute bottom-0 inset-x-0 h-28 sm:h-36 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent pointer-events-none z-1" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
           <div className="text-center max-w-4xl mx-auto space-y-6">
             {/* Badge */}
-            <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-white border border-slate-200/90 text-xs font-bold text-indigo-600 shadow-xs backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+            <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold text-white shadow-lg backdrop-blur-xl">
+              <Sparkles className="w-3.5 h-3.5 text-pink-400" />
               <span>Next-Gen Coworking Ecosystem</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] text-slate-900">
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] text-white drop-shadow-md">
               Elevate Your Work at <br />
-              <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-rose-400 bg-clip-text text-transparent">
                 Cowork30
               </span>
             </h1>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-xl text-slate-200/95 max-w-2xl mx-auto leading-relaxed font-normal drop-shadow-sm">
               Your on-demand business solution partner. On-demand desks, private executive suites, real-time meeting rooms, and vibrant professional community.
             </p>
 
@@ -444,7 +466,7 @@ export default function HomePage() {
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/meeting-rooms"
-                className="w-full sm:w-auto px-8 py-4 text-xs sm:text-sm font-bold rounded-full text-white bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 transition-all shadow-xl shadow-pink-500/25 flex items-center justify-center space-x-2 group"
+                className="w-full sm:w-auto px-8 py-4 text-xs sm:text-sm font-extrabold rounded-full text-white bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 transition-all shadow-xl shadow-pink-600/30 flex items-center justify-center space-x-2 group cursor-pointer"
               >
                 <Calendar className="w-4 h-4" />
                 <span>Reserve Meeting Suite</span>
@@ -453,62 +475,107 @@ export default function HomePage() {
 
               <Link
                 href="/floor-map"
-                className="w-full sm:w-auto px-8 py-4 text-xs sm:text-sm font-bold rounded-full bg-white border border-slate-200 hover:border-slate-300 transition-all text-slate-700 hover:text-slate-900 flex items-center justify-center space-x-2 shadow-xs"
+                className="w-full sm:w-auto px-8 py-4 text-xs sm:text-sm font-extrabold rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-xl transition-all text-white flex items-center justify-center space-x-2 shadow-lg cursor-pointer"
               >
-                <Compass className="w-4 h-4 text-purple-600" />
+                <Compass className="w-4 h-4 text-pink-400" />
                 <span>Explore Interactive Floor Map</span>
               </Link>
             </div>
 
             {/* Trust Perks */}
-            <div className="pt-8 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-semibold text-slate-600 max-w-3xl mx-auto">
-              <div className="flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl bg-white border border-slate-200/90 shadow-xs">
-                <Wifi className="w-4 h-4 text-rose-500" />
-                <span>1 Gbps Fiber Wi-Fi</span>
+            <div className="pt-8 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-semibold text-white/90 max-w-3xl mx-auto">
+              <div className="flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
+                <Wifi className="w-4 h-4 text-pink-400 shrink-0" />
+                <span className="truncate">1 Gbps Fiber Wi-Fi</span>
               </div>
-              <div className="flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl bg-white border border-slate-200/90 shadow-xs">
-                <Clock className="w-4 h-4 text-purple-600" />
-                <span>24/7 Access</span>
+              <div className="flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
+                <Clock className="w-4 h-4 text-purple-400 shrink-0" />
+                <span className="truncate">24/7 Access</span>
               </div>
-              <div className="flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl bg-white border border-slate-200/90 shadow-xs">
-                <Coffee className="w-4 h-4 text-rose-500" />
-                <span>Artisanal Espresso Bar</span>
+              <div className="flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
+                <Coffee className="w-4 h-4 text-pink-400 shrink-0" />
+                <span className="truncate">Artisanal Espresso Bar</span>
               </div>
-              <div className="flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl bg-white border border-slate-200/90 shadow-xs">
-                <ShieldCheck className="w-4 h-4 text-purple-600" />
-                <span>GST Tax Invoicing</span>
+              <div className="flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
+                <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0" />
+                <span className="truncate">GST Tax Invoicing</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Counter Section */}
-      <section className="py-12 bg-white border-y border-slate-200/90">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div className="space-y-1">
-              <div className="text-3xl sm:text-4xl font-extrabold text-indigo-600">150+</div>
-              <div className="text-xs text-slate-500 uppercase tracking-wider font-bold">Available Desks</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-3xl sm:text-4xl font-extrabold text-indigo-600">12+</div>
-              <div className="text-xs text-slate-500 uppercase tracking-wider font-bold">Meeting Rooms</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-3xl sm:text-4xl font-extrabold text-indigo-600">500+</div>
-              <div className="text-xs text-slate-500 uppercase tracking-wider font-bold">Active Members</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-3xl sm:text-4xl font-extrabold text-indigo-600">99.9%</div>
-              <div className="text-xs text-slate-500 uppercase tracking-wider font-bold">Uptime & Satisfaction</div>
+      {/* Stats Counter Section - Sleek Glassmorphic Floating HUD Dock */}
+      <section className="relative z-20 -mt-10 sm:-mt-14 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 sm:mb-8">
+        <div className="relative rounded-3xl p-[1px] bg-gradient-to-b from-white/30 via-white/10 to-transparent shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)]">
+          <div className="bg-slate-950/85 backdrop-blur-2xl rounded-3xl p-3 sm:p-5 lg:p-6 border border-white/10">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-0 lg:divide-x lg:divide-white/10">
+              {/* Stat 1: Available Desks */}
+              <div className="group flex items-center space-x-3 sm:space-x-4 p-2.5 sm:p-4 rounded-2xl lg:rounded-none hover:bg-white/[0.04] transition-all duration-300">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-105 group-hover:border-purple-400/50 transition-all duration-300 shrink-0 shadow-sm">
+                  <Laptop className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight flex items-baseline space-x-1">
+                    <span>150</span>
+                    <span className="text-purple-400 font-extrabold text-base sm:text-xl">+</span>
+                  </div>
+                  <p className="text-xs sm:text-sm font-bold text-slate-200 truncate">Available Desks</p>
+                  <p className="text-[11px] text-slate-400 font-medium truncate hidden sm:block">Flex & dedicated</p>
+                </div>
+              </div>
+
+              {/* Stat 2: Meeting Rooms */}
+              <div className="group flex items-center space-x-3 sm:space-x-4 p-2.5 sm:p-4 rounded-2xl lg:rounded-none hover:bg-white/[0.04] transition-all duration-300">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-pink-500/20 to-pink-600/10 border border-pink-500/30 flex items-center justify-center text-pink-400 group-hover:scale-105 group-hover:border-pink-400/50 transition-all duration-300 shrink-0 shadow-sm">
+                  <Calendar className="w-5 h-5 text-pink-400" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight flex items-baseline space-x-1">
+                    <span>12</span>
+                    <span className="text-pink-400 font-extrabold text-base sm:text-xl">+</span>
+                  </div>
+                  <p className="text-xs sm:text-sm font-bold text-slate-200 truncate">Meeting Rooms</p>
+                  <p className="text-[11px] text-slate-400 font-medium truncate hidden sm:block">Smart AV equipped</p>
+                </div>
+              </div>
+
+              {/* Stat 3: Active Members */}
+              <div className="group flex items-center space-x-3 sm:space-x-4 p-2.5 sm:p-4 rounded-2xl lg:rounded-none hover:bg-white/[0.04] transition-all duration-300">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-105 group-hover:border-indigo-400/50 transition-all duration-300 shrink-0 shadow-sm">
+                  <Users className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight flex items-baseline space-x-1">
+                    <span>500</span>
+                    <span className="text-indigo-400 font-extrabold text-base sm:text-xl">+</span>
+                  </div>
+                  <p className="text-xs sm:text-sm font-bold text-slate-200 truncate">Active Members</p>
+                  <p className="text-[11px] text-slate-400 font-medium truncate hidden sm:block">Founders & teams</p>
+                </div>
+              </div>
+
+              {/* Stat 4: Satisfaction Rate */}
+              <div className="group flex items-center space-x-3 sm:space-x-4 p-2.5 sm:p-4 rounded-2xl lg:rounded-none hover:bg-white/[0.04] transition-all duration-300">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 group-hover:border-emerald-400/50 transition-all duration-300 shrink-0 shadow-sm">
+                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight flex items-baseline space-x-1">
+                    <span>99.9</span>
+                    <span className="text-emerald-400 font-extrabold text-base sm:text-xl">%</span>
+                  </div>
+                  <p className="text-xs sm:text-sm font-bold text-slate-200 truncate">Satisfaction Rate</p>
+                  <p className="text-[11px] text-slate-400 font-medium truncate hidden sm:block">Guaranteed uptime</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* 1. Professional Workspace Solutions Section (Matching Reference 1) */}
-      <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      <section className="pt-8 pb-20 sm:pt-12 sm:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
           <div className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-pink-50 text-pink-600 text-xs font-bold border border-pink-100 uppercase tracking-wider shadow-xs">
@@ -785,7 +852,7 @@ export default function HomePage() {
             </div>
 
             {/* Slider Arrow Buttons (Desktop & Tablet) */}
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => scrollSlider('left')}
@@ -808,12 +875,12 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Slider Carousel Container */}
+        {/* Slider / Vertical Container (Vertical scroll on mobile, horizontal carousel on desktop) */}
         <div className="relative">
           <div
             ref={sliderRef}
             onScroll={handleSliderScroll}
-            className="flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar py-4 px-1"
+            className="flex flex-col md:flex-row gap-8 md:gap-6 md:overflow-x-auto md:snap-x md:snap-mandatory scroll-smooth md:no-scrollbar py-4 px-1"
           >
             {displayedPlans.map((plan: any, idx: number) => {
               const displayPrice =
@@ -825,7 +892,7 @@ export default function HomePage() {
                 <div
                   key={plan.id || idx}
                   data-plan-card
-                  className={`w-[86vw] sm:w-[350px] md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] shrink-0 snap-center md:snap-start bg-white rounded-3xl p-6 sm:p-7 border relative transition-all duration-300 flex flex-col justify-between group shadow-xs hover:shadow-xl ${
+                  className={`w-full max-w-lg mx-auto md:max-w-none md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] md:shrink-0 md:snap-start bg-white rounded-3xl p-6 sm:p-7 border relative transition-all duration-300 flex flex-col justify-between group shadow-xs hover:shadow-xl ${
                     plan.isPopular
                       ? 'border-2 border-purple-500 ring-4 ring-purple-500/10 hover:border-purple-600'
                       : 'border-slate-200/90 hover:border-purple-200'
@@ -933,44 +1000,21 @@ export default function HomePage() {
             })}
           </div>
 
-          {/* Mobile Navigation Arrows & Dot Indicators */}
-          <div className="pt-4 flex items-center justify-between sm:justify-center gap-4">
-            <button
-              type="button"
-              onClick={() => scrollSlider('left')}
-              disabled={!canScrollLeft}
-              aria-label="Previous plan"
-              className="sm:hidden w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-700 disabled:opacity-40 flex items-center justify-center shadow-xs"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-
-            {/* Dots Indicator */}
-            <div className="flex items-center gap-2">
-              {displayedPlans.map((_: any, dotIdx: number) => (
-                <button
-                  key={dotIdx}
-                  type="button"
-                  onClick={() => scrollToSlide(dotIdx)}
-                  aria-label={`Go to slide ${dotIdx + 1}`}
-                  className={`transition-all duration-300 cursor-pointer ${
-                    activeSlideIndex === dotIdx
-                      ? 'w-7 h-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600'
-                      : 'w-2 h-2 rounded-full bg-slate-300 hover:bg-slate-400'
-                  }`}
-                />
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => scrollSlider('right')}
-              disabled={!canScrollRight}
-              aria-label="Next plan"
-              className="sm:hidden w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-700 disabled:opacity-40 flex items-center justify-center shadow-xs"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+          {/* Desktop/Tablet Slide Dots Indicator */}
+          <div className="hidden md:flex items-center justify-center gap-2 pt-6">
+            {displayedPlans.map((_: any, dotIdx: number) => (
+              <button
+                key={dotIdx}
+                type="button"
+                onClick={() => scrollToSlide(dotIdx)}
+                aria-label={`Go to slide ${dotIdx + 1}`}
+                className={`transition-all duration-300 cursor-pointer ${
+                  activeSlideIndex === dotIdx
+                    ? 'w-7 h-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600'
+                    : 'w-2 h-2 rounded-full bg-slate-300 hover:bg-slate-400'
+                }`}
+              />
+            ))}
           </div>
 
           {/* Bottom Comparison Link */}

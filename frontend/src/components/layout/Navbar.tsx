@@ -24,9 +24,11 @@ import {
   Aperture,
   ShieldAlert,
   Bell,
+  Home,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useBranch } from '@/context/BranchContext';
+import { useNotifications, NotificationsPopover } from '@/features/notifications';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -38,6 +40,16 @@ export default function Navbar() {
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const [mobileBranchOpen, setMobileBranchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [desktopNotificationsOpen, setDesktopNotificationsOpen] = useState(false);
+
+  const {
+    notifications,
+    unreadCount,
+    isConnected,
+    isLoading: notificationsLoading,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -70,7 +82,7 @@ export default function Navbar() {
   return (
     <>
       {/* Spacer div so page content isn't covered by fixed navbar */}
-      <div className="h-20 lg:h-24" />
+      <div className="h-16 sm:h-20 lg:h-24" />
 
       {/* Desktop & Mobile Header Container */}
       <header className="fixed top-0 left-0 right-0 z-50 px-2 sm:px-4 lg:px-8 py-2.5 transition-all">
@@ -206,6 +218,40 @@ export default function Navbar() {
 
             {/* 3. User & Wallet Action Section (Right Side) */}
             <div className="flex items-center space-x-2.5">
+              {/* Desktop Live Notifications Bell */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDesktopNotificationsOpen(!desktopNotificationsOpen);
+                    setUserDropdownOpen(false);
+                    setBranchDropdownOpen(false);
+                  }}
+                  className="relative p-2 rounded-2xl bg-slate-100/90 hover:bg-purple-50 text-slate-700 hover:text-purple-700 transition-all cursor-pointer shadow-2xs"
+                  title="Live Notifications"
+                >
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-xs animate-pulse ring-2 ring-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {desktopNotificationsOpen && (
+                  <NotificationsPopover
+                    notifications={notifications}
+                    unreadCount={unreadCount}
+                    isConnected={isConnected}
+                    isLoading={notificationsLoading}
+                    onMarkAsRead={markAsRead}
+                    onMarkAllAsRead={markAllAsRead}
+                    onClose={() => setDesktopNotificationsOpen(false)}
+                    align="right"
+                  />
+                )}
+              </div>
+
               {user ? (
                 <div className="relative flex items-center space-x-2">
                   {/* User Profile Pill */}
@@ -327,80 +373,161 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* MOBILE TOP HEADER BAR (lg:hidden) */}
-          <div className="lg:hidden bg-white/95 backdrop-blur-xl rounded-2xl px-4 py-2.5 border border-slate-200/80 shadow-md flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-xl text-slate-700 hover:bg-slate-100 border border-slate-200/80 cursor-pointer"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+          {/* MOBILE TOP HEADER BAR (Dynamic Island Style - Pure Frosted Glass) */}
+          <div className="lg:hidden relative">
+            <div className="bg-white/85 backdrop-blur-2xl rounded-full px-3 py-1.5 border border-white/80 shadow-[0_4px_20px_rgba(0,0,0,0.05)] flex items-center justify-between gap-2">
+              {/* Left: Brand Logo + Interactive Branch Chip Cluster */}
+              <div className="flex items-center gap-2 shrink-0">
+                <Link href="/" className="flex items-center shrink-0">
+                  <div className="relative w-[48px] h-7">
+                    <Image src="/Logo.png" alt="Cowork30 Logo" fill sizes="60px" className="object-contain" priority />
+                  </div>
+                </Link>
 
-            <Link href="/" className="flex items-center">
-              <div className="relative w-32 h-8">
-                <Image src="/Logo.png" alt="Cowork30 Logo" fill sizes="130px" className="object-contain" priority />
-              </div>
-            </Link>
-
-            <div className="flex items-center space-x-2">
-              <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setNotificationsOpen(!notificationsOpen)}
-                  className="relative p-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 transition-all cursor-pointer"
-                  title="Member Notifications"
+                  onClick={() => {
+                    setMobileBranchOpen(!mobileBranchOpen);
+                    setNotificationsOpen(false);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/90 hover:bg-purple-50 active:bg-purple-100 border border-slate-200/80 text-slate-800 transition-all cursor-pointer text-[11px] font-extrabold max-w-[125px] truncate shadow-2xs"
                 >
-                  <Bell className="w-4 h-4" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-purple-600 rounded-full animate-pulse" />
+                  <MapPin className="w-3.5 h-3.5 text-pink-600 shrink-0" />
+                  <span className="truncate">{activeBranch?.name ? activeBranch.name.replace(' Branch', '').replace(' Coworking', '') : 'Downtown'}</span>
+                  <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${mobileBranchOpen ? 'rotate-180' : ''}`} />
                 </button>
-
-                {notificationsOpen && (
-                  <div className="absolute right-0 top-11 w-72 bg-white rounded-2xl p-3 border border-slate-200 shadow-2xl space-y-2 text-xs z-50 animate-in fade-in slide-in-from-top-2">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                      <span className="font-extrabold text-slate-900 flex items-center space-x-1.5">
-                        <Bell className="w-3.5 h-3.5 text-purple-600" />
-                        <span>Live Notifications</span>
-                      </span>
-                      <span className="px-2 py-0.2 rounded-full text-[9px] font-black uppercase bg-purple-100 text-purple-700">
-                        New
-                      </span>
-                    </div>
-
-                    <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                      <div className="p-2.5 rounded-xl bg-purple-50/60 border border-purple-100 space-y-0.5">
-                        <p className="font-extrabold text-slate-900 text-[11px]">Desk Pass Active</p>
-                        <p className="text-[10px] text-slate-500">Your QR pass is ready for Downtown Hub check-in.</p>
-                      </div>
-
-                      <div className="p-2.5 rounded-xl bg-indigo-50/60 border border-indigo-100 space-y-0.5">
-                        <p className="font-extrabold text-slate-900 text-[11px]">Custom Quote Update</p>
-                        <p className="text-[10px] text-slate-500">Center manager updated your corporate team inquiry quote.</p>
-                      </div>
-
-                      <div className="p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-100 space-y-0.5">
-                        <p className="font-extrabold text-slate-900 text-[11px]">Wallet Recharge Ready</p>
-                        <p className="text-[10px] text-slate-500">Use instant 1-click booking with your wallet credits.</p>
-                      </div>
-                    </div>
-
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setNotificationsOpen(false)}
-                      className="block text-center w-full py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 font-extrabold text-[11px] text-slate-700 transition-colors mt-1"
-                    >
-                      View All Activity in Portal ↗
-                    </Link>
-                  </div>
-                )}
               </div>
 
-              {user && (
-                <div className="w-7 h-7 rounded-full bg-purple-600 text-white flex items-center justify-center font-black text-xs">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-              )}
+              {/* Right: User / Wallet or Sign In + Hamburger Toggle */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {user ? (
+                  <div className="flex items-center gap-1.5">
+                    {/* Quick Wallet Pill */}
+                    <Link
+                      href="/dashboard?tab=wallet"
+                      className="hidden xs:flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-700 text-[10px] font-black"
+                    >
+                      <Wallet className="w-3 h-3 text-emerald-600" />
+                      <span>₹{Number(user.walletBalance || 0).toLocaleString('en-IN')}</span>
+                    </Link>
+
+                    {/* Member Notifications Icon */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNotificationsOpen(!notificationsOpen);
+                        setMobileBranchOpen(false);
+                      }}
+                      className="relative p-1.5 rounded-full bg-slate-100 hover:bg-slate-200/80 text-slate-700 transition-all cursor-pointer"
+                      title="Live Notifications"
+                    >
+                      <Bell className="w-3.5 h-3.5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-xs animate-pulse ring-1 ring-white">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* User Avatar Circle */}
+                    <Link
+                      href="/dashboard"
+                      className="w-7 h-7 rounded-full bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center font-black text-xs shadow-xs"
+                      title={user.name}
+                    >
+                      {user.name.charAt(0).toUpperCase()}
+                    </Link>
+                  </div>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[11px] font-bold shadow-xs hover:opacity-95 transition-all"
+                  >
+                    Sign In
+                  </Link>
+                )}
+
+                {/* Modern Circular Menu Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(!mobileMenuOpen);
+                    setMobileBranchOpen(false);
+                    setNotificationsOpen(false);
+                  }}
+                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                    mobileMenuOpen
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
+                  aria-label="Toggle Navigation Menu"
+                >
+                  {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
+
+            {/* Quick Floating Branch Selector Dropdown from the Dynamic Island */}
+            {mobileBranchOpen && (
+              <div className="absolute top-12 left-1/2 -translate-x-1/2 w-[92vw] max-w-sm bg-white/98 backdrop-blur-2xl rounded-2xl p-2.5 border border-slate-200 shadow-2xl space-y-1.5 text-xs z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Select Branch Location</span>
+                  <button
+                    type="button"
+                    onClick={() => setMobileBranchOpen(false)}
+                    className="text-slate-400 hover:text-slate-700 text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-1 max-h-56 overflow-y-auto">
+                  {branches.map((branch) => {
+                    const isSelected = activeBranch?.id === branch.id;
+                    return (
+                      <button
+                        key={branch.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveBranch(branch);
+                          setMobileBranchOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all ${
+                          isSelected
+                            ? 'bg-purple-50 text-purple-700 font-extrabold border border-purple-100 shadow-2xs'
+                            : 'hover:bg-slate-50 text-slate-700 font-medium'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2.5 truncate">
+                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                            <MapPin className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="truncate">
+                            <p className="truncate font-bold text-xs">{branch.name}</p>
+                            <p className="text-[10px] text-slate-400 truncate">{branch.city}, {branch.state}</p>
+                          </div>
+                        </div>
+                        {isSelected && <span className="w-2 h-2 rounded-full bg-purple-600 shrink-0 ml-1.5" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Real-time Notifications Popover for Mobile */}
+            {notificationsOpen && (
+              <NotificationsPopover
+                notifications={notifications}
+                unreadCount={unreadCount}
+                isConnected={isConnected}
+                isLoading={notificationsLoading}
+                onMarkAsRead={markAsRead}
+                onMarkAllAsRead={markAllAsRead}
+                onClose={() => setNotificationsOpen(false)}
+                align="right"
+              />
+            )}
           </div>
         </div>
       </header>
@@ -568,59 +695,57 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* MOBILE BOTTOM FLOATING NAVIGATION BAR (lg:hidden) - iOS Dock Style */}
-      <div className="lg:hidden fixed bottom-3 left-4 right-4 z-40">
-        <div className="bg-white/95 backdrop-blur-2xl rounded-full px-3 py-2 border border-slate-200/90 shadow-2xl flex items-center justify-around">
-          <Link
-            href="/services"
-            className={`flex flex-col items-center justify-center space-y-0.5 ${
-              pathname === '/services' ? 'text-purple-600 font-black' : 'text-slate-500 font-bold'
-            }`}
-          >
-            <Briefcase className="w-5 h-5" strokeWidth={2} />
-            <span className="text-[10px]">Services</span>
-          </Link>
+      {/* MOBILE BOTTOM FLOATING NAVIGATION BAR (Pure Frosted Glass Theme) */}
+      <div className="lg:hidden fixed bottom-3 inset-x-3 max-w-md mx-auto z-40 pointer-events-none">
+        <div className="pointer-events-auto bg-white/75 backdrop-blur-2xl rounded-full px-2.5 py-1.5 border border-white/80 shadow-[0_8px_32px_rgba(0,0,0,0.08)] flex items-center justify-around">
+          {[
+            pathname === '/services'
+              ? { href: '/services', label: 'Services', icon: Briefcase }
+              : { href: '/', label: 'Home', icon: Home },
+            { href: '/pricing', label: 'Pricing', icon: Crown },
+            { href: '/floor-map', label: 'Floor Map', icon: Map },
+            { href: '/meeting-rooms', label: 'Rooms', icon: Presentation },
+            { href: user ? '/bookings' : '/login', label: user ? 'Bookings' : 'Sign In', icon: user ? CalendarCheck : User },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive =
+              tab.href === '/'
+                ? pathname === '/'
+                : pathname.startsWith(tab.href);
 
-          <Link
-            href="/pricing"
-            className={`flex flex-col items-center justify-center space-y-0.5 ${
-              pathname === '/pricing' ? 'text-purple-600 font-black' : 'text-slate-500 font-bold'
-            }`}
-          >
-            <Crown className="w-5 h-5" strokeWidth={2} />
-            <span className="text-[10px]">Pricing</span>
-          </Link>
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all duration-200 group cursor-pointer"
+              >
+                {/* Icon Container with Frosted Glass Active Tile */}
+                <div
+                  className={`p-2 rounded-2xl transition-all duration-200 flex items-center justify-center ${
+                    isActive
+                      ? 'bg-white/95 text-purple-700 shadow-sm border border-slate-200/70 scale-105'
+                      : 'text-slate-400 group-hover:text-slate-700 group-hover:bg-white/50'
+                  }`}
+                >
+                  <Icon className={`w-4.5 h-4.5 ${isActive ? 'stroke-[2.3]' : 'stroke-[1.9]'}`} />
+                </div>
 
-          <Link
-            href="/meeting-rooms"
-            className={`flex flex-col items-center justify-center space-y-0.5 ${
-              pathname === '/meeting-rooms' ? 'text-purple-600 font-black' : 'text-slate-500 font-bold'
-            }`}
-          >
-            <Presentation className="w-5 h-5" strokeWidth={2} />
-            <span className="text-[10px]">Rooms</span>
-          </Link>
+                {/* Label */}
+                <span
+                  className={`text-[10px] tracking-tight mt-0.5 transition-colors ${
+                    isActive ? 'font-extrabold text-slate-900' : 'font-semibold text-slate-500 group-hover:text-slate-700'
+                  }`}
+                >
+                  {tab.label}
+                </span>
 
-          {/* Highlighted Prominent Center Action Button (Floor Map) */}
-          <Link
-            href="/floor-map"
-            className="flex flex-col items-center justify-center -translate-y-3"
-          >
-            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-purple-600 via-indigo-600 to-pink-600 text-white flex items-center justify-center shadow-lg shadow-purple-600/40 border-2 border-white">
-              <Map className="w-6 h-6" strokeWidth={2.2} />
-            </div>
-            <span className="text-[10px] font-black text-purple-700 mt-0.5">Floor Map</span>
-          </Link>
-
-          <Link
-            href={user ? '/bookings' : '/login'}
-            className={`flex flex-col items-center justify-center space-y-0.5 ${
-              pathname === '/bookings' ? 'text-purple-600 font-black' : 'text-slate-500 font-bold'
-            }`}
-          >
-            <CalendarCheck className="w-5 h-5" strokeWidth={2} />
-            <span className="text-[10px]">Bookings</span>
-          </Link>
+                {/* Subtle active pip */}
+                {isActive && (
+                  <span className="w-1 h-1 rounded-full bg-purple-600 mt-0.5" />
+                )}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </>

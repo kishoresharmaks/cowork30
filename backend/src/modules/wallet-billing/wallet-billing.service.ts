@@ -1,8 +1,9 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { RazorpayService } from './razorpay.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentMethod, PaymentStatus, BookingStatus } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class WalletBillingService {
@@ -12,6 +13,7 @@ export class WalletBillingService {
     private prisma: PrismaService,
     private razorpayService: RazorpayService,
     private invoiceService: InvoiceService,
+    @Optional() private notificationsService?: NotificationsService,
   ) {}
 
   private async getTaxRate(): Promise<number> {
@@ -214,6 +216,16 @@ export class WalletBillingService {
       isTaxable: false,
     });
 
+    if (this.notificationsService) {
+      this.notificationsService.create({
+        userId: params.userId,
+        title: 'Wallet Recharge Ready',
+        message: `Use instant 1-click booking with your ₹${totalCredit} wallet credits.`,
+        type: 'wallet',
+        link: '/dashboard?tab=wallet',
+      }).catch(() => {});
+    }
+
     return {
       success: true,
       message: `Successfully topped up ₹${totalCredit} to wallet balance`,
@@ -345,6 +357,16 @@ export class WalletBillingService {
       taxAmount: 0,
       isTaxable: false,
     });
+
+    if (this.notificationsService) {
+      this.notificationsService.create({
+        userId,
+        title: 'Wallet Recharge Ready',
+        message: `Use instant 1-click booking with your ₹${totalCredit} wallet credits.`,
+        type: 'wallet',
+        link: '/dashboard?tab=wallet',
+      }).catch(() => {});
+    }
 
     return {
       success: true,

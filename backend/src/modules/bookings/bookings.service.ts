@@ -1,10 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { BookingStatus, PaymentStatus } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class BookingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private notificationsService?: NotificationsService,
+  ) {}
 
   async autoCompleteExpiredBookings() {
     const now = new Date();
@@ -231,6 +235,16 @@ export class BookingsService {
         payments: true,
       },
     });
+
+    if (status === BookingStatus.confirmed && this.notificationsService) {
+      this.notificationsService.create({
+        userId: (updated as any).userId || undefined,
+        title: 'Desk Pass Active',
+        message: `Your QR pass is ready for Downtown Hub check-in (Code: #${updated.bookingCode}).`,
+        type: 'booking',
+        link: '/dashboard?tab=bookings',
+      }).catch(() => {});
+    }
 
     return {
       success: true,

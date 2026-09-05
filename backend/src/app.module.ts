@@ -11,6 +11,7 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { CmsModule } from './modules/cms/cms.module';
 import { WalletBillingModule } from './modules/wallet-billing/wallet-billing.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 import { HealthModule } from './modules/health/health.module';
 
@@ -31,6 +32,7 @@ import { HealthModule } from './modules/health/health.module';
     CmsModule,
     WalletBillingModule,
     ReportsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

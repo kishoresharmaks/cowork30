@@ -1,13 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { BookingType, BookingStatus, PaymentStatus } from '@prisma/client';
 import { ServicesChatGateway } from './services-chat.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ServicesService {
   constructor(
     private prisma: PrismaService,
     private chatGateway: ServicesChatGateway,
+    @Optional() private notificationsService?: NotificationsService,
   ) {}
 
   async findAll(includeInactive = false, branchId?: number) {
@@ -229,6 +231,18 @@ export class ServicesService {
     }
 
     this.chatGateway.notifyInquiryUpdate(id, 'status_change', updated);
+
+    if (this.notificationsService) {
+      this.notificationsService.create({
+        userId: (updated as any).userId || undefined,
+        title: totalAmount !== undefined ? 'Custom Quote Update' : 'Solution Inquiry Update',
+        message: totalAmount !== undefined
+          ? `Center manager updated your corporate team inquiry quote to ₹${Number(totalAmount).toLocaleString()}.`
+          : `Center manager updated your corporate team inquiry status to '${status}'.`,
+        type: 'inquiry',
+        link: '/dashboard',
+      }).catch(() => {});
+    }
 
     return {
       success: true,
