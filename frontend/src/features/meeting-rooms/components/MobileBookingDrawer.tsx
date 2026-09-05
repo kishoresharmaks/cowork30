@@ -53,7 +53,7 @@ export const MobileBookingDrawer: React.FC<MobileBookingDrawerProps> = (props) =
     onSubmit,
   } = props;
 
-  const totalHours = selectedSlotsCount;
+  const totalHours = selectedSlotsCount * 0.5;
   const baseRate = Number(selectedRoom.hourlyRate || 0);
   const perSeatRate = Number(selectedRoom.perSeatPrice || 0);
   const baseSubtotal = (baseRate + perSeatRate * selectedSeats) * totalHours;
@@ -69,6 +69,14 @@ export const MobileBookingDrawer: React.FC<MobileBookingDrawerProps> = (props) =
   const gstTax = subtotalWithService * taxRate;
   const grandTotal = subtotalWithService + gstTax;
 
+  const formatDurationDisplay = (hours: number) => {
+    if (hours === 0) return '0 Mins';
+    if (hours === 0.5) return '30 Mins';
+    if (hours === 1) return '1 Hour';
+    if (hours % 1 === 0) return `${hours} Hours`;
+    return `${hours} Hours (${Math.round(hours * 60)} Mins)`;
+  };
+
   return (
     <>
       {/* Sticky Bottom Floating Bar on Mobile/Tablet (< 1024px) */}
@@ -78,11 +86,11 @@ export const MobileBookingDrawer: React.FC<MobileBookingDrawerProps> = (props) =
             {totalHours > 0 ? (
               <>
                 <span className="text-[10px] uppercase tracking-wider font-extrabold text-pink-600 block">
-                  {totalHours} {totalHours === 1 ? 'Slot' : 'Slots'} Selected
+                  {selectedSlotsCount} {selectedSlotsCount === 1 ? 'Slot' : 'Slots'} ({formatDurationDisplay(totalHours)})
                 </span>
                 <div className="flex items-baseline space-x-1">
                   <span className="text-base font-extrabold text-slate-900">
-                    {paymentMethod === 'credits' ? `${totalHours} Credits` : `₹${grandTotal.toFixed(2)}`}
+                    {paymentMethod === 'credits' ? `${totalHours} Credit${totalHours === 1 ? '' : 's'}` : `₹${grandTotal.toFixed(2)}`}
                   </span>
                   <span className="text-[10px] text-slate-400">incl. GST</span>
                 </div>

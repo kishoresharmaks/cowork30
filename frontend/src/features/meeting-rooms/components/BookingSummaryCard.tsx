@@ -29,8 +29,8 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
   booking,
   onSubmit,
 }) => {
-  // Financial Calculations driven strictly from existing props
-  const totalHours = selectedSlotsCount;
+  // Financial Calculations driven strictly from existing props (each slot = 30 mins = 0.5 hr)
+  const totalHours = selectedSlotsCount * 0.5;
   const baseRate = Number(selectedRoom.hourlyRate || 0);
   const perSeatRate = Number(selectedRoom.perSeatPrice || 0);
   const baseSubtotal = (baseRate + perSeatRate * selectedSeats) * totalHours;
@@ -46,17 +46,25 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
   const gstTax = subtotalWithService * taxRate;
   const grandTotal = subtotalWithService + gstTax;
 
-  const meetingCreditsNeeded = Math.max(1, totalHours);
+  const meetingCreditsNeeded = totalHours;
   const meetingCreditsBalance = Number(user?.meetingCreditsBalance || 0);
   const canUseMeetingCredits = meetingCreditsBalance >= meetingCreditsNeeded;
   const walletBalance = Number(user?.walletBalance || 0);
+
+  const formatDurationDisplay = (hours: number) => {
+    if (hours === 0) return '0 Mins';
+    if (hours === 0.5) return '30 Mins';
+    if (hours === 1) return '1 Hour';
+    if (hours % 1 === 0) return `${hours} Hours`;
+    return `${hours} Hours (${Math.round(hours * 60)} Mins)`;
+  };
 
   return (
     <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs p-5 space-y-4">
       <h3 className="text-xs font-bold text-slate-900 border-b border-slate-100 pb-2.5 flex items-center justify-between">
         <span>Guest Information & Payment</span>
         <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
-          {totalHours} {totalHours === 1 ? 'Hour' : 'Hours'}
+          {selectedSlotsCount > 0 ? `${selectedSlotsCount} Slots • ${formatDurationDisplay(totalHours)}` : '0 Slots Selected'}
         </span>
       </h3>
 
@@ -202,7 +210,7 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
         {/* Payment Summary */}
         <div className="pt-3 border-t border-slate-100 space-y-1.5 text-xs text-slate-600">
           <div className="flex justify-between">
-            <span>Base Cost ({totalHours} {totalHours === 1 ? 'hr' : 'hrs'}):</span>
+            <span>Base Cost ({formatDurationDisplay(totalHours)}):</span>
             <span className="font-semibold text-slate-900">₹{baseSubtotal.toFixed(2)}</span>
           </div>
 
@@ -215,7 +223,7 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
             <span>Grand Total</span>
             <span className="text-base">
               {paymentMethod === 'credits'
-                ? `${meetingCreditsNeeded} Credits`
+                ? `${meetingCreditsNeeded} Credit${meetingCreditsNeeded === 1 ? '' : 's'}`
                 : `₹${grandTotal.toFixed(2)}`}
             </span>
           </div>
@@ -233,7 +241,7 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
               : totalHours === 0
               ? 'Select Time Slots Above'
               : paymentMethod === 'credits'
-              ? `Pay ${meetingCreditsNeeded} Credits & Reserve`
+              ? `Pay ${meetingCreditsNeeded} Credit${meetingCreditsNeeded === 1 ? '' : 's'} & Reserve`
               : `Pay ₹${grandTotal.toFixed(2)} & Reserve`}
           </span>
           <ArrowRight className="w-4 h-4 ml-1" />

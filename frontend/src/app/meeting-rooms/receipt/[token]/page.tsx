@@ -146,10 +146,40 @@ export default function ReceiptPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFC] text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
-      <Navbar />
+    <div className="min-h-screen bg-[#FAFAFC] text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white print:min-h-0 print:bg-white print:p-0">
+      {/* Global Print Media Styles */}
+      <style jsx global>{`
+        @media print {
+          @page {
+            margin: 10mm;
+            size: auto;
+          }
+          html, body {
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          nav, footer, header, .print\\:hidden, #mobile-bottom-nav, aside {
+            display: none !important;
+          }
+          main {
+            padding: 0 !important;
+            margin: 0 auto !important;
+            max-width: 100% !important;
+            width: 100% !important;
+          }
+        }
+      `}</style>
 
-      <main className="pt-24 pb-24 max-w-3xl mx-auto px-4 w-full flex-grow space-y-6">
+      <div className="print:hidden">
+        <Navbar />
+      </div>
+
+      <main className="pt-24 pb-24 max-w-3xl mx-auto px-4 w-full flex-grow space-y-6 print:pt-0 print:pb-0 print:max-w-none print:px-0 print:space-y-0 print:w-full">
         {/* Action Header */}
         <div className="flex items-center justify-between print:hidden">
           <Link
@@ -171,9 +201,25 @@ export default function ReceiptPage() {
         </div>
 
         {/* Digital Pass Card */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200/90 shadow-sm space-y-8 relative overflow-hidden print:bg-white print:text-black print:p-0 print:border-none">
-          {/* Header Badge */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-sm space-y-6 relative overflow-hidden print:p-6 print:rounded-2xl print:border print:border-slate-300 print:shadow-none print:max-w-xl print:mx-auto print:space-y-5">
+          {/* Header Brand Banner (Visible in Print Mode Only) */}
+          <div className="hidden print:flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="flex items-center space-x-2">
+              <span className="text-xl font-black tracking-tight text-slate-900">
+                COWORK<span className="text-rose-600">30</span>
+              </span>
+              <span className="text-[10px] text-slate-500 font-semibold pl-2 border-l border-slate-300 uppercase tracking-wider">
+                Digital Entry Pass & Invoice
+              </span>
+            </div>
+            <div className="text-right">
+              <span className="text-[9px] font-mono text-slate-400 block font-bold uppercase">Pass Reference</span>
+              <span className="text-xs font-mono font-bold text-indigo-600">#{booking.bookingCode}</span>
+            </div>
+          </div>
+
+          {/* Header Badge & Title */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 print:border-slate-200 pb-4">
             <div className="space-y-1">
               <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase">
                 <CheckCircle2 className="w-3 h-3 text-emerald-600" />
@@ -186,31 +232,33 @@ export default function ReceiptPage() {
               </p>
             </div>
 
-            <div className="text-right space-y-0.5">
+            <div className="text-right space-y-0.5 print:hidden">
               <span className="text-[10px] font-mono uppercase text-slate-400 block font-bold">Booking Code</span>
               <span className="text-lg font-mono font-extrabold text-indigo-600">{booking.bookingCode}</span>
             </div>
           </div>
 
           {/* QR Pass Entry Hero */}
-          <div className="p-6 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="p-5 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-6 print:bg-slate-50 print:border-slate-200 print:p-4">
             <div className="space-y-2 text-center sm:text-left">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 block">Digital Access Pass</span>
               <h3 className="text-lg font-extrabold text-slate-900">{booking.meetingRoom?.name}</h3>
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs text-slate-600 font-medium">
                 <span className="flex items-center space-x-1">
                   <Calendar className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>{new Date(booking.bookingDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                  <span>{new Date(booking.bookingDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
                 </span>
                 <span className="flex items-center space-x-1">
                   <Clock className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>{booking.slots?.length || 1} Hourly Slot{(booking.slots?.length || 1) > 1 ? 's' : ''}</span>
+                  <span className="font-semibold text-slate-900">
+                    {formatUtcTimeSlot(booking.startTime)} - {formatUtcTimeSlot(booking.endTime)} ({Number(booking.totalHours) === 0.5 ? '30 Mins' : `${Number(booking.totalHours)} Hr${Number(booking.totalHours) === 1 ? '' : 's'}`})
+                  </span>
                 </span>
               </div>
             </div>
 
             {/* Dynamic Scannable QR Pass Display */}
-            <div className="p-3.5 bg-white rounded-2xl border border-indigo-200 shadow-sm text-center shrink-0 min-w-[130px]">
+            <div className="p-3 bg-white rounded-2xl border border-indigo-200 shadow-sm text-center shrink-0 min-w-[130px] print:border-slate-300">
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
                   booking.qrAccessCode || booking.bookingCode || 'QR-PASS'
@@ -228,32 +276,56 @@ export default function ReceiptPage() {
           </div>
 
           {/* Reservation Breakdown */}
-          <div className="space-y-4 text-xs">
-            <h4 className="font-extrabold text-slate-900 border-b border-slate-100 pb-2">Reservation Breakdown</h4>
+          <div className="space-y-3 text-xs">
+            <h4 className="font-extrabold text-slate-900 border-b border-slate-100 print:border-slate-200 pb-2">Reservation Breakdown</h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-0.5">
                 <span className="text-[11px] text-slate-400 block font-medium">Guest Name</span>
                 <span className="font-bold text-slate-900">{booking.customerName}</span>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <span className="text-[11px] text-slate-400 block font-medium">Guest Email</span>
                 <span className="font-bold text-slate-900">{booking.customerEmail}</span>
               </div>
-              <div className="space-y-1">
+              {booking.customerPhone && (
+                <div className="space-y-0.5">
+                  <span className="text-[11px] text-slate-400 block font-medium">Guest Phone</span>
+                  <span className="font-bold text-slate-900">{booking.customerPhone}</span>
+                </div>
+              )}
+              {booking.companyName && (
+                <div className="space-y-0.5">
+                  <span className="text-[11px] text-slate-400 block font-medium">Company Name</span>
+                  <span className="font-bold text-slate-900">{booking.companyName}</span>
+                </div>
+              )}
+              <div className="space-y-0.5">
                 <span className="text-[11px] text-slate-400 block font-medium">Payment Method</span>
                 <span className="font-bold text-slate-900 uppercase">{booking.paymentMethod || 'Wallet'}</span>
               </div>
-              <div className="space-y-1">
-                <span className="text-[11px] text-slate-400 block font-medium">Total Paid</span>
+              <div className="space-y-0.5">
+                <span className="text-[11px] text-slate-400 block font-medium">Total Paid (incl. GST)</span>
                 <span className="font-extrabold text-indigo-600 text-sm">₹{Number(booking.totalAmount || 0).toFixed(2)}</span>
               </div>
             </div>
           </div>
+
+          {/* Print Footer Note */}
+          <div className="hidden print:block pt-3 border-t border-slate-200 text-center space-y-1">
+            <p className="text-[10px] text-slate-500 font-medium">
+              Please present this pass or scan the QR code at the turnstile / reception entrance scanner.
+            </p>
+            <p className="text-[9px] text-slate-400">
+              Need assistance? Contact support@cowork30.com or speak with our on-site community manager.
+            </p>
+          </div>
         </div>
       </main>
 
-      <Footer />
+      <div className="print:hidden">
+        <Footer />
+      </div>
     </div>
   );
 }

@@ -287,6 +287,56 @@ async function main() {
       },
     },
   });
+
+  await prisma.pricingPlan.upsert({
+    where: { slug: 'private-executive-suite' },
+    update: {},
+    create: {
+      name: 'Private Executive Suite',
+      slug: 'private-executive-suite',
+      tagline: 'Private lockable office suite tailored for growing teams & startups.',
+      priceMonthly: 899.00,
+      priceDaily: 89.00,
+      meetingCreditsIncluded: 20,
+      deskCreditsIncluded: 60,
+      isPopular: false,
+      sortOrder: 3,
+      features: {
+        create: [
+          { featureText: 'Fully furnished lockable private office', isIncluded: true },
+          { featureText: '24/7 Biometric access & climate control', isIncluded: true },
+          { featureText: '20 Hours Meeting Room Credits / Month', isIncluded: true },
+          { featureText: 'Dedicated high-speed private VLAN', isIncluded: true },
+          { featureText: 'Priority reception & mail forwarding', isIncluded: true },
+        ],
+      },
+    },
+  });
+
+  await prisma.pricingPlan.upsert({
+    where: { slug: 'virtual-office-pro' },
+    update: {},
+    create: {
+      name: 'Virtual Office & GST Pro',
+      slug: 'virtual-office-pro',
+      tagline: 'Prime business address, mail handling, and official GST compliance.',
+      priceMonthly: 99.00,
+      priceDaily: 15.00,
+      meetingCreditsIncluded: 4,
+      deskCreditsIncluded: 4,
+      isPopular: false,
+      sortOrder: 4,
+      features: {
+        create: [
+          { featureText: 'Prestigious commercial business address', isIncluded: true },
+          { featureText: 'Official GST registration & documentation', isIncluded: true },
+          { featureText: 'Daily mail receipt & digital notification', isIncluded: true },
+          { featureText: '4 Hours Meeting Room Credits / Month', isIncluded: true },
+          { featureText: 'Access to community events & networking', isIncluded: true },
+        ],
+      },
+    },
+  });
   console.log('✅ Pricing Plans seeded');
 
   // 7. Create Meeting Rooms

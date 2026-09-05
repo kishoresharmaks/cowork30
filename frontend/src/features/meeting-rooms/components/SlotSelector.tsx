@@ -162,19 +162,24 @@ export const SlotSelector: React.FC<SlotSelectorProps> = ({
         </div>
       </div>
 
-      {/* Available Time Slots Section (2-Column Grid matching reference screenshot) */}
+      {/* Available Time Slots Section (2-Column Grid with 30-Min Intervals) */}
       <div className="space-y-3 pt-2 border-t border-slate-100">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-bold text-slate-900 flex items-center space-x-1.5">
-            <Clock className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Available Time Slots</span>
-          </h4>
+          <div className="flex items-center space-x-2">
+            <h4 className="text-xs font-bold text-slate-900 flex items-center space-x-1.5">
+              <Clock className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Available Time Slots</span>
+            </h4>
+            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+              30-Min Slots
+            </span>
+          </div>
 
           {selectedSlots.length > 0 && (
             <button
               type="button"
               onClick={onClearSlots}
-              className="text-[11px] font-semibold text-rose-600 hover:text-rose-700"
+              className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
             >
               Clear ({selectedSlots.length})
             </button>
@@ -186,7 +191,7 @@ export const SlotSelector: React.FC<SlotSelectorProps> = ({
         ) : !availability?.timeSlots || availability.timeSlots.length === 0 ? (
           <div className="py-8 text-center text-xs text-slate-400">No available slots for selected date.</div>
         ) : (
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-1">
             {availability.timeSlots.map((slot) => {
               const isSelected = selectedSlots.includes(slot.startTime);
               const isUnavailable = !slot.isAvailable;
@@ -197,7 +202,7 @@ export const SlotSelector: React.FC<SlotSelectorProps> = ({
                   disabled={isUnavailable}
                   type="button"
                   onClick={() => onToggleSlot(slot.startTime)}
-                  className={`py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all duration-200 text-center cursor-pointer ${
+                  className={`py-2 px-2.5 rounded-xl border text-xs font-semibold transition-all duration-200 text-center cursor-pointer ${
                     isUnavailable
                       ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed line-through'
                       : isSelected

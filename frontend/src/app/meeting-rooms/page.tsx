@@ -193,8 +193,8 @@ export default function MeetingRoomsPage() {
     setSelectedSeats(room.minSeats || 1);
   };
 
-  // Grand total calculation for submission validation
-  const totalHours = selectedSlots.length;
+  // Grand total calculation for submission validation (each slot = 30 mins = 0.5 hr)
+  const totalHours = selectedSlots.length * 0.5;
   const baseRate = Number(selectedRoom?.hourlyRate || 0);
   const perSeatRate = Number(selectedRoom?.perSeatPrice || 0);
   const baseSubtotal = (baseRate + perSeatRate * selectedSeats) * totalHours;
@@ -231,7 +231,7 @@ export default function MeetingRoomsPage() {
     if (!selectedRoom) return;
 
     if (selectedSlots.length === 0) {
-      alert('Please select at least 1 hourly time slot');
+      alert('Please select at least 1 time slot (30-min minimum)');
       return;
     }
 
@@ -270,14 +270,14 @@ export default function MeetingRoomsPage() {
           return;
         }
 
-        const meetingCreditsNeeded = Math.max(1, totalHours);
+        const meetingCreditsNeeded = totalHours;
         const meetingCreditsBalance = Number(user.meetingCreditsBalance || 0);
 
         if (meetingCreditsBalance < meetingCreditsNeeded) {
           setErrorModalData({
             isOpen: true,
             title: 'Insufficient Meeting Credits',
-            message: `Available credits: ${meetingCreditsBalance}, Required: ${meetingCreditsNeeded}. Please select Credit Wallet, Razorpay, or Pay at Reception.`,
+            message: `Available credits: ${meetingCreditsBalance}, Required: ${meetingCreditsNeeded} Credit${meetingCreditsNeeded === 1 ? '' : 's'}. Please select Credit Wallet, Razorpay, or Pay at Reception.`,
           });
           setBooking(false);
           return;
@@ -405,7 +405,7 @@ export default function MeetingRoomsPage() {
     <div className="min-h-screen bg-[#FAFAFC] text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
       <Navbar />
 
-      <main className="pt-24 pb-32 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grow">
+      <main className="pt-6 sm:pt-8 pb-32 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grow">
         {/* Two-Column Desktop Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column: Hero, Filters, & Room Showcase Grid (7 Cols on desktop) */}

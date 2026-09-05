@@ -267,7 +267,7 @@ function MemberBookingsContent() {
     <div className="min-h-screen bg-[#FAFAFC] text-slate-900 flex flex-col font-sans selection:bg-purple-600 selection:text-white">
       <Navbar />
 
-      <main className="pt-20 sm:pt-24 pb-16 sm:pb-24 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 w-full flex-grow space-y-6 sm:space-y-8">
+      <main className="pt-4 sm:pt-6 pb-16 sm:pb-24 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 w-full flex-grow space-y-6 sm:space-y-8">
         {/* Header Profile Banner Card */}
         <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 relative overflow-hidden">
           <div className="flex items-center space-x-4 sm:space-x-5 relative z-10">

@@ -32,13 +32,13 @@ export function formatMinutesTo12Hr(totalMinutes: number): string {
 }
 
 export function generateTimeSlots(startTime: string | null | undefined, endTime: string | null | undefined) {
-  // If neither start nor end time is set, support 24/7 round-the-clock (00:00 to 24:00)
+  // If neither start nor end time is set, support 24/7 round-the-clock (00:00 to 24:00) in 30-min intervals
   if (!startTime && !endTime) {
     const slots = [];
-    for (let current = 0; current + 60 <= 1440; current += 60) {
+    for (let current = 0; current + 30 <= 1440; current += 30) {
       slots.push({
         startMinutes: current,
-        endMinutes: current + 60,
+        endMinutes: current + 30,
       });
     }
     return slots;
@@ -57,11 +57,11 @@ export function generateTimeSlots(startTime: string | null | undefined, endTime:
   }
 
   const slots = [];
-  // Strict boundary rule: slotStart + 60 <= operatingEnd
-  for (let current = startMinutes; current + 60 <= endMinutes; current += 60) {
+  // Strict boundary rule: slotStart + 30 <= operatingEnd
+  for (let current = startMinutes; current + 30 <= endMinutes; current += 30) {
     slots.push({
       startMinutes: current,
-      endMinutes: current + 60,
+      endMinutes: current + 30,
     });
   }
 
@@ -239,7 +239,10 @@ export class MeetingRoomsService {
     const qrAccessCode = `QR-MR-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
     const viewToken = crypto.randomBytes(16).toString('hex');
 
-    const totalHours = Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0 ? dto.selectedSlots.length : 1;
+    const totalSlotsCount = Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0 ? dto.selectedSlots.length : 1;
+    const totalHours = Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0
+      ? totalSlotsCount * 0.5
+      : (dto.totalHours ? Number(dto.totalHours) : 0.5);
     const seatsCount = Number(dto.seatsBooked || 1);
     const minSeats = Number(room.minSeats || 1);
     const maxSeats = Number(room.maxSeats || room.capacity || 10);
@@ -273,13 +276,14 @@ export class MeetingRoomsService {
     const finalTaxAmount = dto.totalAmount ? Number((finalTotalAmount - finalTotalAmount / (1 + taxRate)).toFixed(2)) : calculatedTaxAmount;
 
     let startTime = new Date();
-    let endTime = new Date(Date.now() + 3600000);
+    let endTime = new Date(Date.now() + 1800000); // Default 30 min
 
     if (Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0) {
       const sortedSlots = [...dto.selectedSlots].sort();
       startTime = new Date(sortedSlots[0]);
       const lastSlotStart = new Date(sortedSlots[sortedSlots.length - 1]);
-      endTime = new Date(lastSlotStart.getTime() + 3600000);
+      // Each slot is 30 minutes = 30 * 60 * 1000 = 1,800,000 ms
+      endTime = new Date(lastSlotStart.getTime() + 1800000);
     } else if (dto.startTime && dto.endTime) {
       const dateStr = dto.bookingDate ? new Date(dto.bookingDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
 
@@ -360,7 +364,7 @@ export class MeetingRoomsService {
 
     const useCredits = dto.paymentMethod === 'credits';
     const useWallet = dto.paymentMethod === 'wallet';
-    const creditsNeeded = Math.max(1, Math.ceil(totalHours));
+    const creditsNeeded = totalHours; // 0.5 for 30m, 1.0 for 1 hr, etc.
 
     const booking = await this.prisma.$transaction(async (tx) => {
       let memberBalanceAfter: number | null = null;
@@ -426,7 +430,7 @@ export class MeetingRoomsService {
           startTime,
           endTime,
           totalHours,
-          creditsUsed: useCredits ? creditsNeeded : 0,
+          creditsUsed: useCredits ? Math.ceil(creditsNeeded) : 0,
           taxAmount: finalTaxAmount,
           totalAmount: finalTotalAmount,
           seatsBooked: seatsCount,

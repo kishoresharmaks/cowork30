@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import {
   MapPin,
   Calendar,
+  CalendarCheck,
   Compass,
   Menu,
   X,
@@ -16,10 +17,11 @@ import {
   Wallet,
   ChevronDown,
   Sparkles,
-  Layers,
-  Tag,
-  Grid,
-  Image as ImageIcon,
+  Briefcase,
+  Crown,
+  Presentation,
+  Map,
+  Aperture,
   ShieldAlert,
   Bell,
 } from 'lucide-react';
@@ -46,12 +48,11 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { href: '/services', label: 'Services', icon: Layers },
-    { href: '/pricing', label: 'Pricing Plans', icon: Tag },
-    { href: '/meeting-rooms', label: 'Meeting Rooms', icon: Grid },
-    { href: '/floor-map', label: 'Interactive Map', icon: Compass },
-    { href: '/floor-map', label: '2D Desk', icon: Grid, isHighlighted: true },
-    { href: '/gallery', label: 'Gallery', icon: ImageIcon },
+    { href: '/services', label: 'Services', icon: Briefcase },
+    { href: '/pricing', label: 'Pricing Plans', icon: Crown },
+    { href: '/meeting-rooms', label: 'Meeting Rooms', icon: Presentation },
+    { href: '/floor-map', label: 'Interactive Map', icon: Map },
+    { href: '/gallery', label: 'Gallery', icon: Aperture },
   ];
 
   const getBranchTitleParts = (name: string, city?: string) => {
@@ -150,27 +151,31 @@ export default function Navbar() {
             </div>
 
             {/* 2. Center Navigation Links (Vertical Icon on Top + Label Below) */}
-            <nav className="flex items-center space-x-1.5">
+            <nav className="flex items-center space-x-1 sm:space-x-1.5">
               {navLinks.map((link, idx) => {
                 const Icon = link.icon;
-                const isActive = pathname === link.href && (!link.isHighlighted || pathname === '/floor-map');
+                const isActive = pathname === link.href;
 
                 return (
                   <Link
                     key={`${link.href}-${idx}`}
                     href={link.href}
-                    className={`relative flex flex-col items-center justify-center px-3.5 py-1.5 rounded-2xl transition-all group ${
+                    className={`relative flex flex-col items-center justify-center px-3.5 py-1.5 rounded-2xl transition-all duration-200 group ${
                       isActive
                         ? 'bg-purple-100/70 text-purple-700 font-extrabold'
                         : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-bold'
                     }`}
                   >
-                    <Icon className={`w-4.5 h-4.5 transition-transform group-hover:scale-110 ${isActive ? 'text-purple-700' : 'text-slate-600'}`} />
+                    <Icon
+                      className={`w-[19px] h-[19px] transition-all duration-200 group-hover:scale-115 ${
+                        isActive ? 'text-purple-700 stroke-[2.2]' : 'text-slate-500 group-hover:text-purple-600 stroke-[1.9]'
+                      }`}
+                    />
                     <span className="text-[11px] leading-tight mt-0.5 whitespace-nowrap">{link.label}</span>
 
                     {/* Active Underline Indicator Bar */}
                     {isActive && (
-                      <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-7 h-1 bg-purple-600 rounded-full shadow-xs" />
+                      <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-7 h-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full shadow-xs" />
                     )}
                   </Link>
                 );
@@ -179,17 +184,21 @@ export default function Navbar() {
               {user && (
                 <Link
                   href="/bookings"
-                  className={`relative flex flex-col items-center justify-center px-3.5 py-1.5 rounded-2xl transition-all group ${
+                  className={`relative flex flex-col items-center justify-center px-3.5 py-1.5 rounded-2xl transition-all duration-200 group ${
                     pathname === '/bookings'
-                      ? 'bg-indigo-100/70 text-indigo-700 font-extrabold'
+                      ? 'bg-purple-100/70 text-purple-700 font-extrabold'
                       : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-bold'
                   }`}
                 >
-                  <Calendar className={`w-4.5 h-4.5 transition-transform group-hover:scale-110 ${pathname === '/bookings' ? 'text-indigo-700' : 'text-slate-600'}`} />
+                  <CalendarCheck
+                    className={`w-[19px] h-[19px] transition-all duration-200 group-hover:scale-115 ${
+                      pathname === '/bookings' ? 'text-purple-700 stroke-[2.2]' : 'text-slate-500 group-hover:text-purple-600 stroke-[1.9]'
+                    }`}
+                  />
                   <span className="text-[11px] leading-tight mt-0.5 whitespace-nowrap">My Bookings</span>
 
                   {pathname === '/bookings' && (
-                    <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-7 h-1 bg-indigo-600 rounded-full shadow-xs" />
+                    <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-7 h-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full shadow-xs" />
                   )}
                 </Link>
               )}
@@ -483,12 +492,12 @@ export default function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={`flex items-center space-x-3 p-3 rounded-2xl transition-all font-bold text-xs ${
                   pathname === '/bookings'
-                    ? 'bg-indigo-100/80 text-indigo-700 border border-indigo-200/80 font-extrabold'
+                    ? 'bg-purple-100/80 text-purple-700 border border-purple-200/80 font-extrabold'
                     : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-100'
                 }`}
               >
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${pathname === '/bookings' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>
-                  <Calendar className="w-4 h-4" />
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${pathname === '/bookings' ? 'bg-purple-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>
+                  <CalendarCheck className="w-4 h-4" />
                 </div>
                 <span>My Bookings</span>
               </Link>
@@ -568,7 +577,7 @@ export default function Navbar() {
               pathname === '/services' ? 'text-purple-600 font-black' : 'text-slate-500 font-bold'
             }`}
           >
-            <Layers className="w-5 h-5" />
+            <Briefcase className="w-5 h-5" strokeWidth={2} />
             <span className="text-[10px]">Services</span>
           </Link>
 
@@ -578,7 +587,7 @@ export default function Navbar() {
               pathname === '/pricing' ? 'text-purple-600 font-black' : 'text-slate-500 font-bold'
             }`}
           >
-            <Tag className="w-5 h-5" />
+            <Crown className="w-5 h-5" strokeWidth={2} />
             <span className="text-[10px]">Pricing</span>
           </Link>
 
@@ -588,19 +597,19 @@ export default function Navbar() {
               pathname === '/meeting-rooms' ? 'text-purple-600 font-black' : 'text-slate-500 font-bold'
             }`}
           >
-            <Grid className="w-5 h-5" />
+            <Presentation className="w-5 h-5" strokeWidth={2} />
             <span className="text-[10px]">Rooms</span>
           </Link>
 
-          {/* Highlighted Prominent Center Action Button (2D Desk / Floor Map) */}
+          {/* Highlighted Prominent Center Action Button (Floor Map) */}
           <Link
             href="/floor-map"
             className="flex flex-col items-center justify-center -translate-y-3"
           >
             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-purple-600 via-indigo-600 to-pink-600 text-white flex items-center justify-center shadow-lg shadow-purple-600/40 border-2 border-white">
-              <Grid className="w-6 h-6" />
+              <Map className="w-6 h-6" strokeWidth={2.2} />
             </div>
-            <span className="text-[10px] font-black text-purple-700 mt-0.5">2D Desk</span>
+            <span className="text-[10px] font-black text-purple-700 mt-0.5">Floor Map</span>
           </Link>
 
           <Link
@@ -609,7 +618,7 @@ export default function Navbar() {
               pathname === '/bookings' ? 'text-purple-600 font-black' : 'text-slate-500 font-bold'
             }`}
           >
-            <Calendar className="w-5 h-5" />
+            <CalendarCheck className="w-5 h-5" strokeWidth={2} />
             <span className="text-[10px]">Bookings</span>
           </Link>
         </div>
