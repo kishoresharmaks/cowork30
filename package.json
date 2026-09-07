@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "description": "Coworking Space Management Platform - Dual deployment in single Render service",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
-    "build": "cd backend && npx prisma generate && npx prisma db push --accept-data-loss && node prisma/seed.js && npm run build && cd ../frontend && npm install --no-package-lock && npm run build",
+    "build": "cd backend && npx prisma generate && npx prisma db push --accept-data-loss && node prisma/seed.js && npm run build && cd ../frontend && npm run build",
     "start": "npx concurrently -k \"npm run start --prefix backend\" \"npm run start --prefix frontend\"",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run start:dev --prefix backend"
@@ -13,6 +16,7 @@
     "concurrently": "^9.1.2"
   },
   "workspaces": [
+    "frontend",
     "backend"
   ]
 }
