@@ -138,10 +138,10 @@ export default function LoginPage() {
               href="/register"
               className="inline-flex items-center space-x-1.5 text-xs font-bold text-indigo-600 hover:underline"
             >
-              {welcomeBonus > 0 ? (
+              {welcomeBonus != null && welcomeBonus > 0 ? (
                 <>
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Register Account & Get ₹{welcomeBonus.toLocaleString()} Welcome Credit</span>
+                  <span>Register Account & Get ₹{(welcomeBonus || 0).toLocaleString()} Welcome Credit</span>
                 </>
               ) : (
                 <>

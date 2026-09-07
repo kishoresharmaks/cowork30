@@ -1,4 +1,4 @@
-import { Controller, Get, Logger, Request } from '@nestjs/common';
+import { Controller, Get, Logger, Request, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Cron } from '@nestjs/schedule';
 import { AuthGuard } from '@nestjs/passport';

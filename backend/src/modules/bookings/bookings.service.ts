@@ -132,7 +132,6 @@ export class BookingsService {
       timestamp: now.toISOString(),
     };
   }
-  }
 
   async findAll(query: { status?: BookingStatus; search?: string; type?: string }) {
     const where: any = {
