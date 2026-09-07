@@ -45,6 +45,7 @@ async function bootstrap() {
         (allowedFrontendUrl && origin === allowedFrontendUrl) ||
         origin.includes('localhost') ||
         origin.includes('127.0.0.1') ||
+        origin.includes('onrender.com') ||
         /^http:\/\/(192\.168|10|172)\.\d+\.\d+:\d+$/.test(origin);
       if (isAllowed) {
         return callback(null, true);
