@@ -36,9 +36,11 @@ export class AuthController {
   }
 
   @Get('user-by-email')
-  @ApiOperation({ summary: 'Auto-lookup member details by email address for booking forms' })
-  async findUserByEmail(@Query('email') email: string) {
-    return this.authService.findUserByEmail(email);
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Auto-lookup member details by email address for booking forms (authenticated)' })
+  async findUserByEmail(@Query('email') email: string, @Request() req: any) {
+    return this.authService.findUserByEmail(email, req.user?.id);
   }
 
   @Get('me')
@@ -75,8 +77,15 @@ export class AuthController {
   async getAdminUsers(
     @Query('search') search?: string,
     @Query('role') role?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.authService.getAdminUsers({ search, role });
+    return this.authService.getAdminUsers({
+      search,
+      role,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+    });
   }
 
   @Get('admin/users/:id')

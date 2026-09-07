@@ -1,5 +1,22 @@
 import axios from 'axios';
 
+const isProd = process.env.NODE_ENV === 'production';
+
+// Production error sanitization
+const safeLog = (prefix: string, ...args: any[]) => {
+  if (isProd) {
+    const sanitized = args.map(arg => {
+      if (typeof arg === 'string') return arg.slice(0, 200);
+      if (arg instanceof Error) return arg.message.slice(0, 200);
+      if (typeof arg === 'object' && arg !== null) return JSON.stringify(arg).slice(0, 200);
+      return String(arg).slice(0, 200);
+    });
+    console.log(`[API ${prefix}]`, ...sanitized);
+  } else {
+    console.log(`[API ${prefix}]`, ...args);
+  }
+};
+
 export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
@@ -41,12 +58,27 @@ apiClient.interceptors.request.use((config) => {
 });
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (isProd) {
+      safeLog('Response', `${response.config.method?.toUpperCase()} ${response.config.url}`, response.status);
+    }
+    return response;
+  },
   (error) => {
     if (error.response && error.response.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
     }
+
+    // Sanitized error logging
+    if (isProd) {
+      const status = error.response?.status;
+      const url = error.config?.url;
+      safeLog('Error', `${error.config?.method?.toUpperCase()} ${url}`, status || 'Network Error');
+    } else {
+      console.error('API Error:', error);
+    }
+
     return Promise.reject(error);
   }
 );

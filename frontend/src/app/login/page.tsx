@@ -16,16 +16,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [welcomeBonus, setWelcomeBonus] = useState<number>(500);
+  const [welcomeBonus, setWelcomeBonus] = useState<number | null>(null);
+  const [welcomeBonusLoading, setWelcomeBonusLoading] = useState(true);
 
   useEffect(() => {
     async function fetchBonus() {
       try {
         const res = await apiClient.get('/cms/settings');
         if (res.data?.welcomeBonusAmount !== undefined) {
-          setWelcomeBonus(res.data.welcomeBonusAmount);
+          setWelcomeBonus(Number(res.data.welcomeBonusAmount));
         }
-      } catch (e) {}
+      } catch (e) {
+        setWelcomeBonus(0);
+      } finally {
+        setWelcomeBonusLoading(false);
+      }
     }
     fetchBonus();
   }, []);

@@ -262,6 +262,10 @@ export default function HomePage() {
   const [services, setServices] = useState<any[]>([]);
   const [servicesLoading, setServicesLoading] = useState(true);
 
+  // Public stats state
+  const [publicStats, setPublicStats] = useState<{ availableDesks: number; meetingRooms: number; totalMembers: number; satisfactionRate: number } | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
   // Dynamic Membership Pricing Plans state
   const [plans, setPlans] = useState<any[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
@@ -327,6 +331,19 @@ export default function HomePage() {
       }
     }
     fetchPlans();
+
+    async function fetchStats() {
+      try {
+        setStatsLoading(true);
+        const res = await apiClient.get('/bookings/public-stats');
+        setPublicStats(res.data?.stats || null);
+      } catch (err) {
+        console.error('Failed to load public stats on homepage:', err);
+      } finally {
+        setStatsLoading(false);
+      }
+    }
+    fetchStats();
   }, []);
 
   const displayedPlans = plans.length > 0 ? plans : fallbackPlans;
@@ -517,7 +534,7 @@ export default function HomePage() {
                 </div>
                 <div className="min-w-0">
                   <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight flex items-baseline space-x-1">
-                    <span>150</span>
+                    <span>{statsLoading ? '...' : (publicStats?.availableDesks ?? '--')}</span>
                     <span className="text-purple-400 font-extrabold text-base sm:text-xl">+</span>
                   </div>
                   <p className="text-xs sm:text-sm font-bold text-slate-200 truncate">Available Desks</p>
@@ -532,7 +549,7 @@ export default function HomePage() {
                 </div>
                 <div className="min-w-0">
                   <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight flex items-baseline space-x-1">
-                    <span>12</span>
+                    <span>{statsLoading ? '...' : (publicStats?.meetingRooms ?? '--')}</span>
                     <span className="text-pink-400 font-extrabold text-base sm:text-xl">+</span>
                   </div>
                   <p className="text-xs sm:text-sm font-bold text-slate-200 truncate">Meeting Rooms</p>
@@ -547,7 +564,7 @@ export default function HomePage() {
                 </div>
                 <div className="min-w-0">
                   <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight flex items-baseline space-x-1">
-                    <span>500</span>
+                    <span>{statsLoading ? '...' : (publicStats?.totalMembers ?? '--')}</span>
                     <span className="text-indigo-400 font-extrabold text-base sm:text-xl">+</span>
                   </div>
                   <p className="text-xs sm:text-sm font-bold text-slate-200 truncate">Active Members</p>
@@ -562,7 +579,7 @@ export default function HomePage() {
                 </div>
                 <div className="min-w-0">
                   <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight flex items-baseline space-x-1">
-                    <span>99.9</span>
+                    <span>{statsLoading ? '...' : (publicStats?.satisfactionRate ?? '--')}</span>
                     <span className="text-emerald-400 font-extrabold text-base sm:text-xl">%</span>
                   </div>
                   <p className="text-xs sm:text-sm font-bold text-slate-200 truncate">Satisfaction Rate</p>

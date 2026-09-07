@@ -7,6 +7,7 @@ import {
   Body,
   Req,
   ParseIntPipe,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
@@ -23,7 +24,10 @@ export class NotificationsController {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const token = authHeader.split(' ')[1];
-        const secret = process.env.JWT_SECRET || 'cowork30_super_secret_jwt_key_2026';
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+          throw new UnauthorizedException('Server misconfiguration');
+        }
         const decoded: any = jwt.verify(token, secret);
         if (decoded && (decoded.sub || decoded.id)) {
           return Number(decoded.sub || decoded.id);

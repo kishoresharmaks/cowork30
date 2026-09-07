@@ -68,8 +68,18 @@ export class AuthService {
     };
   }
 
-  async findUserByEmail(email: string) {
+  async findUserByEmail(email: string, requesterId?: number) {
     if (!email) return { success: false, user: null };
+
+    const requester = requesterId ? await this.prisma.user.findUnique({
+      where: { id: requesterId },
+      select: { id: true, role: true },
+    }) : null;
+
+    if (!requester) {
+      return { success: false, user: null, message: 'Authentication required' };
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { email: email.trim().toLowerCase() },
       select: {
@@ -79,9 +89,6 @@ export class AuthService {
         phone: true,
         companyName: true,
         gstin: true,
-        walletBalance: true,
-        deskCreditsBalance: true,
-        meetingCreditsBalance: true,
         role: true,
       },
     });
@@ -247,8 +254,8 @@ export class AuthService {
 
   // --- ADMIN USER MANAGEMENT METHODS ---
 
-  async getAdminUsers(params: { search?: string; role?: string }) {
-    const { search, role } = params;
+  async getAdminUsers(params: { search?: string; role?: string; page?: number; limit?: number }) {
+    const { search, role, page = 1, limit = 50 } = params;
 
     const where: any = {};
 
@@ -267,56 +274,44 @@ export class AuthService {
       ];
     }
 
-    const users = await this.prisma.user.findMany({
-      where,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        companyName: true,
-        gstin: true,
-        role: true,
-        walletBalance: true,
-        deskCreditsBalance: true,
-        meetingCreditsBalance: true,
-        avatarUrl: true,
-        bio: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const skip = (page - 1) * limit;
 
-    // Compute accurate booking counts by matching both userId & email
-    const usersWithAccurateCounts = await Promise.all(
-      users.map(async (u) => {
-        const deskBookingsCount = await this.prisma.booking.count({
-          where: {
-            OR: [{ userId: u.id }, { customerEmail: u.email }],
+    // Use _count aggregation to avoid N+1 queries for booking counts
+    const [users, totalCount] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          companyName: true,
+          gstin: true,
+          role: true,
+          walletBalance: true,
+          deskCreditsBalance: true,
+          meetingCreditsBalance: true,
+          avatarUrl: true,
+          bio: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              bookings: true,
+              meetingBookings: true,
+            },
           },
-        });
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
 
-        const meetingBookingsCount = await this.prisma.meetingBooking.count({
-          where: {
-            OR: [{ userId: u.id }, { customerEmail: u.email }],
-          },
-        });
-
-        return {
-          ...u,
-          walletBalance: Number(u.walletBalance),
-          deskCreditsBalance: Number((u as any).deskCreditsBalance || 0),
-          meetingCreditsBalance: Number((u as any).meetingCreditsBalance || 0),
-          deskBookingsCount,
-          meetingBookingsCount,
-          totalBookings: deskBookingsCount + meetingBookingsCount,
-        };
-      })
-    );
-
-    // Attach membership summary (latest confirmed & paid membership inquiry) for each user
+    // Attach membership summary for each user
     const usersWithMembership = await Promise.all(
-      usersWithAccurateCounts.map(async (u) => {
+      users.map(async (u) => {
         const membershipBooking = await this.prisma.booking.findFirst({
           where: {
             bookingType: BookingType.membership_inquiry,
@@ -329,7 +324,18 @@ export class AuthService {
         });
 
         if (!membershipBooking) {
-          return { ...u, membershipActive: false, membershipExpiresAt: null, membershipPlanName: null };
+          return {
+            ...u,
+            walletBalance: Number(u.walletBalance),
+            deskCreditsBalance: Number((u as any).deskCreditsBalance || 0),
+            meetingCreditsBalance: Number((u as any).meetingCreditsBalance || 0),
+            deskBookingsCount: u._count.bookings,
+            meetingBookingsCount: u._count.meetingBookings,
+            totalBookings: u._count.bookings + u._count.meetingBookings,
+            membershipActive: false,
+            membershipExpiresAt: null,
+            membershipPlanName: null,
+          };
         }
 
         const expiresAt = this.getMembershipEndDate(membershipBooking as any);
@@ -337,11 +343,17 @@ export class AuthService {
 
         return {
           ...u,
+          walletBalance: Number(u.walletBalance),
+          deskCreditsBalance: Number((u as any).deskCreditsBalance || 0),
+          meetingCreditsBalance: Number((u as any).meetingCreditsBalance || 0),
+          deskBookingsCount: u._count.bookings,
+          meetingBookingsCount: u._count.meetingBookings,
+          totalBookings: u._count.bookings + u._count.meetingBookings,
           membershipActive: isActive,
           membershipExpiresAt: expiresAt,
           membershipPlanName: membershipBooking.pricingPlan?.name || null,
         };
-      })
+      }),
     );
 
     // Aggregate summary stats
@@ -355,6 +367,8 @@ export class AuthService {
 
     const totalWalletBalance = Number(walletSumAggregate._sum.walletBalance || 0);
 
+    const totalPages = Math.ceil(totalCount / limit);
+
     return {
       success: true,
       stats: {
@@ -364,6 +378,14 @@ export class AuthService {
         totalWalletBalance,
       },
       users: usersWithMembership,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
     };
   }
 
@@ -468,47 +490,68 @@ export class AuthService {
   }
 
   async adjustUserWallet(userId: number, data: { amount: number; type: 'credit' | 'debit'; reason: string }) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('User not found');
+    // Input validation
+    if (!data.amount || data.amount <= 0) {
+      throw new BadRequestException('Adjustment amount must be greater than zero');
     }
 
-    const currentBalance = Number(user.walletBalance || 0);
-    const adjustAmount = Math.abs(Number(data.amount));
+    if (!data.reason || data.reason.trim().length === 0) {
+      throw new BadRequestException('A reason for the adjustment is required');
+    }
 
-    let newBalance = currentBalance;
-    if (data.type === 'credit') {
-      newBalance = Number((currentBalance + adjustAmount).toFixed(2));
-    } else {
-      if (currentBalance < adjustAmount) {
-        throw new BadRequestException(`Insufficient user wallet balance to debit ₹${adjustAmount}. Current: ₹${currentBalance}`);
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('User not found');
       }
-      newBalance = Number((currentBalance - adjustAmount).toFixed(2));
-    }
 
-    const updatedUser = await this.prisma.user.update({
-      where: { id: userId },
-      data: { walletBalance: newBalance },
+      const currentBalance = Number(user.walletBalance || 0);
+      const adjustAmount = Math.abs(Number(data.amount));
+
+      let newBalance = currentBalance;
+      if (data.type === 'credit') {
+        newBalance = Number((currentBalance + adjustAmount).toFixed(2));
+      } else {
+        if (currentBalance < adjustAmount) {
+          throw new BadRequestException(
+            `Insufficient wallet balance to debit ₹${adjustAmount}. Current: ₹${currentBalance}`,
+          );
+        }
+        newBalance = Number((currentBalance - adjustAmount).toFixed(2));
+      }
+
+      // Optimistic lock: only update if balance unchanged (prevents race conditions)
+      const updateResult = await tx.user.update({
+        where: {
+          id: userId,
+          walletBalance: currentBalance,
+        },
+        data: { walletBalance: newBalance },
+      });
+
+      if (!updateResult) {
+        throw new ConflictException('Wallet balance was modified during processing. Please retry.');
+      }
+
+      // Create Wallet Transaction Log
+      const transaction = await tx.walletTransaction.create({
+        data: {
+          userId,
+          type: data.type === 'credit' ? 'admin_credit' : 'admin_debit',
+          amount: adjustAmount,
+          balanceAfter: newBalance,
+          description: data.reason || `Admin Manual Wallet ${data.type === 'credit' ? 'Credit' : 'Debit'}`,
+          referenceId: `ADM-ADJ-${Date.now()}`,
+        },
+      });
+
+      return {
+        success: true,
+        message: `Successfully ${data.type === 'credit' ? 'credited' : 'debited'} ₹${adjustAmount} to ${user.name}'s wallet.`,
+        walletBalance: newBalance,
+        transaction,
+      };
     });
-
-    // Create Wallet Transaction Log
-    const transaction = await this.prisma.walletTransaction.create({
-      data: {
-        userId,
-        type: data.type === 'credit' ? 'admin_credit' : 'admin_debit',
-        amount: adjustAmount,
-        balanceAfter: newBalance,
-        description: data.reason || `Admin Manual Wallet ${data.type === 'credit' ? 'Credit' : 'Debit'}`,
-        referenceId: `ADM-ADJ-${Date.now()}`,
-      },
-    });
-
-    return {
-      success: true,
-      message: `Successfully ${data.type === 'credit' ? 'credited' : 'debited'} ₹${adjustAmount} to ${user.name}'s wallet.`,
-      walletBalance: newBalance,
-      transaction,
-    };
   }
 
   async updateUserRole(userId: number, role: string) {

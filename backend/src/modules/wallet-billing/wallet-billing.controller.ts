@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, ParseIntPipe, UseGuards, Request, Res } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, ParseIntPipe, UseGuards, Request, Res, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { WalletBillingService } from './wallet-billing.service';
 import { InvoiceService } from './invoice.service';
@@ -33,7 +33,10 @@ export class PublicInvoiceController {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const jwtToken = authHeader.split(' ')[1];
-        const secret = process.env.JWT_SECRET || 'cowork30_super_secret_jwt_key_2026';
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+          throw new UnauthorizedException('Server misconfiguration');
+        }
         const decoded: any = jwt.verify(jwtToken, secret);
         if (decoded && decoded.sub) {
           userId = Number(decoded.sub);

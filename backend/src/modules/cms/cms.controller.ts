@@ -101,6 +101,13 @@ export class CmsController {
     return this.cmsService.getGallery(category);
   }
 
+  @Post('contact')
+  @ApiOperation({ summary: 'Submit a contact form message (public)' })
+  @ApiConsumes('application/json')
+  async submitContact(@Body() body: { name: string; email: string; phone?: string; subject?: string; message: string }) {
+    return this.cmsService.submitContact(body);
+  }
+
   @Post('gallery')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')

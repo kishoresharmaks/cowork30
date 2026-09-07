@@ -30,6 +30,12 @@ export class BookingsController {
     return this.bookingsService.getAdminStats();
   }
 
+  @Get('public-stats')
+  @ApiOperation({ summary: 'Public: Fetch platform statistics for homepage display' })
+  async getPublicStats() {
+    return this.bookingsService.getPublicStats();
+  }
+
   @Get('meeting-rooms')
   @ApiOperation({ summary: 'Admin/Staff: List and search all meeting room reservations' })
   async findMeetingBookings(

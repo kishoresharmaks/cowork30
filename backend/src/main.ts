@@ -4,10 +4,32 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import * as helmet from 'helmet';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Security headers via Helmet
+  app.use(
+    helmet.default({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'", 'ws:', 'wss:'],
+          frameSrc: ["'none'"],
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+      },
+    }),
+  );
 
   // Serve uploaded images statically at http://localhost:4000/uploads/...
   app.useStaticAssets(join(process.cwd(), 'public', 'uploads'), {
@@ -19,16 +41,16 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       if (!origin) return callback(null, true);
-      if (
+      const isAllowed =
         (allowedFrontendUrl && origin === allowedFrontendUrl) ||
-        process.env.NODE_ENV !== 'production' ||
         origin.includes('localhost') ||
         origin.includes('127.0.0.1') ||
-        /^http:\/\/(192\.168|10|172)\.\d+\.\d+:\d+$/.test(origin)
-      ) {
+        /^http:\/\/(192\.168|10|172)\.\d+\.\d+:\d+$/.test(origin);
+      if (isAllowed) {
         return callback(null, true);
       }
-      callback(null, true);
+      // Explicitly deny unknown origins in production
+      return callback(new Error(`CORS: Origin ${origin} is not allowed`), false);
     },
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',

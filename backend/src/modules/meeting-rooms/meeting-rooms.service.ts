@@ -221,6 +221,20 @@ export class MeetingRoomsService {
   }
 
   async createBooking(dto: any) {
+    // Input validation and sanitization
+    if (!dto.customerName || !dto.customerEmail || !dto.customerPhone) {
+      throw new BadRequestException('Customer name, email, and phone are required');
+    }
+
+    const customerName = String(dto.customerName).trim().slice(0, 100);
+    const customerEmail = String(dto.customerEmail).trim().toLowerCase();
+    const customerPhone = String(dto.customerPhone).trim().slice(0, 20);
+    const companyName = dto.companyName ? String(dto.companyName).trim().slice(0, 100) : null;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail)) {
+      throw new BadRequestException('Invalid email format');
+    }
+
     let room = null;
     if (dto.roomSlug) {
       room = await this.prisma.meetingRoom.findUnique({ where: { slug: dto.roomSlug } });
@@ -232,11 +246,15 @@ export class MeetingRoomsService {
       throw new NotFoundException('Meeting room not found');
     }
 
+    if (!room.isActive) {
+      throw new BadRequestException('This meeting room is not available for booking');
+    }
+
     const branch = await this.prisma.branch.findFirst();
     const branchId = room.branchId || (branch ? branch.id : 1);
 
-    const bookingCode = `MR-${Date.now().toString(36).toUpperCase()}`;
-    const qrAccessCode = `QR-MR-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+    const bookingCode = `MR-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    const qrAccessCode = `QR-MR-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
     const viewToken = crypto.randomBytes(16).toString('hex');
 
     const totalSlotsCount = Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0 ? dto.selectedSlots.length : 1;
@@ -271,9 +289,9 @@ export class MeetingRoomsService {
     const calculatedTaxAmount = Number((subtotal * taxRate).toFixed(2));
     const calculatedGrandTotal = Number((subtotal + calculatedTaxAmount).toFixed(2));
 
-    // Align with pre-calculated grandTotal from payload if available
-    const finalTotalAmount = dto.totalAmount ? Number(Number(dto.totalAmount).toFixed(2)) : calculatedGrandTotal;
-    const finalTaxAmount = dto.totalAmount ? Number((finalTotalAmount - finalTotalAmount / (1 + taxRate)).toFixed(2)) : calculatedTaxAmount;
+    // SECURITY: Always use server-calculated totalAmount. Never trust client-supplied price.
+    const finalTotalAmount = calculatedGrandTotal;
+    const finalTaxAmount = calculatedTaxAmount;
 
     let startTime = new Date();
     let endTime = new Date(Date.now() + 1800000); // Default 30 min
@@ -332,41 +350,42 @@ export class MeetingRoomsService {
       }
     }
 
-    // STRICT OVERLAP & DOUBLE-BOOKING GUARD
-    const doubleBooking = await this.prisma.meetingBooking.findFirst({
-      where: {
-        meetingRoomId: room.id,
-        status: { in: [BookingStatus.pending, BookingStatus.confirmed] },
-        AND: [
-          { startTime: { lt: endTime } },
-          { endTime: { gt: startTime } },
-        ],
-      },
-      include: { meetingRoom: true },
-    });
-
-    if (doubleBooking) {
-      throw new ConflictException(
-        `Time Slot Conflict: ${room.name} is already reserved for the selected time slot (Booking Ref: #${doubleBooking.bookingCode}). Please select another time slot.`
-      );
-    }
-
-    let payMethodEnum: PaymentMethod = PaymentMethod.razorpay;
-    if (dto.paymentMethod === 'wallet') {
-      payMethodEnum = PaymentMethod.wallet;
-    } else if (dto.paymentMethod === 'credits') {
-      payMethodEnum = PaymentMethod.credits;
-    } else if (dto.paymentMethod === 'cash' || dto.paymentMethod === 'reception') {
-      payMethodEnum = PaymentMethod.cash;
-    } else {
-      payMethodEnum = PaymentMethod.razorpay;
-    }
-
-    const useCredits = dto.paymentMethod === 'credits';
-    const useWallet = dto.paymentMethod === 'wallet';
-    const creditsNeeded = totalHours; // 0.5 for 30m, 1.0 for 1 hr, etc.
-
+    // Double-booking guard is now inside the $transaction to prevent race conditions
     const booking = await this.prisma.$transaction(async (tx) => {
+      // STRICT OVERLAP & DOUBLE-BOOKING GUARD (inside transaction)
+      const doubleBooking = await tx.meetingBooking.findFirst({
+        where: {
+          meetingRoomId: room.id,
+          status: { in: [BookingStatus.pending, BookingStatus.confirmed] },
+          AND: [
+            { startTime: { lt: endTime } },
+            { endTime: { gt: startTime } },
+          ],
+        },
+        include: { meetingRoom: true },
+      });
+
+      if (doubleBooking) {
+        throw new ConflictException(
+          `Time Slot Conflict: ${room.name} is already reserved for the selected time slot (Booking Ref: #${doubleBooking.bookingCode}). Please select another time slot.`
+        );
+      }
+
+      let payMethodEnum: PaymentMethod = PaymentMethod.razorpay;
+      if (dto.paymentMethod === 'wallet') {
+        payMethodEnum = PaymentMethod.wallet;
+      } else if (dto.paymentMethod === 'credits') {
+        payMethodEnum = PaymentMethod.credits;
+      } else if (dto.paymentMethod === 'cash' || dto.paymentMethod === 'reception') {
+        payMethodEnum = PaymentMethod.cash;
+      } else {
+        payMethodEnum = PaymentMethod.razorpay;
+      }
+
+      const useCredits = dto.paymentMethod === 'credits';
+      const useWallet = dto.paymentMethod === 'wallet';
+      const creditsNeeded = totalHours; // 0.5 for 30m, 1.0 for 1 hr, etc.
+
       let memberBalanceAfter: number | null = null;
 
       if (useCredits || useWallet) {

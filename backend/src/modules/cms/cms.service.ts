@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { ContactStatus } from '@prisma/client';
 
 const DEFAULT_TOPUP_PACKAGES = [
   { id: '1', amount: 1000, bonus: 0, title: 'Starter Credit Pack', badge: 'Basic', isPopular: false },
@@ -174,6 +175,38 @@ export class CmsService {
     return {
       success: true,
       message: 'Photo deleted from gallery',
+    };
+  }
+
+  async submitContact(data: { name: string; email: string; phone?: string; subject?: string; message: string }) {
+    if (!data.name || !data.email || !data.message) {
+      throw new BadRequestException('Name, email, and message are required fields.');
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.email)) {
+      throw new BadRequestException('Please provide a valid email address.');
+    }
+
+    if (data.message.length > 5000) {
+      throw new BadRequestException('Message must be under 5000 characters.');
+    }
+
+    const contact = await this.prisma.contact.create({
+      data: {
+        name: String(data.name).trim().slice(0, 100),
+        email: String(data.email).trim().toLowerCase().slice(0, 100),
+        phone: data.phone ? String(data.phone).trim().slice(0, 20) : null,
+        subject: data.subject ? String(data.subject).trim().slice(0, 200) : null,
+        message: String(data.message).trim().slice(0, 5000),
+        status: ContactStatus.unread,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Your message has been received. We will get back to you within 24 hours.',
+      contactId: contact.id,
     };
   }
 }

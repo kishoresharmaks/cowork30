@@ -31,7 +31,11 @@ export class MeetingRoomsController {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const jwtToken = authHeader.split(' ')[1];
-        const secret = process.env.JWT_SECRET || 'cowork30_super_secret_jwt_key_2026';
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+          // No secret configured - proceed as unauthenticated
+          return this.meetingRoomsService.getReceiptByToken(token, null);
+        }
         const decoded: any = jwt.verify(jwtToken, secret);
         if (decoded) {
           requestingUser = { id: decoded.sub, email: decoded.email, role: decoded.role };

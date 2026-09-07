@@ -1,8 +1,8 @@
-import { Injectable, Logger, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, Optional, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { RazorpayService } from './razorpay.service';
 import { InvoiceService } from './invoice.service';
-import { PaymentMethod, PaymentStatus, BookingStatus } from '@prisma/client';
+import { PaymentMethod, PaymentStatus, BookingStatus, Prisma } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -295,6 +295,19 @@ export class WalletBillingService {
     const bonus = Number(params.bonus || 0);
     const totalCredit = amount + bonus;
 
+    // Check for duplicate payment using transaction-level row lock to prevent race conditions
+    const existingPayment = await this.prisma.$queryRaw`
+      SELECT id FROM payments
+      WHERE razorpay_payment_id = ${razorpayPaymentId}
+      AND status = 'paid'
+      FOR UPDATE
+      LIMIT 1
+    `;
+
+    if (existingPayment && Array.isArray(existingPayment) && existingPayment.length > 0) {
+      throw new ConflictException(`Payment ${razorpayPaymentId} has already been processed`);
+    }
+
     const isValid = this.razorpayService.verifyPaymentSignature({
       razorpayOrderId,
       razorpayPaymentId,
@@ -305,57 +318,78 @@ export class WalletBillingService {
       throw new BadRequestException('Invalid Razorpay payment signature verification failed');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+    // Use transaction with row-level locking to prevent race conditions on wallet balance
+    const result = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true, email: true, walletBalance: true, gstin: true, companyName: true }
+      });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
 
-    const previousBalance = Number(user.walletBalance || 0);
-    const newBalance = Number((previousBalance + totalCredit).toFixed(2));
+      const previousBalance = Number(user.walletBalance || 0);
+      const newBalance = Number((previousBalance + totalCredit).toFixed(2));
 
-    // Update wallet balance
-    const updatedUser = await this.prisma.user.update({
-      where: { id: userId },
-      data: { walletBalance: newBalance },
-    });
+      // Lock the user row and update with CAS-like pattern
+      const updateResult = await tx.user.update({
+        where: {
+          id: userId,
+          walletBalance: previousBalance,  // Optimistic lock: only update if balance unchanged
+        },
+        data: { walletBalance: newBalance },
+        select: { id: true, walletBalance: true },
+      });
 
-    // Create Wallet Transaction Log
-    const transaction = await this.prisma.walletTransaction.create({
-      data: {
+      if (!updateResult) {
+        throw new ConflictException('Wallet balance was modified during processing. Please retry.');
+      }
+
+      // Create Wallet Transaction Log
+      const transaction = await tx.walletTransaction.create({
+        data: {
+          userId,
+          type: 'credit_topup',
+          amount: totalCredit,
+          balanceAfter: newBalance,
+          description: `Online Razorpay Wallet Top-Up (Paid ₹${amount.toLocaleString()}${bonus > 0 ? ` + ₹${bonus.toLocaleString()} Bonus` : ''} - #${razorpayPaymentId})`,
+          referenceId: razorpayPaymentId,
+        },
+      });
+
+      // Create Payment Record
+      const payment = await tx.payment.create({
+        data: {
+          userId,
+          razorpayOrderId,
+          razorpayPaymentId,
+          razorpaySignature,
+          amount,
+          taxAmount: 0,
+          paymentMethod: PaymentMethod.razorpay,
+          status: PaymentStatus.paid,
+          rawResponse: { razorpayOrderId, razorpayPaymentId, timestamp: new Date().toISOString() },
+        },
+      });
+
+      // Generate Invoice
+      const invoice = await this.invoiceService.generateInvoice({
+        paymentId: payment.id,
         userId,
-        type: 'credit_topup',
-        amount: totalCredit,
-        balanceAfter: newBalance,
-        description: `Online Razorpay Wallet Top-Up (Paid ₹${amount.toLocaleString()}${bonus > 0 ? ` + ₹${bonus.toLocaleString()} Bonus` : ''} - #${razorpayPaymentId})`,
-        referenceId: razorpayPaymentId,
-      },
-    });
-
-    // Create Payment Record (Wallet Topups have 0% Tax)
-    const payment = await this.prisma.payment.create({
-      data: {
-        userId,
-        razorpayOrderId,
-        razorpayPaymentId,
-        razorpaySignature,
-        amount,
+        customerName: user.name,
+        customerGstin: user.gstin || undefined,
+        companyName: user.companyName || undefined,
+        subtotal: amount,
         taxAmount: 0,
-        paymentMethod: PaymentMethod.razorpay,
-        status: PaymentStatus.paid,
-        rawResponse: { razorpayOrderId, razorpayPaymentId, timestamp: new Date().toISOString() },
-      },
-    });
+        isTaxable: false,
+      });
 
-    // Generate Invoice (0% tax for wallet topup)
-    const invoice = await this.invoiceService.generateInvoice({
-      paymentId: payment.id,
-      userId,
-      customerName: user.name,
-      customerGstin: user.gstin || undefined,
-      companyName: user.companyName || undefined,
-      subtotal: amount,
-      taxAmount: 0,
-      isTaxable: false,
+      return {
+        user: { ...user, walletBalance: newBalance },
+        transaction,
+        payment,
+        invoice,
+      };
     });
 
     if (this.notificationsService) {
@@ -371,10 +405,10 @@ export class WalletBillingService {
     return {
       success: true,
       message: `Razorpay Online Payment verified! ₹${totalCredit} credited to wallet.`,
-      walletBalance: newBalance,
-      transaction,
-      payment,
-      invoice,
+      walletBalance: result.user.walletBalance,
+      transaction: result.transaction,
+      payment: result.payment,
+      invoice: result.invoice,
     };
   }
 
@@ -390,43 +424,119 @@ export class WalletBillingService {
   }) {
     const { userId, amount, bookingType, bookingId, paymentMethod = 'wallet', creditType, creditsAmount } = params;
 
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    if (paymentMethod === 'credits') {
-      const field = creditType === 'meeting' ? 'meetingCreditsBalance' : 'deskCreditsBalance';
-      const currentCredits = Number((user as any)[field] || 0);
-      const reqCredits = creditsAmount || 1;
-
-      if (currentCredits < reqCredits) {
-        throw new BadRequestException(`Insufficient ${creditType || 'desk'} credits. Available: ${currentCredits}, required: ${reqCredits}`);
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true, email: true, walletBalance: true, deskCreditsBalance: true, meetingCreditsBalance: true }
+      });
+      if (!user) {
+        throw new NotFoundException('User not found');
       }
 
-      const newCreditBal = Number((currentCredits - reqCredits).toFixed(2));
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { [field]: newCreditBal } as any,
+      if (paymentMethod === 'credits') {
+        const field = creditType === 'meeting' ? 'meetingCreditsBalance' : 'deskCreditsBalance';
+        const currentCredits = Number((user as any)[field] || 0);
+        const reqCredits = creditsAmount || 1;
+
+        if (currentCredits < reqCredits) {
+          throw new BadRequestException(`Insufficient ${creditType || 'desk'} credits. Available: ${currentCredits}, required: ${reqCredits}`);
+        }
+
+        const newCreditBal = Number((currentCredits - reqCredits).toFixed(2));
+        const updateResult = await tx.user.update({
+          where: {
+            id: userId,
+            [field]: currentCredits,  // Optimistic lock: only update if balance unchanged
+          },
+          data: { [field]: newCreditBal } as any,
+        });
+
+        if (!updateResult) {
+          throw new ConflictException('Credit balance was modified during processing. Please retry.');
+        }
+
+        const transaction = await tx.walletTransaction.create({
+          data: {
+            userId,
+            type: 'debit_booking',
+            amount: 0,
+            balanceAfter: Number(user.walletBalance || 0),
+            description: params.description || `Redeemed ${reqCredits} ${creditType || 'desk'} credit(s) for ${bookingType} reservation #${bookingId}`,
+            referenceId: `REF-${bookingType.toUpperCase()}-${bookingId}`,
+          },
+        });
+
+        const payment = await tx.payment.create({
+          data: {
+            userId,
+            amount: 0,
+            taxAmount: 0,
+            paymentMethod: PaymentMethod.credits,
+            status: PaymentStatus.paid,
+            ...(bookingType === 'meeting' ? { meetingBookingId: bookingId } : { bookingId }),
+          },
+        });
+
+        return {
+          success: true,
+          walletBalance: Number(user.walletBalance || 0),
+          deskCreditsBalance: creditType === 'desk' ? newCreditBal : Number((user as any).deskCreditsBalance || 0),
+          meetingCreditsBalance: creditType === 'meeting' ? newCreditBal : Number((user as any).meetingCreditsBalance || 0),
+          transaction,
+          payment,
+        };
+      }
+
+      const currentBalance = Number(user.walletBalance || 0);
+      if (currentBalance < amount) {
+        throw new BadRequestException(`Insufficient wallet balance. Available: ₹${currentBalance}, required: ₹${amount}`);
+      }
+
+      const newBalance = Number((currentBalance - amount).toFixed(2));
+
+      // Optimistic lock: only update if balance unchanged since read
+      const updateResult = await tx.user.update({
+        where: {
+          id: userId,
+          walletBalance: currentBalance,
+        },
+        data: { walletBalance: newBalance },
       });
 
-      const transaction = await this.prisma.walletTransaction.create({
+      if (!updateResult) {
+        throw new ConflictException('Wallet balance was modified during processing. Please retry.');
+      }
+
+      const transaction = await tx.walletTransaction.create({
         data: {
           userId,
           type: 'debit_booking',
-          amount: 0,
-          balanceAfter: Number(user.walletBalance || 0),
-          description: params.description || `Redeemed ${reqCredits} ${creditType || 'desk'} credit(s) for ${bookingType} reservation #${bookingId}`,
+          amount: amount,
+          balanceAfter: newBalance,
+          description: params.description || `Wallet Debit for ${bookingType} reservation #${bookingId}`,
           referenceId: `REF-${bookingType.toUpperCase()}-${bookingId}`,
         },
       });
 
-      const payment = await this.prisma.payment.create({
+      const taxRate = await this.getTaxRate();
+      if (bookingType === 'desk') {
+        await tx.booking.update({
+          where: { id: bookingId },
+          data: { status: BookingStatus.confirmed, paymentStatus: PaymentStatus.paid },
+        });
+      } else {
+        await tx.meetingBooking.update({
+          where: { id: bookingId },
+          data: { status: BookingStatus.confirmed, paymentStatus: PaymentStatus.paid },
+        });
+      }
+
+      const payment = await tx.payment.create({
         data: {
           userId,
-          amount: 0,
-          taxAmount: 0,
-          paymentMethod: PaymentMethod.credits,
+          amount,
+          taxAmount: Number((amount * taxRate).toFixed(2)),
+          paymentMethod: PaymentMethod.wallet,
           status: PaymentStatus.paid,
           ...(bookingType === 'meeting' ? { meetingBookingId: bookingId } : { bookingId }),
         },
@@ -434,69 +544,13 @@ export class WalletBillingService {
 
       return {
         success: true,
-        walletBalance: Number(user.walletBalance || 0),
-        deskCreditsBalance: creditType === 'desk' ? newCreditBal : Number((user as any).deskCreditsBalance || 0),
-        meetingCreditsBalance: creditType === 'meeting' ? newCreditBal : Number((user as any).meetingCreditsBalance || 0),
+        walletBalance: newBalance,
+        deskCreditsBalance: Number((user as any).deskCreditsBalance || 0),
+        meetingCreditsBalance: Number((user as any).meetingCreditsBalance || 0),
         transaction,
         payment,
       };
-    }
-
-    const currentBalance = Number(user.walletBalance || 0);
-    if (currentBalance < amount) {
-      throw new BadRequestException(`Insufficient wallet balance. Available: ₹${currentBalance}, required: ₹${amount}`);
-    }
-
-    const newBalance = Number((currentBalance - amount).toFixed(2));
-
-    const updatedUser = await this.prisma.user.update({
-      where: { id: userId },
-      data: { walletBalance: newBalance },
     });
-
-    const transaction = await this.prisma.walletTransaction.create({
-      data: {
-        userId,
-        type: 'debit_booking',
-        amount: amount,
-        balanceAfter: newBalance,
-        description: params.description || `Wallet Debit for ${bookingType} reservation #${bookingId}`,
-        referenceId: `REF-${bookingType.toUpperCase()}-${bookingId}`,
-      },
-    });
-
-    const taxRate = await this.getTaxRate();
-    if (bookingType === 'desk') {
-      await this.prisma.booking.update({
-        where: { id: bookingId },
-        data: { status: BookingStatus.confirmed, paymentStatus: PaymentStatus.paid },
-      });
-    } else {
-      await this.prisma.meetingBooking.update({
-        where: { id: bookingId },
-        data: { status: BookingStatus.confirmed, paymentStatus: PaymentStatus.paid },
-      });
-    }
-
-    const payment = await this.prisma.payment.create({
-      data: {
-        userId,
-        amount,
-        taxAmount: Number((amount * taxRate).toFixed(2)),
-        paymentMethod: PaymentMethod.wallet,
-        status: PaymentStatus.paid,
-        ...(bookingType === 'meeting' ? { meetingBookingId: bookingId } : { bookingId }),
-      },
-    });
-
-    return {
-      success: true,
-      walletBalance: Number(updatedUser.walletBalance || 0),
-      deskCreditsBalance: Number((updatedUser as any).deskCreditsBalance || 0),
-      meetingCreditsBalance: Number((updatedUser as any).meetingCreditsBalance || 0),
-      transaction,
-      payment,
-    };
   }
 
   async getUserTransactions(userId: number) {

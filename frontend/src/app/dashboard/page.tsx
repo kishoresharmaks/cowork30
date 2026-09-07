@@ -395,6 +395,23 @@ function MemberDashboardContent() {
         const loaded = await loadRazorpayScript();
         if (loaded) {
           try {
+            const wrappedHandler = async (response: any) => {
+              try {
+                await handleVerifyPayment({
+                  amount,
+                  bonus,
+                  razorpayOrderId: response.razorpay_order_id,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpaySignature: response.razorpay_signature,
+                });
+              } catch (vErr: any) {
+                console.error('Razorpay payment verification failed:', vErr);
+                alert(vErr.response?.data?.message || 'Payment verification failed');
+              } finally {
+                setToppingUp(false);
+              }
+            };
+
             const options = {
               key: keyId,
               amount: amountInPaise,
@@ -403,15 +420,7 @@ function MemberDashboardContent() {
               description: `Wallet Credit Recharge (₹${amount}${bonus > 0 ? ` + ₹${bonus} Bonus` : ''})`,
               image: '/Logo.png',
               order_id: orderId,
-              handler: async function (response: any) {
-                await handleVerifyPayment({
-                  amount,
-                  bonus,
-                  razorpayOrderId: response.razorpay_order_id,
-                  razorpayPaymentId: response.razorpay_payment_id,
-                  razorpaySignature: response.razorpay_signature || 'sig_demo_passed',
-                });
-              },
+              handler: wrappedHandler,
               prefill: {
                 name: user?.name || '',
                 email: user?.email || '',
@@ -460,8 +469,6 @@ function MemberDashboardContent() {
         paymentMethod: 'wallet',
         description: `Solution Inquiry Payment for ${inquiry.bookingCode}`,
       });
-
-      alert('Payment successful! Membership confirmed and GST Tax Invoice generated.');
       loadMyBookings();
       loadWalletLogs();
       if (refreshProfile) refreshProfile();
@@ -471,32 +478,33 @@ function MemberDashboardContent() {
   };
 
   const handleExportCsv = () => {
+    const escapeCsv = (val: string) => String(val || '').replace(/"/g, '""');
     const rows = [
       ['Booking Code', 'Type', 'Title / Room', 'Date', 'Time Slot', 'Amount', 'Status'],
       ...myDeskBookings.map((b) => [
-        b.bookingCode || `DESK-${b.id}`,
+        escapeCsv(b.bookingCode || `DESK-${b.id}`),
         'Desk Pass',
-        b.notes || 'Day Pass Flex Desk',
-        b.preferredDate || 'N/A',
-        b.preferredTimeSlot || '10:00 AM - 06:00 PM',
-        `₹${b.totalAmount || 0}`,
-        b.status,
+        escapeCsv(b.notes || 'Day Pass Flex Desk'),
+        escapeCsv(b.preferredDate || 'N/A'),
+        escapeCsv(b.preferredTimeSlot || '10:00 AM - 06:00 PM'),
+        escapeCsv(`₹${b.totalAmount || 0}`),
+        escapeCsv(b.status),
       ]),
       ...myMeetingBookings.map((mb) => [
-        mb.bookingCode || `MEET-${mb.id}`,
+        escapeCsv(mb.bookingCode || `MEET-${mb.id}`),
         'Meeting Suite',
-        mb.meetingRoom?.name || 'Conference Suite',
-        mb.bookingDate || 'N/A',
-        formatMeetingTimeSlot(mb.startTime, mb.endTime).timeStr,
-        `₹${mb.totalAmount || 0}`,
-        mb.status,
+        escapeCsv(mb.meetingRoom?.name || 'Conference Suite'),
+        escapeCsv(mb.bookingDate || 'N/A'),
+        escapeCsv(formatMeetingTimeSlot(mb.startTime, mb.endTime).timeStr),
+        escapeCsv(`₹${mb.totalAmount || 0}`),
+        escapeCsv(mb.status),
       ]),
     ];
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + rows.map((e) => e.join(',')).join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = 'data:text/csv;charset=utf-8,﻿' + rows.map((e) => e.map((cell) => `"${cell}"`).join(',')).join('\n');
+    const encodedUri = encodeURIComponent(csvContent);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.setAttribute('href', `data:text/csv;charset=utf-8,${encodedUri}`);
     link.setAttribute('download', `my_reservations_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
@@ -1983,8 +1991,8 @@ function MemberDashboardContent() {
             amount: razorpayModalData.amount,
             bonus: razorpayModalData.bonus || 0,
             razorpayOrderId: razorpayModalData.orderId,
-            razorpayPaymentId: 'pay_demo_sandbox_pass',
-            razorpaySignature: 'sig_demo_sandbox_pass',
+            razorpayPaymentId: `pay_demo_${Date.now()}`,
+            razorpaySignature: `sig_demo_${Date.now()}`,
           })
         }
         onClose={() => setRazorpayModalData({ isOpen: false, amount: 0, bonus: 0, orderId: '' })}

@@ -120,11 +120,21 @@ export class BookingsService {
         data: { status: BookingStatus.not_checked_in },
       });
     }
+
+    return {
+      success: true,
+      processed: {
+        meetingsCompleted: meetingIdsToComplete.length,
+        meetingsNotCheckedIn: meetingIdsNotCheckedIn.length,
+        deskCompleted: deskIdsToComplete.length,
+        deskNotCheckedIn: deskIdsNotCheckedIn.length,
+      },
+      timestamp: now.toISOString(),
+    };
+  }
   }
 
   async findAll(query: { status?: BookingStatus; search?: string; type?: string }) {
-    await this.autoCompleteExpiredBookings();
-
     const where: any = {
       NOT: [
         { bookingCode: { startsWith: 'SRV-' } },
@@ -169,8 +179,6 @@ export class BookingsService {
   }
 
   async findMeetingBookings(query: { status?: BookingStatus; search?: string }) {
-    await this.autoCompleteExpiredBookings();
-
     const where: any = {};
 
     if (query.status) {
@@ -319,11 +327,15 @@ export class BookingsService {
     const rows = bookings
       .map(
         (b) =>
-          `"${b.bookingCode}","${b.customerName}","${b.customerEmail}","${b.customerPhone || ''}","${b.pricingPlan?.name || 'Pass'}","${b.preferredDate.toISOString().split('T')[0]}","${b.preferredTimeSlot || ''}","${b.bookingType}","${b.status}","${b.createdAt.toISOString()}"`,
+          `"${this.escapeCsv(b.bookingCode)}","${this.escapeCsv(b.customerName)}","${this.escapeCsv(b.customerEmail)}","${this.escapeCsv(b.customerPhone || '')}","${this.escapeCsv(b.pricingPlan?.name || 'Pass')}","${b.preferredDate.toISOString().split('T')[0]}","${this.escapeCsv(b.preferredTimeSlot || '')}","${b.bookingType}","${b.status}","${b.createdAt.toISOString()}"`,
       )
       .join('\n');
 
     return header + rows;
+  }
+
+  private escapeCsv(value: string): string {
+    return String(value).replace(/"/g, '""');
   }
 
   async getAdminStats() {
@@ -391,6 +403,30 @@ export class BookingsService {
     };
   }
 
+  async getPublicStats() {
+    const availableDesks = await this.prisma.desk.count({
+      where: { status: 'available' },
+    });
+
+    const meetingRooms = await this.prisma.meetingRoom.count({
+      where: { isActive: true },
+    });
+
+    const totalMembers = await this.prisma.user.count({
+      where: { role: 'member' },
+    });
+
+    return {
+      success: true,
+      stats: {
+        availableDesks,
+        meetingRooms,
+        totalMembers,
+        satisfactionRate: 99.9,
+      },
+    };
+  }
+
   async exportCsv() {
     const bookings = await this.prisma.booking.findMany({
       include: { pricingPlan: true, branch: true },
@@ -408,26 +444,63 @@ export class BookingsService {
     return header + rows;
   }
 
+  private generateUniqueBookingCode(prefix: string): string {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = require('crypto').randomBytes(3).toString('hex').toUpperCase();
+    return `${prefix}-${timestamp}-${random}`;
+  }
+
   async createAdminBooking(data: any) {
-    const bookingCode = `BK-${Date.now().toString(36).toUpperCase()}`;
+    const bookingCode = this.generateUniqueBookingCode('BK');
+
+    // Input validation and sanitization
+    const customerName = String(data.customerName || '').trim();
+    const customerEmail = String(data.customerEmail || '').trim().toLowerCase();
+    const customerPhone = data.customerPhone ? String(data.customerPhone).trim() : null;
+    const companyName = data.companyName ? String(data.companyName).trim() : null;
+    const gstin = data.gstin ? String(data.gstin).trim() : null;
+    const preferredDate = data.preferredDate ? new Date(data.preferredDate) : new Date();
+    const totalAmount = Number(data.totalAmount || 150);
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail)) {
+      throw new BadRequestException('Invalid email format');
+    }
+
+    // Validate amount
+    if (isNaN(totalAmount) || totalAmount < 0) {
+      throw new BadRequestException('Total amount must be a positive number');
+    }
+
+    // Validate date
+    if (isNaN(preferredDate.getTime())) {
+      throw new BadRequestException('Invalid preferred date');
+    }
+
     const isPaid = data.paymentStatus === PaymentStatus.paid || data.paymentMethod === 'wallet' || data.paymentMethod === 'credits' || data.isPaid;
 
     const payload: any = {
       bookingCode,
-      branchId: data.branchId || 1,
-      customerName: data.customerName,
-      customerEmail: data.customerEmail,
-      customerPhone: data.customerPhone,
-      companyName: data.companyName,
-      preferredDate: new Date(data.preferredDate || Date.now()),
-      preferredTimeSlot: data.preferredTimeSlot || '10:00 AM',
+      branchId: Number(data.branchId) || 1,
+      customerName,
+      customerEmail,
+      customerPhone,
+      companyName,
+      gstin,
+      preferredDate,
+      preferredTimeSlot: String(data.preferredTimeSlot || '10:00 AM').trim().slice(0, 50),
       status: isPaid ? BookingStatus.pending : BookingStatus.unpaid,
       paymentStatus: isPaid ? PaymentStatus.paid : PaymentStatus.unpaid,
-      totalAmount: Number(data.totalAmount || 150),
+      totalAmount,
     };
 
     if (data.pricingPlanId) {
       payload.pricingPlanId = Number(data.pricingPlanId);
+    }
+
+    if (data.userId) {
+      payload.userId = Number(data.userId);
     }
 
     const booking = await this.prisma.booking.create({
@@ -461,11 +534,12 @@ export class BookingsService {
 
       let updated = meetingBooking;
       if (meetingBooking.status !== BookingStatus.completed) {
+        const isUnpaid = meetingBooking.paymentStatus === PaymentStatus.unpaid || meetingBooking.paymentStatus === PaymentStatus.pending;
         updated = await this.prisma.meetingBooking.update({
           where: { id: meetingBooking.id },
           data: {
             status: BookingStatus.confirmed,
-            paymentStatus: PaymentStatus.paid,
+            paymentStatus: isUnpaid ? meetingBooking.paymentStatus : PaymentStatus.paid,
           },
           include: { meetingRoom: true },
         });
@@ -493,11 +567,12 @@ export class BookingsService {
 
       let updated = regularBooking;
       if (regularBooking.status !== BookingStatus.completed) {
+        const isUnpaid = regularBooking.paymentStatus === PaymentStatus.unpaid || regularBooking.paymentStatus === PaymentStatus.pending;
         updated = await this.prisma.booking.update({
           where: { id: regularBooking.id },
           data: {
             status: BookingStatus.confirmed,
-            paymentStatus: PaymentStatus.paid,
+            paymentStatus: isUnpaid ? regularBooking.paymentStatus : PaymentStatus.paid,
           },
           include: { pricingPlan: true },
         });
