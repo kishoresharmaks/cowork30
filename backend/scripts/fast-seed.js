@@ -14,16 +14,24 @@ async function runFastSeed() {
     // 1. Seed Main Branch
     const branch = await prisma.branch.upsert({
       where: { slug: 'downtown-main-hub' },
-      update: {},
+      update: {
+        name: 'Ishwarji Cowork 30',
+        address: '201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala',
+        city: 'Mumbai',
+        state: 'MH',
+        zip: '400059',
+        phone: '7708888765 / 022-62396303 / 9820431183',
+        email: 'cowork307@gmail.com',
+      },
       create: {
-        name: 'Downtown Main Hub',
+        name: 'Ishwarji Cowork 30',
         slug: 'downtown-main-hub',
-        address: '100 Innovation Boulevard, Suite 500',
-        city: 'Tech City',
-        state: 'CA',
-        zip: '90001',
-        phone: '+1 (555) 300-2026',
-        email: 'downtown@cowork30.com',
+        address: '201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala',
+        city: 'Mumbai',
+        state: 'MH',
+        zip: '400059',
+        phone: '7708888765 / 022-62396303 / 9820431183',
+        email: 'cowork307@gmail.com',
         openingTime: '08:00 AM',
         closingTime: '08:00 PM',
         isActive: true,
@@ -35,13 +43,15 @@ async function runFastSeed() {
     const adminPasswordHash = await bcrypt.hash('admin123', 10);
     const admin = await prisma.user.upsert({
       where: { email: 'admin@cowork30.com' },
-      update: {},
+      update: {
+        phone: '+91 9820431183',
+      },
       create: {
         branchId: branch.id,
         name: 'System Admin',
         email: 'admin@cowork30.com',
         passwordHash: adminPasswordHash,
-        phone: '+1 (555) 000-1111',
+        phone: '+91 9820431183',
         role: 'admin',
         walletBalance: 1000.0,
       },

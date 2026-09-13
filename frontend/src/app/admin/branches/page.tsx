@@ -402,7 +402,7 @@ export default function AdminBranchesPage() {
                     type="text"
                     value={formData.name}
                     onChange={handleNameChange}
-                    placeholder="e.g. Downtown Main Hub"
+                    placeholder="e.g. Ishwarji Cowork 30"
                     required
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#0F172A] border border-[#334155] text-[#F8FAFC] focus:outline-none focus:border-[#6366F1]"
                   />
@@ -414,7 +414,7 @@ export default function AdminBranchesPage() {
                     type="text"
                     value={formData.slug}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    placeholder="e.g. downtown-main-hub"
+                    placeholder="e.g. ishwarji-cowork-30"
                     required
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#0F172A] border border-[#334155] text-[#F8FAFC] focus:outline-none focus:border-[#6366F1]"
                   />
@@ -427,7 +427,7 @@ export default function AdminBranchesPage() {
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="e.g. 100 Innovation Boulevard, Suite 500"
+                  placeholder="e.g. 201 2nd Floor ACME Plaza No 2 Opp. Sangam Cinema Andheri Kurla Road Chakala"
                   required
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#0F172A] border border-[#334155] text-[#F8FAFC] focus:outline-none focus:border-[#6366F1]"
                 />
@@ -440,7 +440,7 @@ export default function AdminBranchesPage() {
                     type="text"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="e.g. Tech City"
+                    placeholder="e.g. Mumbai"
                     required
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#0F172A] border border-[#334155] text-[#F8FAFC] focus:outline-none focus:border-[#6366F1]"
                   />
@@ -452,7 +452,7 @@ export default function AdminBranchesPage() {
                     type="text"
                     value={formData.state}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    placeholder="e.g. CA"
+                    placeholder="e.g. MH"
                     required
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#0F172A] border border-[#334155] text-[#F8FAFC] focus:outline-none focus:border-[#6366F1]"
                   />
@@ -464,7 +464,7 @@ export default function AdminBranchesPage() {
                     type="text"
                     value={formData.zip}
                     onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
-                    placeholder="e.g. 90001"
+                    placeholder="e.g. 400059"
                     required
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#0F172A] border border-[#334155] text-[#F8FAFC] focus:outline-none focus:border-[#6366F1]"
                   />
@@ -478,7 +478,7 @@ export default function AdminBranchesPage() {
                     type="text"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="e.g. +1 (555) 300-2026"
+                    placeholder="e.g. 7708888765 / 9820431183"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#0F172A] border border-[#334155] text-[#F8FAFC] focus:outline-none focus:border-[#6366F1]"
                   />
                 </div>
@@ -489,7 +489,7 @@ export default function AdminBranchesPage() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="e.g. downtown@cowork30.com"
+                    placeholder="e.g. cowork307@gmail.com"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#0F172A] border border-[#334155] text-[#F8FAFC] focus:outline-none focus:border-[#6366F1]"
                   />
                 </div>

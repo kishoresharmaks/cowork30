@@ -228,7 +228,7 @@ export default function ReceiptPage() {
               <h1 className="text-2xl font-black text-slate-900">{booking.meetingRoom?.name || 'Executive Conference Suite'}</h1>
               <p className="text-xs text-slate-500 flex items-center space-x-2 font-medium">
                 <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                <span>{booking.branch?.name || 'Downtown Main Hub'}, {booking.branch?.city || 'Downtown'}</span>
+                <span>{booking.branch?.name || 'Ishwarji Cowork 30'}, {booking.branch?.city || 'Mumbai'}</span>
               </p>
             </div>
 
@@ -317,7 +317,7 @@ export default function ReceiptPage() {
               Please present this pass or scan the QR code at the turnstile / reception entrance scanner.
             </p>
             <p className="text-[9px] text-slate-400">
-              Need assistance? Contact support@cowork30.com or speak with our on-site community manager.
+              Need assistance? Contact cowork307@gmail.com or call Off: 7708888765 / Mob: 9820431183.
             </p>
           </div>
         </div>

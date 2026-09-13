@@ -247,7 +247,7 @@ export class BookingsService {
       this.notificationsService.create({
         userId: (updated as any).userId || undefined,
         title: 'Desk Pass Active',
-        message: `Your QR pass is ready for Downtown Hub check-in (Code: #${updated.bookingCode}).`,
+        message: `Your QR pass is ready for Ishwarji Cowork 30 check-in (Code: #${updated.bookingCode}).`,
         type: 'booking',
         link: '/dashboard?tab=bookings',
       }).catch(() => {});

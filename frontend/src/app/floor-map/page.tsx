@@ -381,7 +381,7 @@ export default function FloorMapPage() {
                 <MapPin className="w-4 h-4 text-rose-500" />
                 <span>
                   {floorMapData?.branch?.name ? `${floorMapData.branch.name} — ` : ''}
-                  {floorMapData?.floorName || 'Ground Floor Innovation Hub'}
+                  {floorMapData?.floorName || '2nd Floor ACME Plaza'}
                 </span>
                 {floorMapData?.floorLevel && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20">

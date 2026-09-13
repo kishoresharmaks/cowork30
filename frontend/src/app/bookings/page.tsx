@@ -287,7 +287,7 @@ function MemberBookingsContent() {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                {user.email} • {user.phone || '+91 98765 43210'}
+                {user.email} • {user.phone || '+91 9820431183'}
               </p>
               <p className="text-[11px] text-slate-400">Member since 12 Jan 2025</p>
             </div>
@@ -470,7 +470,7 @@ function MemberBookingsContent() {
                             <p className="font-extrabold text-slate-900 text-sm">{b.bookingCode || `D-${b.id}`}</p>
                             <p className="text-[11px] text-slate-500 flex items-center space-x-1 mt-0.5">
                               <MapPin className="w-3 h-3 text-indigo-500 inline shrink-0" />
-                              <span>A-39, Downtown Main Hub</span>
+                              <span>{b.branch?.name || 'Ishwarji Cowork 30, Andheri East'}</span>
                             </p>
                           </div>
                           <span className="font-black text-slate-900 text-sm">₹{Number(b.totalAmount || 128.5).toFixed(2)}</span>
@@ -543,7 +543,7 @@ function MemberBookingsContent() {
                               <p className="font-extrabold text-slate-900">{b.bookingCode || `D-${b.id}`}</p>
                               <p className="text-[10px] text-slate-500 flex items-center space-x-1 mt-0.5">
                                 <MapPin className="w-3 h-3 text-indigo-500 inline shrink-0" />
-                                <span>A-39, Downtown Main Hub</span>
+                                <span>{b.branch?.name || 'Ishwarji Cowork 30, Andheri East'}</span>
                               </p>
                             </td>
 
@@ -726,7 +726,7 @@ function MemberBookingsContent() {
                             <p className="text-[11px] text-slate-500 font-mono">{mb.bookingCode}</p>
                             <p className="text-[11px] text-slate-500 flex items-center space-x-1 mt-0.5">
                               <MapPin className="w-3 h-3 text-indigo-500 inline shrink-0" />
-                              <span>A-39, Downtown Hub - 2nd Floor</span>
+                              <span>{mb.branch?.name || 'Ishwarji Cowork 30 - 2nd Floor, ACME Plaza'}</span>
                             </p>
                           </div>
                           <span className="font-black text-slate-900 text-sm">₹{Number(mb.totalAmount || 299).toFixed(2)}</span>
@@ -803,7 +803,7 @@ function MemberBookingsContent() {
                             <td className="py-4 px-3 text-slate-600 font-medium">
                               <p className="flex items-center space-x-1">
                                 <MapPin className="w-3 h-3 text-indigo-500 shrink-0" />
-                                <span>A-39, Downtown Hub - 2nd Floor</span>
+                                <span>{mb.branch?.name || 'Ishwarji Cowork 30 - 2nd Floor, ACME Plaza'}</span>
                               </p>
                             </td>
 

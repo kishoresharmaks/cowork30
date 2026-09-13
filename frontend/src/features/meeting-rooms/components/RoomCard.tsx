@@ -90,7 +90,7 @@ export const RoomCard: React.FC<RoomCardProps> = ({ room, isSelected, onSelect }
 
             <div className="flex items-center space-x-1 text-slate-400 pt-0.5">
               <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
-              <span className="truncate">A-39, Downtown Main Hub</span>
+              <span className="truncate">{room.branch?.name || 'Ishwarji Cowork 30, Andheri East'}</span>
             </div>
           </div>
         </div>

@@ -494,13 +494,13 @@ CREATE TABLE `wallet_topup_requests` (
 
 -- 1. Insert Branches
 INSERT INTO `branches` (`id`, `name`, `slug`, `address`, `city`, `state`, `zip`, `latitude`, `longitude`, `phone`, `email`, `openingTime`, `closingTime`, `isActive`) VALUES
-(1, 'Downtown Main Hub', 'downtown-main-hub', '100 Innovation Boulevard, Suite 500', 'Tech City', 'CA', '90001', 34.0522, -118.2437, '+1 (555) 300-2026', 'downtown@cowork30.com', '08:00 AM', '08:00 PM', 1),
+(1, 'Ishwarji Cowork 30', 'downtown-main-hub', '201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala', 'Mumbai', 'MH', '400059', 19.1136, 72.8697, '7708888765 / 022-62396303 / 9820431183', 'cowork307@gmail.com', '08:00 AM', '08:00 PM', 1),
 (2, 'Tech Park Sector 62', 'tech-park-sector-62', 'Plot 42, Tech Park, Sector 62', 'Noida', 'UP', '201309', 28.6270, 77.3726, '+91 (120) 400-2026', 'sector62@cowork30.com', '08:00 AM', '09:00 PM', 1),
 (3, 'Westside Business Bay', 'westside-business-bay', '77 Financial Expressway, Tower B', 'Cyber City', 'HR', '122002', 28.4595, 77.0266, '+91 (124) 500-3026', 'westside@cowork30.com', '07:30 AM', '10:00 PM', 1);
 
 -- 2. Insert Admin User (Email: admin@cowork30.com | Password: admin123)
 INSERT INTO `users` (`id`, `branchId`, `name`, `email`, `passwordHash`, `phone`, `companyName`, `role`, `walletBalance`, `deskCreditsBalance`, `meetingCreditsBalance`) VALUES
-(1, 1, 'System Admin', 'admin@cowork30.com', '$2b$10$e.xKjZ4pP5S8aB4w0Y9e1.qK7F2Z0Y9X8W7V6U5T4S3R2Q1P0O9N8', '+1 (555) 000-1111', 'Cowork30 Corporate', 'admin', 1000.00, 50.00, 20.00);
+(1, 1, 'System Admin', 'admin@cowork30.com', '$2b$10$e.xKjZ4pP5S8aB4w0Y9e1.qK7F2Z0Y9X8W7V6U5T4S3R2Q1P0O9N8', '+91 9820431183', 'Ishwarji Cowork 30', 'admin', 1000.00, 50.00, 20.00);
 
 -- 3. Insert Pricing Plans
 INSERT INTO `pricing_plans` (`id`, `name`, `slug`, `tagline`, `priceMonthly`, `priceDaily`, `billingPeriod`, `meetingCreditsIncluded`, `deskCreditsIncluded`, `isPopular`, `isActive`, `sortOrder`) VALUES
@@ -533,7 +533,7 @@ INSERT INTO `services` (`id`, `branchId`, `name`, `slug`, `shortDescription`, `d
 -- 7. Insert Site Settings & Logo Settings
 INSERT INTO `site_settings` (`key`, `value`) VALUES
 ('tax_rate', '0.18'),
-('site_info', '{"companyName":"Cowork30","tagline":"Enterprise Coworking Solutions","contactEmail":"contact@v1dev.cowork30.com"}');
+('site_info', '{"companyName":"Ishwarji Cowork 30","tagline":"Your On-Demand Business Solution Partner","contactEmail":"cowork307@gmail.com","contactPhone":"Off: 7708888765 / 022-62396303 | Mob: 9820431183","supportAddress":"201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala, Andheri East, Mumbai 400059","website":"https://www.cowork30.com"}');
 
 INSERT INTO `logo_settings` (`id`, `logoName`, `lightLogoUrl`, `darkLogoUrl`, `faviconUrl`, `widthPx`, `heightPx`, `isActive`) VALUES
 (1, 'Default Branding', '/Logo.png', '/Logo.png', '/favicon.ico', 180, 50, 1);

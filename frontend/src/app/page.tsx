@@ -1229,7 +1229,7 @@ export default function HomePage() {
                       required
                       value={formData.customerPhone}
                       onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-                      placeholder="+91 9876543210"
+                      placeholder="+91 9820431183"
                       className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-indigo-600 font-medium text-slate-900"
                     />
                   </div>

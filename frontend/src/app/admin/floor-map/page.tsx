@@ -168,9 +168,9 @@ export default function AdminFloorMapPage() {
 
   const openFloorModal = () => {
     setFloorFormData({
-      floorName: floorMap?.floorName || 'Ground Floor Innovation Hub',
-      floorLevel: Number(floorMap?.floorLevel || 1),
-      branchName: floorMap?.branch?.name || 'Downtown Main Hub',
+      floorName: floorMap?.floorName || '2nd Floor ACME Plaza',
+      floorLevel: Number(floorMap?.floorLevel || 2),
+      branchName: floorMap?.branch?.name || 'Ishwarji Cowork 30',
     });
     setShowFloorModal(true);
   };

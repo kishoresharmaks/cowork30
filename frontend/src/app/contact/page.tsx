@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import { Mail, Phone, MapPin, Send, CheckCircle2 } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, CheckCircle2, Globe } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 
 export default function ContactPage() {
@@ -49,20 +49,27 @@ export default function ContactPage() {
           {/* Contact Details */}
           <div className="space-y-6">
             <div className="bg-white p-8 rounded-2xl space-y-6 border border-slate-200/90 shadow-xs">
-              <h3 className="text-xl font-bold text-slate-900">Downtown Main Hub</h3>
+              <h3 className="text-xl font-bold text-slate-900">Ishwarji Cowork 30</h3>
 
               <div className="space-y-4 text-xs text-slate-600 font-medium">
                 <div className="flex items-start space-x-3">
                   <MapPin className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-                  <span>100 Innovation Boulevard, Suite 500, Tech City, CA 90001</span>
+                  <span>201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala, Andheri East, Mumbai 400059</span>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Phone className="w-5 h-5 text-rose-500 shrink-0" />
-                  <span>+1 (555) 300-2026</span>
+                <div className="flex items-start space-x-3">
+                  <Phone className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                  <div className="flex flex-col space-y-1">
+                    <span className="font-semibold text-slate-800">Office: 7708888765 / 022-62396303</span>
+                    <span className="font-semibold text-slate-800">Mobile: +91 9820431183</span>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   <Mail className="w-5 h-5 text-rose-500 shrink-0" />
-                  <span>contact@cowork30.com</span>
+                  <a href="mailto:cowork307@gmail.com" className="text-indigo-600 hover:underline">cowork307@gmail.com</a>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Globe className="w-5 h-5 text-rose-500 shrink-0" />
+                  <a href="https://www.cowork30.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-semibold">www.cowork30.com</a>
                 </div>
               </div>
             </div>

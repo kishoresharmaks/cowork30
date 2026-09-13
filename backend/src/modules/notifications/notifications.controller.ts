@@ -82,7 +82,7 @@ export class NotificationsController {
     const notification = await this.notificationsService.create({
       userId,
       title: body.title || 'Desk Pass Active',
-      message: body.message || 'Your QR pass is ready for Downtown Hub check-in.',
+      message: body.message || 'Your QR pass is ready for Ishwarji Cowork 30 check-in.',
       type: body.type || 'booking',
       link: body.link || '/dashboard?tab=bookings',
     });

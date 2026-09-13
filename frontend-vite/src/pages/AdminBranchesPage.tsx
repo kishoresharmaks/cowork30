@@ -42,7 +42,7 @@ export default function AdminBranchesPage() {
               </div>
 
               <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs">
-                <span className="text-slate-400">{b.phone || '+1 555-000-2026'}</span>
+                <span className="text-slate-400">{b.phone || '7708888765 / 9820431183'}</span>
                 <button className="p-2 text-slate-400 hover:text-white"><Edit className="w-4 h-4" /></button>
               </div>
             </div>

@@ -939,7 +939,7 @@ export default function StaffBookingsPage() {
                     type="text"
                     value={newForm.customerPhone}
                     onChange={(e) => setNewForm({ ...newForm, customerPhone: e.target.value })}
-                    placeholder="+91 9876543210"
+                    placeholder="+91 9820431183"
                     className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3 py-2 text-[#F8FAFC] focus:border-[#6366F1] focus:outline-none"
                   />
                 </div>

@@ -38,7 +38,7 @@ export default function FloorMapPage() {
           <div>
             <h1 className="text-3xl font-black text-slate-900">Interactive 2D Floor Layout & Desk Picker</h1>
             <p className="text-xs text-slate-500 mt-1">
-              Select available hot desks or dedicated cabins in real time at {activeBranch ? activeBranch.name : 'Downtown Hub'}.
+              Select available hot desks or dedicated cabins in real time at {activeBranch ? activeBranch.name : 'Ishwarji Cowork 30'}.
             </p>
           </div>
 

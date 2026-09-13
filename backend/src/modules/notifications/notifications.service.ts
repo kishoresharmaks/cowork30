@@ -144,7 +144,7 @@ export class NotificationsService {
       {
         userId,
         title: 'Desk Pass Active',
-        message: 'Your QR pass is ready for Downtown Hub check-in.',
+        message: 'Your QR pass is ready for Ishwarji Cowork 30 check-in.',
         type: 'booking',
         link: '/dashboard?tab=bookings',
         isRead: false,

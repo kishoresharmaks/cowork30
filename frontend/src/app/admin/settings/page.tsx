@@ -23,12 +23,12 @@ export default function AdminSettingsPage() {
   ]);
 
   const [settings, setSettings] = useState({
-    companyName: 'Enterprise Workspace Solutions Pvt. Ltd.',
-    companyAddress: 'A-39, Downtown Hub, New Delhi, India',
+    companyName: 'Ishwarji Cowork 30',
+    companyAddress: '201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala, Andheri East, Mumbai 400059',
     companyGstin: '07AAAAA0000A1Z5',
     tagline: 'Your On-Demand Business Solution Partner',
-    contactEmail: 'contact@cowork30.com',
-    contactPhone: '+91 98765 43210',
+    contactEmail: 'cowork307@gmail.com',
+    contactPhone: 'Off: 7708888765 / 022-62396303 | Mob: 9820431183',
     brandPrimaryColor: '#6366F1',
     brandSecondaryColor: '#9333EA',
     smtpHost: 'smtp.gmail.com',
@@ -193,7 +193,7 @@ export default function AdminSettingsPage() {
                     required
                     value={settings.companyName}
                     onChange={(e) => setSettings({ ...settings, companyName: e.target.value })}
-                    placeholder="Enterprise Workspace Solutions Pvt. Ltd."
+                    placeholder="Ishwarji Cowork 30"
                     className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3 py-2 text-[#F8FAFC] text-xs font-bold focus:border-[#6366F1] focus:outline-none"
                   />
                 </div>
@@ -217,9 +217,9 @@ export default function AdminSettingsPage() {
                   <input
                     type="text"
                     required
-                    value={settings.companyAddress || 'A-39, Downtown Hub, New Delhi, India'}
+                    value={settings.companyAddress || '201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala, Andheri East, Mumbai 400059'}
                     onChange={(e) => setSettings({ ...settings, companyAddress: e.target.value })}
-                    placeholder="A-39, Downtown Hub, New Delhi, India"
+                    placeholder="201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala, Andheri East, Mumbai 400059"
                     className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3 py-2 text-[#F8FAFC] text-xs font-bold focus:border-[#6366F1] focus:outline-none"
                   />
                 </div>

@@ -102,8 +102,8 @@ export default function HomePage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
                 <div className="absolute bottom-6 left-6 right-6 p-4 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800 flex items-center justify-between text-xs">
                   <div>
-                    <div className="font-bold text-white">{activeBranch ? activeBranch.name : 'Downtown Main Hub'}</div>
-                    <div className="text-slate-400 text-[11px]">{activeBranch ? activeBranch.address : '100 Innovation Blvd, Tech City'}</div>
+                    <div className="font-bold text-white">{activeBranch ? activeBranch.name : 'Ishwarji Cowork 30'}</div>
+                    <div className="text-slate-400 text-[11px]">{activeBranch ? activeBranch.address : '201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala, Andheri East, Mumbai 400059'}</div>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px]">
                     ● Active Hub

@@ -50,21 +50,31 @@ export default function Footer() {
           <div>
             <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-4">Contact Us</h4>
             <ul className="space-y-2.5 text-xs">
-              <li className="flex items-center gap-2">
-                <MapPin className="w-3.5 h-3.5 text-rose-500" /> 100 Innovation Blvd, Tech City
+              <li className="flex items-start gap-2">
+                <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                <span>201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala, Andheri East, Mumbai 400059</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Phone className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                <div className="flex flex-col">
+                  <span>Off: 7708888765 / 022-62396303</span>
+                  <span>Mob: +91 9820431183</span>
+                </div>
               </li>
               <li className="flex items-center gap-2">
-                <Phone className="w-3.5 h-3.5 text-rose-500" /> +1 (555) 300-2026
+                <Mail className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                <a href="mailto:cowork307@gmail.com" className="hover:text-rose-400 transition-colors">cowork307@gmail.com</a>
               </li>
               <li className="flex items-center gap-2">
-                <Mail className="w-3.5 h-3.5 text-rose-500" /> contact@v1dev.cowork30.com
+                <Globe className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                <a href="https://www.cowork30.com" target="_blank" rel="noopener noreferrer" className="hover:text-rose-400 transition-colors">www.cowork30.com</a>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="mt-12 pt-8 border-t border-slate-800/80 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500">
-          <p>© {new Date().getFullYear()} Cowork30 Enterprise Platform. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Ishwarji Cowork 30. All rights reserved.</p>
           <div className="flex items-center gap-1 mt-4 md:mt-0">
             <span>Built with React + Vite & NestJS</span>
           </div>

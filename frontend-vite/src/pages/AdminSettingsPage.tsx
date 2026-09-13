@@ -4,7 +4,7 @@ import AdminSidebar from '@/components/layout/AdminSidebar';
 
 export default function AdminSettingsPage() {
   const [gstRate, setGstRate] = useState('18');
-  const [companyName, setCompanyName] = useState('Cowork30 Enterprise Platform');
+  const [companyName, setCompanyName] = useState('Ishwarji Cowork 30');
   const [saved, setSaved] = useState(false);
 
   const handleSave = (e: React.FormEvent) => {

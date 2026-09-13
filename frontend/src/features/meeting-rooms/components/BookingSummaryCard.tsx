@@ -111,7 +111,7 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
                   required
                   value={formData.customerPhone}
                   onChange={(e) => onFormDataChange({ ...formData, customerPhone: e.target.value })}
-                  placeholder="+91 98765 43210"
+                  placeholder="+91 9820431183"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-900 focus:border-indigo-600 focus:bg-white focus:outline-none transition-all"
                 />
               </div>

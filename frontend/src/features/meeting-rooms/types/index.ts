@@ -18,6 +18,12 @@ export interface MeetingRoom {
   images?: string[] | string;
   amenities?: string[];
   isAvailable?: boolean;
+  branch?: {
+    id?: number;
+    name?: string;
+    address?: string;
+    city?: string;
+  };
 }
 
 export interface TimeSlot {

@@ -392,7 +392,7 @@ export default function Navbar() {
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/90 hover:bg-purple-50 active:bg-purple-100 border border-slate-200/80 text-slate-800 transition-all cursor-pointer text-[11px] font-extrabold max-w-[125px] truncate shadow-2xs"
                 >
                   <MapPin className="w-3.5 h-3.5 text-pink-600 shrink-0" />
-                  <span className="truncate">{activeBranch?.name ? activeBranch.name.replace(' Branch', '').replace(' Coworking', '') : 'Downtown'}</span>
+                  <span className="truncate">{activeBranch?.name ? activeBranch.name.replace(' Branch', '').replace(' Coworking', '') : 'Ishwarji Cowork 30'}</span>
                   <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${mobileBranchOpen ? 'rotate-180' : ''}`} />
                 </button>
               </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Mail, Phone, MapPin, ShieldCheck } from 'lucide-react';
+import { Mail, Phone, MapPin, ShieldCheck, Globe } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -95,15 +95,22 @@ export default function Footer() {
             <ul className="space-y-3 text-xs text-slate-500 font-medium">
               <li className="flex items-start space-x-2.5">
                 <MapPin className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-                <span>100 Innovation Boulevard, Suite 500, Tech City</span>
+                <span>Ishwarji Cowork 30, 201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala, Andheri East, Mumbai 400059</span>
               </li>
-              <li className="flex items-center space-x-2.5">
-                <Phone className="w-4 h-4 text-rose-500 shrink-0" />
-                <span>+1 (555) 300-2026</span>
+              <li className="flex items-start space-x-2.5">
+                <Phone className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                <div className="flex flex-col space-y-0.5">
+                  <span className="font-semibold text-slate-700">Off: 7708888765 / 022-62396303</span>
+                  <span className="font-semibold text-slate-700">Mob: +91 9820431183</span>
+                </div>
               </li>
               <li className="flex items-center space-x-2.5">
                 <Mail className="w-4 h-4 text-rose-500 shrink-0" />
-                <span>contact@cowork30.com</span>
+                <a href="mailto:cowork307@gmail.com" className="hover:text-indigo-600 transition-colors">cowork307@gmail.com</a>
+              </li>
+              <li className="flex items-center space-x-2.5">
+                <Globe className="w-4 h-4 text-rose-500 shrink-0" />
+                <a href="https://www.cowork30.com" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 transition-colors">www.cowork30.com</a>
               </li>
             </ul>
           </div>
@@ -111,12 +118,12 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 space-y-4 sm:space-y-0">
-          <p>© {new Date().getFullYear()} Cowork30 Inc. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Ishwarji Cowork 30. All rights reserved.</p>
           <div className="flex space-x-6">
-            <Link href="/page/terms" className="hover:text-slate-900">
+            <Link href="/terms" className="hover:text-slate-900">
               Terms of Service
             </Link>
-            <Link href="/page/privacy" className="hover:text-slate-900">
+            <Link href="/privacy" className="hover:text-slate-900">
               Privacy Policy
             </Link>
           </div>

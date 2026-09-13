@@ -23,8 +23,8 @@ export class InvoiceService {
     }
 
     return {
-      companyName: siteInfo.companyName || 'Enterprise Workspace Solutions Pvt. Ltd.',
-      companyAddress: siteInfo.companyAddress || 'A-39, Downtown Hub, New Delhi, India',
+      companyName: siteInfo.companyName || 'Ishwarji Cowork 30',
+      companyAddress: siteInfo.companyAddress || '201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala, Andheri East, Mumbai 400059',
       companyGstin: siteInfo.companyGstin || '07AAAAA0000A1Z5',
       sacCode: siteInfo.sacCode || '997212',
     };
