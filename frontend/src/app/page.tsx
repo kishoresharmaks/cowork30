@@ -432,7 +432,7 @@ export default function HomePage() {
 
       {/* Hero Section with Backdrop_header.png */}
       <section className="relative min-h-[580px] sm:min-h-[640px] lg:min-h-[700px] flex items-center pt-8 pb-20 md:pt-14 md:pb-28 overflow-hidden bg-slate-950">
-        {/* 1. Base Photographic Backdrop */}
+        {/* 1. Base Photographic Backdrop (Positioned rightwards so subjects are fully visible on right) */}
         <div className="absolute inset-0 z-0">
           <Image
             src="/Backdrop_header.png"
@@ -440,50 +440,50 @@ export default function HomePage() {
             fill
             priority
             sizes="100vw"
-            className="object-cover object-right sm:object-[75%_center] lg:object-center"
+            className="object-cover object-right sm:object-[80%_center] md:object-[85%_center] lg:object-[88%_center]"
           />
         </div>
 
         {/* 2. Top Edge Fade (Behind Fixed/Floating Navbar) */}
         <div className="absolute top-0 inset-x-0 h-32 sm:h-40 bg-gradient-to-b from-slate-950/95 via-slate-950/60 to-transparent pointer-events-none z-1" />
 
-        {/* 3. Directional Vignette / Text Readability Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-slate-950/45 lg:from-slate-950/90 lg:via-slate-950/60 lg:to-transparent pointer-events-none z-1" />
+        {/* 3. Directional Vignette / Text Readability Gradient (Darkened on left for text, transparent on right for image) */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40 md:from-slate-950 md:via-slate-950/75 md:via-45% md:to-transparent pointer-events-none z-1" />
 
-        {/* 4. Subtle Radial Color Backdrops (Brand Ambience) */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[140px] pointer-events-none z-1" />
-        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-pink-500/15 rounded-full blur-[140px] pointer-events-none z-1" />
+        {/* 4. Subtle Radial Color Backdrops (Brand Ambience anchored to left) */}
+        <div className="absolute top-1/4 left-10 w-80 sm:w-96 h-80 sm:h-96 bg-purple-600/20 rounded-full blur-[140px] pointer-events-none z-1" />
+        <div className="absolute bottom-1/4 left-1/3 w-72 sm:w-80 h-72 sm:h-80 bg-pink-500/15 rounded-full blur-[140px] pointer-events-none z-1" />
 
-        {/* 5. Bottom Dark Vignette Fade (Keeps photo deep, rich, and crisp with zero white fog) */}
+        {/* 5. Bottom Dark Vignette Fade */}
         <div className="absolute bottom-0 inset-x-0 h-28 sm:h-36 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent pointer-events-none z-1" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
-          <div className="text-center max-w-4xl mx-auto space-y-6">
+          <div className="text-left max-w-2xl lg:max-w-xl xl:max-w-2xl space-y-5 sm:space-y-6">
             {/* Badge */}
-            <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold text-white shadow-lg backdrop-blur-xl">
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold text-white shadow-lg backdrop-blur-xl">
               <Sparkles className="w-3.5 h-3.5 text-pink-400" />
               <span>Next-Gen Coworking Ecosystem</span>
               <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
             </div>
 
-            {/* Main Headline */}
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] text-white drop-shadow-md">
-              Elevate Your Work at <br />
-              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-rose-400 bg-clip-text text-transparent">
+            {/* Main Headline (Scaled down slightly and left-aligned) */}
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[44px] xl:text-5xl font-extrabold tracking-tight leading-[1.15] text-white drop-shadow-md">
+              Elevate Your Work at <br className="hidden sm:inline" />
+              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-rose-400 bg-clip-text text-transparent inline-block">
                 Cowork30
               </span>
             </h1>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-xl text-slate-200/95 max-w-2xl mx-auto leading-relaxed font-normal drop-shadow-sm">
+            <p className="text-sm sm:text-base md:text-lg text-slate-200/90 max-w-xl leading-relaxed font-normal drop-shadow-sm">
               Your on-demand business solution partner. On-demand desks, private executive suites, real-time meeting rooms, and vibrant professional community.
             </p>
 
             {/* Action Buttons */}
-            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="pt-2 sm:pt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-start gap-3 sm:gap-4">
               <Link
                 href="/meeting-rooms"
-                className="w-full sm:w-auto px-8 py-4 text-xs sm:text-sm font-extrabold rounded-full text-white bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 transition-all shadow-xl shadow-pink-600/30 flex items-center justify-center space-x-2 group cursor-pointer"
+                className="w-full sm:w-auto px-7 py-3.5 text-xs sm:text-sm font-extrabold rounded-full text-white bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 transition-all shadow-xl shadow-pink-600/30 flex items-center justify-center space-x-2 group cursor-pointer"
               >
                 <Calendar className="w-4 h-4" />
                 <span>Reserve Meeting Suite</span>
@@ -492,7 +492,7 @@ export default function HomePage() {
 
               <Link
                 href="/floor-map"
-                className="w-full sm:w-auto px-8 py-4 text-xs sm:text-sm font-extrabold rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-xl transition-all text-white flex items-center justify-center space-x-2 shadow-lg cursor-pointer"
+                className="w-full sm:w-auto px-7 py-3.5 text-xs sm:text-sm font-extrabold rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-xl transition-all text-white flex items-center justify-center space-x-2 shadow-lg cursor-pointer"
               >
                 <Compass className="w-4 h-4 text-pink-400" />
                 <span>Explore Interactive Floor Map</span>
@@ -500,20 +500,20 @@ export default function HomePage() {
             </div>
 
             {/* Trust Perks */}
-            <div className="pt-8 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-semibold text-white/90 max-w-3xl mx-auto">
-              <div className="flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
+            <div className="pt-4 sm:pt-6 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 text-xs font-semibold text-white/90 max-w-xl lg:max-w-2xl">
+              <div className="flex items-center space-x-2 px-3 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
                 <Wifi className="w-4 h-4 text-pink-400 shrink-0" />
                 <span className="truncate">1 Gbps Fiber Wi-Fi</span>
               </div>
-              <div className="flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
+              <div className="flex items-center space-x-2 px-3 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
                 <Clock className="w-4 h-4 text-purple-400 shrink-0" />
                 <span className="truncate">24/7 Access</span>
               </div>
-              <div className="flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
+              <div className="flex items-center space-x-2 px-3 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
                 <Coffee className="w-4 h-4 text-pink-400 shrink-0" />
                 <span className="truncate">Artisanal Espresso Bar</span>
               </div>
-              <div className="flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
+              <div className="flex items-center space-x-2 px-3 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
                 <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0" />
                 <span className="truncate">GST Tax Invoicing</span>
               </div>
