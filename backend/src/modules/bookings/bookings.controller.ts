@@ -8,13 +8,19 @@ import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Bookings')
 @Controller('bookings')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('admin', 'staff')
-@ApiBearerAuth()
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
+  @Get('public-stats')
+  @ApiOperation({ summary: 'Public: Fetch platform statistics for homepage display' })
+  async getPublicStats() {
+    return this.bookingsService.getPublicStats();
+  }
+
   @Get()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin', 'staff')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin/Staff: Search and filter desk & tour bookings' })
   async findAll(
     @Query('status') status?: BookingStatus,
@@ -25,18 +31,18 @@ export class BookingsController {
   }
 
   @Get('stats/dashboard')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin', 'staff')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin/Staff: Fetch real-time executive analytics & activity feed' })
   async getDashboardStats() {
     return this.bookingsService.getAdminStats();
   }
 
-  @Get('public-stats')
-  @ApiOperation({ summary: 'Public: Fetch platform statistics for homepage display' })
-  async getPublicStats() {
-    return this.bookingsService.getPublicStats();
-  }
-
   @Get('meeting-rooms')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin', 'staff')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin/Staff: List and search all meeting room reservations' })
   async findMeetingBookings(
     @Query('status') status?: BookingStatus,
@@ -46,18 +52,27 @@ export class BookingsController {
   }
 
   @Post()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin', 'staff')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin/Staff: Manually create a desk/tour booking record' })
   async createAdminBooking(@Body() body: any) {
     return this.bookingsService.createAdminBooking(body);
   }
 
   @Post('check-in')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin', 'staff')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin/Staff Reception: Verify QR access code and check in arriving customer' })
   async verifyAndCheckIn(@Body() body: { accessCode: string }) {
     return this.bookingsService.verifyAndCheckIn(body.accessCode);
   }
 
   @Put(':id/status')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin', 'staff')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin/Staff: Update booking status and payment status inline' })
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
@@ -67,6 +82,9 @@ export class BookingsController {
   }
 
   @Put('meeting-rooms/:id/status')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin', 'staff')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin/Staff: Update meeting room booking status inline' })
   async updateMeetingStatus(
     @Param('id', ParseIntPipe) id: number,
@@ -76,6 +94,9 @@ export class BookingsController {
   }
 
   @Post(':id/notes')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin', 'staff')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin/Staff: Add timestamped staff note to booking' })
   async addNote(
     @Param('id', ParseIntPipe) id: number,
@@ -88,6 +109,9 @@ export class BookingsController {
   }
 
   @Get('export/csv')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin', 'staff')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin/Staff: Export filtered bookings to CSV spreadsheet' })
   async exportCsv(@Res() res: any) {
     const csvContent = await this.bookingsService.generateCsvExport();

@@ -141,6 +141,16 @@ export class UpdateMeetingRoomDto {
   @IsString()
   name?: string;
 
+  @ApiProperty({ example: 'executive-boardroom', required: false })
+  @IsOptional()
+  @IsString()
+  slug?: string;
+
+  @ApiProperty({ example: 1, required: false })
+  @IsOptional()
+  @IsNumber()
+  branchId?: number;
+
   @ApiProperty({ example: 10, required: false })
   @IsOptional()
   @IsNumber()

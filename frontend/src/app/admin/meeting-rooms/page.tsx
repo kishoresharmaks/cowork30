@@ -256,12 +256,13 @@ export default function AdminMeetingRoomsPage() {
       const payload = {
         ...restData,
         branchId: Number(formData.branchId || 1),
+        capacity: Number(formData.maxSeats || 10),
         images: formData.imageUrl ? [formData.imageUrl] : [],
         startTime: is24Hours ? null : formData.startTime,
         endTime: is24Hours ? null : formData.endTime,
         floorMapId: formData.floorMapId ? Number(formData.floorMapId) : null,
-        xCoordinate: formData.xCoordinate !== '' ? Number(formData.xCoordinate) : null,
-        yCoordinate: formData.yCoordinate !== '' ? Number(formData.yCoordinate) : null,
+        xCoordinate: formData.xCoordinate !== '' && formData.xCoordinate !== null ? Number(formData.xCoordinate) : null,
+        yCoordinate: formData.yCoordinate !== '' && formData.yCoordinate !== null ? Number(formData.yCoordinate) : null,
       };
 
       if (editingRoom) {
@@ -272,7 +273,9 @@ export default function AdminMeetingRoomsPage() {
       setShowModal(false);
       loadRoomsAndFloors();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to save meeting room');
+      const msg = err.response?.data?.message;
+      const displayMsg = Array.isArray(msg) ? msg.join(', ') : (msg || err.message || 'Failed to save meeting room');
+      alert(displayMsg);
     } finally {
       setSubmitting(false);
     }
