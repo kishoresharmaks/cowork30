@@ -1,18 +1,10 @@
 import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody } from '@nestjs/websockets';
 import { Server } from 'socket.io';
-
-const WS_ALLOWED_ORIGINS = [
-  process.env.FRONTEND_URL,
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:3000',
-  'http://localhost:4000',
-  ...(process.env.NODE_ENV === 'production' ? [] : ['http://localhost:3000']),
-].filter(Boolean);
+import { corsOriginDelegate } from '../../shared/utils/cors.util';
 
 @WebSocketGateway({
   cors: {
-    origin: WS_ALLOWED_ORIGINS,
+    origin: corsOriginDelegate,
     credentials: true,
   },
 })

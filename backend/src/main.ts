@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import * as helmet from 'helmet';
+import { corsOriginDelegate } from './shared/utils/cors.util';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -36,23 +37,9 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
-  // Enable CORS for Next.js frontend (supports process.env.FRONTEND_URL, localhost & local network IPs)
-  const allowedFrontendUrl = process.env.FRONTEND_URL;
+  // Enable CORS for Next.js frontend (supports process.env.FRONTEND_URL, custom domain cowork30.com, onrender.com & local network IPs)
   app.enableCors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      if (!origin) return callback(null, true);
-      const isAllowed =
-        (allowedFrontendUrl && origin === allowedFrontendUrl) ||
-        origin.includes('localhost') ||
-        origin.includes('127.0.0.1') ||
-        origin.includes('onrender.com') ||
-        /^http:\/\/(192\.168|10|172)\.\d+\.\d+:\d+$/.test(origin);
-      if (isAllowed) {
-        return callback(null, true);
-      }
-      // Explicitly deny unknown origins in production
-      return callback(new Error(`CORS: Origin ${origin} is not allowed`), false);
-    },
+    origin: corsOriginDelegate,
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   });
