@@ -65,8 +65,9 @@ export class BookingsController {
   @Roles('admin', 'staff')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin/Staff Reception: Verify QR access code and check in arriving customer' })
-  async verifyAndCheckIn(@Body() body: { accessCode: string }) {
-    return this.bookingsService.verifyAndCheckIn(body.accessCode);
+  async verifyAndCheckIn(@Body() body: { accessCode?: string; passCode?: string; code?: string; branchId?: number }) {
+    const accessCode = body.accessCode || body.passCode || body.code || '';
+    return this.bookingsService.verifyAndCheckIn(accessCode, body.branchId);
   }
 
   @Put(':id/status')
@@ -114,7 +115,7 @@ export class BookingsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin/Staff: Export filtered bookings to CSV spreadsheet' })
   async exportCsv(@Res() res: any) {
-    const csvContent = await this.bookingsService.generateCsvExport();
+    const csvContent = await this.bookingsService.exportCsv();
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=cowork30_bookings_report.csv');
     return res.send(csvContent);

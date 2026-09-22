@@ -536,12 +536,12 @@ export class WalletBillingService {
       if (bookingType === 'desk') {
         await tx.booking.update({
           where: { id: bookingId },
-          data: { status: BookingStatus.confirmed, paymentStatus: PaymentStatus.paid },
+          data: { paymentStatus: PaymentStatus.paid },
         });
       } else {
         await tx.meetingBooking.update({
           where: { id: bookingId },
-          data: { status: BookingStatus.confirmed, paymentStatus: PaymentStatus.paid },
+          data: { paymentStatus: PaymentStatus.paid },
         });
       }
 

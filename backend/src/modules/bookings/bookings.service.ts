@@ -1,15 +1,90 @@
-import { Injectable, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Optional, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
-import { BookingStatus, PaymentStatus } from '@prisma/client';
+import { BookingStatus, PaymentStatus, Role } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class BookingsService {
+  private readonly logger = new Logger(BookingsService.name);
+
   constructor(
     private prisma: PrismaService,
     @Optional() private notificationsService?: NotificationsService,
   ) {}
 
+  private getBookingTimeWindow(preferredDate: Date, preferredTimeSlot?: string | null): { startTime: Date; endTime: Date } {
+    const startDate = new Date(preferredDate);
+    const endDate = new Date(preferredDate);
+    const slot = (preferredTimeSlot || '').trim();
+    const slotLower = slot.toLowerCase();
+
+    // Match all 12-hour time patterns: e.g. "10:00 AM", "06:00 PM", "10 AM", "6 PM", "8:00AM"
+    const matches = Array.from(
+      slot.matchAll(/\b(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\b/gi),
+    );
+
+    if (matches.length >= 2) {
+      // Time range found (e.g. "10:00 AM - 06:00 PM", "8:00 AM to 8:00 PM", "10 AM - 6 PM")
+      const startMatch = matches[0];
+      const lastMatch = matches[matches.length - 1];
+
+      let sHours = parseInt(startMatch[1], 10);
+      const sMinutes = startMatch[2] ? parseInt(startMatch[2], 10) : 0;
+      const sAmpm = startMatch[3].toUpperCase();
+      if (sAmpm === 'PM' && sHours < 12) sHours += 12;
+      if (sAmpm === 'AM' && sHours === 12) sHours = 0;
+      startDate.setHours(sHours, sMinutes, 0, 0);
+
+      let eHours = parseInt(lastMatch[1], 10);
+      const eMinutes = lastMatch[2] ? parseInt(lastMatch[2], 10) : 0;
+      const eAmpm = lastMatch[3].toUpperCase();
+      if (eAmpm === 'PM' && eHours < 12) eHours += 12;
+      if (eAmpm === 'AM' && eHours === 12) eHours = 0;
+
+      const startTotalMins = sHours * 60 + sMinutes;
+      const endTotalMins = eHours * 60 + eMinutes;
+      if (endTotalMins <= startTotalMins) {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+      endDate.setHours(eHours, eMinutes, 0, 0);
+
+      return { startTime: startDate, endTime: endDate };
+    }
+
+    if (matches.length === 1) {
+      // Single time matched e.g. "10:00 AM" or "Morning 10:00 AM"
+      const match = matches[0];
+      let startHours = parseInt(match[1], 10);
+      const startMins = match[2] ? parseInt(match[2], 10) : 0;
+      const ampm = match[3].toUpperCase();
+
+      if (ampm === 'PM' && startHours < 12) startHours += 12;
+      if (ampm === 'AM' && startHours === 12) startHours = 0;
+      startDate.setHours(startHours, startMins, 0, 0);
+
+      // Half-day (morning/afternoon) = 4h, Day pass default = 8h
+      const durationHours = (slotLower.includes('morning') || slotLower.includes('afternoon')) ? 4 : 8;
+      const endHours = startHours + durationHours;
+      const finalEHours = endHours % 24;
+
+      const startTotalMins = startHours * 60 + startMins;
+
+      if (endHours >= 24 || (finalEHours * 60 + startMins) <= startTotalMins) {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+      endDate.setHours(finalEHours, startMins, 0, 0);
+      return { startTime: startDate, endTime: endDate };
+    }
+
+    // Default operating window: 8:00 AM to 8:00 PM (20:00)
+    startDate.setHours(8, 0, 0, 0);
+    endDate.setHours(20, 0, 0, 0);
+    return { startTime: startDate, endTime: endDate };
+  }
+
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async autoCompleteExpiredBookings() {
     const now = new Date();
     const nowTime = now.getTime();
@@ -28,26 +103,11 @@ export class BookingsService {
     const meetingIdsNotCheckedIn: number[] = [];
 
     for (const mb of activeMeetings) {
-      let isExpired = false;
       const endTimeMs = new Date(mb.endTime).getTime();
-
       if (endTimeMs <= nowTime) {
-        isExpired = true;
-      } else {
-        // Fallback: check wall-clock local date/time if endTime ISO string contains stored wall-clock hours (e.g. YYYY-MM-DDT14:00:00.000Z)
-        const mbEndIso = mb.endTime instanceof Date ? mb.endTime.toISOString() : String(mb.endTime);
-        const match = mbEndIso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-        if (match) {
-          const [, y, m, d, hh, mm] = match;
-          const localWallClockEnd = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), 0, 0);
-          if (localWallClockEnd.getTime() <= nowTime) {
-            isExpired = true;
-          }
-        }
-      }
-
-      if (isExpired) {
-        if (mb.status === BookingStatus.confirmed || mb.paymentStatus === PaymentStatus.paid) {
+        // ONLY if customer actually checked in (status === BookingStatus.confirmed)
+        // paymentStatus is completely independent!
+        if (mb.status === BookingStatus.confirmed) {
           meetingIdsToComplete.push(mb.id);
         } else {
           meetingIdsNotCheckedIn.push(mb.id);
@@ -57,14 +117,20 @@ export class BookingsService {
 
     if (meetingIdsToComplete.length > 0) {
       await this.prisma.meetingBooking.updateMany({
-        where: { id: { in: meetingIdsToComplete } },
-        data: { status: BookingStatus.completed, paymentStatus: PaymentStatus.paid },
+        where: {
+          id: { in: meetingIdsToComplete },
+          status: BookingStatus.confirmed, // Atomic guard: ONLY currently confirmed meetings
+        },
+        data: { status: BookingStatus.completed }, // DO NOT automatically alter paymentStatus
       });
     }
 
     if (meetingIdsNotCheckedIn.length > 0) {
       await this.prisma.meetingBooking.updateMany({
-        where: { id: { in: meetingIdsNotCheckedIn } },
+        where: {
+          id: { in: meetingIdsNotCheckedIn },
+          status: { in: [BookingStatus.pending, BookingStatus.unpaid] }, // Atomic guard: ONLY currently non-checked-in
+        },
         data: { status: BookingStatus.not_checked_in },
       });
     }
@@ -80,29 +146,17 @@ export class BookingsService {
           { notes: { contains: 'Solution:' } },
         ],
       },
-      select: { id: true, preferredDate: true, status: true, paymentStatus: true },
+      select: { id: true, preferredDate: true, preferredTimeSlot: true, status: true, paymentStatus: true },
     });
 
     const deskIdsToComplete: number[] = [];
     const deskIdsNotCheckedIn: number[] = [];
 
     for (const db of activeDeskBookings) {
-      const dbIso = db.preferredDate instanceof Date ? db.preferredDate.toISOString() : String(db.preferredDate);
-      const match = dbIso.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      let y = new Date(db.preferredDate).getFullYear();
-      let m = new Date(db.preferredDate).getMonth();
-      let d = new Date(db.preferredDate).getDate();
-
-      if (match) {
-        y = Number(match[1]);
-        m = Number(match[2]) - 1;
-        d = Number(match[3]);
-      }
-
-      const endOfDayMs = new Date(y, m, d, 23, 59, 59, 999).getTime();
-
-      if (endOfDayMs <= nowTime) {
-        if (db.status === BookingStatus.confirmed || db.paymentStatus === PaymentStatus.paid) {
+      const { endTime } = this.getBookingTimeWindow(db.preferredDate, db.preferredTimeSlot);
+      if (endTime.getTime() <= nowTime) {
+        // ONLY if customer actually checked in (status === BookingStatus.confirmed)
+        if (db.status === BookingStatus.confirmed) {
           deskIdsToComplete.push(db.id);
         } else {
           deskIdsNotCheckedIn.push(db.id);
@@ -112,14 +166,20 @@ export class BookingsService {
 
     if (deskIdsToComplete.length > 0) {
       await this.prisma.booking.updateMany({
-        where: { id: { in: deskIdsToComplete } },
-        data: { status: BookingStatus.completed, paymentStatus: PaymentStatus.paid },
+        where: {
+          id: { in: deskIdsToComplete },
+          status: BookingStatus.confirmed, // Atomic guard: ONLY currently confirmed passes
+        },
+        data: { status: BookingStatus.completed }, // DO NOT automatically alter paymentStatus
       });
     }
 
     if (deskIdsNotCheckedIn.length > 0) {
       await this.prisma.booking.updateMany({
-        where: { id: { in: deskIdsNotCheckedIn } },
+        where: {
+          id: { in: deskIdsNotCheckedIn },
+          status: { in: [BookingStatus.pending, BookingStatus.unpaid] }, // Atomic guard: ONLY currently non-checked-in
+        },
         data: { status: BookingStatus.not_checked_in },
       });
     }
@@ -137,9 +197,6 @@ export class BookingsService {
   }
 
   async findAll(query: { status?: BookingStatus; search?: string; type?: string }) {
-    // Automatically trigger real-time auto-completion check before returning records
-    await this.autoCompleteExpiredBookings().catch(() => {});
-
     const where: any = {
       NOT: [
         { bookingCode: { startsWith: 'SRV-' } },
@@ -184,9 +241,6 @@ export class BookingsService {
   }
 
   async findMeetingBookings(query: { status?: BookingStatus; search?: string }) {
-    // Automatically trigger real-time auto-completion check before returning records
-    await this.autoCompleteExpiredBookings().catch(() => {});
-
     const where: any = {};
 
     if (query.status) {
@@ -222,23 +276,32 @@ export class BookingsService {
   }
 
   async updateStatus(id: number, status: BookingStatus, paymentStatus?: PaymentStatus) {
+    if (!Object.values(BookingStatus).includes(status)) {
+      throw new BadRequestException('Invalid status value');
+    }
+
     const booking = await this.prisma.booking.findUnique({ where: { id } });
     if (!booking) {
       throw new NotFoundException('Booking not found');
     }
 
-    if (booking.status === BookingStatus.completed || booking.status === BookingStatus.cancelled) {
+    if (
+      booking.status === BookingStatus.completed ||
+      booking.status === BookingStatus.cancelled ||
+      booking.status === BookingStatus.not_checked_in
+    ) {
       throw new BadRequestException(
         `Status Locked: Booking #${booking.bookingCode} is already in terminal '${booking.status}' status and cannot be modified.`
       );
     }
 
-    let nextPaymentStatus = paymentStatus || booking.paymentStatus;
-    if (status === BookingStatus.confirmed || status === BookingStatus.completed) {
-      nextPaymentStatus = PaymentStatus.paid;
-    } else if (status === BookingStatus.unpaid) {
-      nextPaymentStatus = PaymentStatus.unpaid;
+    if (status === BookingStatus.confirmed) {
+      throw new BadRequestException(
+        `Direct status transition to 'confirmed' via admin update is disallowed. Guest check-in must be processed via reception check-in terminal or QR verification (/api/v1/bookings/check-in).`
+      );
     }
+
+    const nextPaymentStatus = paymentStatus !== undefined ? paymentStatus : booking.paymentStatus;
 
     const updated = await this.prisma.booking.update({
       where: { id },
@@ -252,32 +315,6 @@ export class BookingsService {
       },
     });
 
-    if (status === BookingStatus.confirmed && this.notificationsService) {
-      this.notificationsService.createNotification(
-        (updated as any).userId || null,
-        'Desk Pass Active',
-        `Your QR pass is ready for Ishwarji Cowork 30 check-in (Code: #${updated.bookingCode}).`,
-        'booking',
-        '/dashboard?tab=bookings',
-      ).catch(() => {});
-
-      const emailTo = (updated as any).customerEmail || (updated as any).email;
-      if (emailTo) {
-        this.notificationsService.sendMail({
-          to: emailTo,
-          templateKey: 'booking_confirmation',
-          variables: {
-            name: (updated as any).customerName || 'Valued Guest',
-            bookingCode: updated.bookingCode,
-            bookingType: (updated as any).pricingPlan?.name || 'Day Pass / Workspace',
-            date: new Date(updated.preferredDate).toLocaleDateString(),
-            branchName: 'Ishwarji Cowork 30 Main Branch',
-            amount: updated.totalAmount || 0,
-          },
-        }).catch(() => {});
-      }
-    }
-
     return {
       success: true,
       booking: updated,
@@ -285,23 +322,32 @@ export class BookingsService {
   }
 
   async updateMeetingStatus(id: number, status: BookingStatus, paymentStatus?: PaymentStatus) {
+    if (!Object.values(BookingStatus).includes(status)) {
+      throw new BadRequestException('Invalid status value');
+    }
+
     const booking = await this.prisma.meetingBooking.findUnique({ where: { id } });
     if (!booking) {
       throw new NotFoundException('Meeting room booking not found');
     }
 
-    if (booking.status === BookingStatus.completed || booking.status === BookingStatus.cancelled) {
+    if (
+      booking.status === BookingStatus.completed ||
+      booking.status === BookingStatus.cancelled ||
+      booking.status === BookingStatus.not_checked_in
+    ) {
       throw new BadRequestException(
         `Status Locked: Meeting reservation #${booking.bookingCode} is already in terminal '${booking.status}' status and cannot be modified.`
       );
     }
 
-    let nextPaymentStatus = paymentStatus || booking.paymentStatus;
-    if (status === BookingStatus.confirmed || status === BookingStatus.completed) {
-      nextPaymentStatus = PaymentStatus.paid;
-    } else if (status === BookingStatus.unpaid) {
-      nextPaymentStatus = PaymentStatus.unpaid;
+    if (status === BookingStatus.confirmed) {
+      throw new BadRequestException(
+        `Direct status transition to 'confirmed' via admin update is disallowed. Guest check-in must be processed via reception check-in terminal or QR verification (/api/v1/bookings/check-in).`
+      );
     }
+
+    const nextPaymentStatus = paymentStatus !== undefined ? paymentStatus : booking.paymentStatus;
 
     const updated = await this.prisma.meetingBooking.update({
       where: { id },
@@ -327,10 +373,14 @@ export class BookingsService {
       throw new NotFoundException('Booking not found');
     }
 
+    if (!adminUserId) {
+      throw new BadRequestException('Admin user ID is required');
+    }
+
     const note = await this.prisma.bookingNote.create({
       data: {
         bookingId,
-        adminUserId: adminUserId || 1,
+        adminUserId,
         noteText,
       },
     });
@@ -341,25 +391,16 @@ export class BookingsService {
     };
   }
 
-  async generateCsvExport() {
-    const bookings = await this.prisma.booking.findMany({
-      include: { pricingPlan: true, user: true },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const header = 'Booking Code,Customer Name,Email,Phone,Plan Name,Preferred Date,Time Slot,Booking Type,Status,Created At\n';
-    const rows = bookings
-      .map(
-        (b) =>
-          `"${this.escapeCsv(b.bookingCode)}","${this.escapeCsv(b.customerName)}","${this.escapeCsv(b.customerEmail)}","${this.escapeCsv(b.customerPhone || '')}","${this.escapeCsv(b.pricingPlan?.name || 'Pass')}","${b.preferredDate.toISOString().split('T')[0]}","${this.escapeCsv(b.preferredTimeSlot || '')}","${b.bookingType}","${b.status}","${b.createdAt.toISOString()}"`,
-      )
-      .join('\n');
-
-    return header + rows;
-  }
-
-  private escapeCsv(value: string): string {
-    return String(value).replace(/"/g, '""');
+  private escapeCsv(value: any): string {
+    if (value === null || value === undefined) return '';
+    let str = String(value);
+    if (/^[=+\-@\t\r]/.test(str)) {
+      str = `'${str}`;
+    }
+    if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
   }
 
   async getAdminStats() {
@@ -367,24 +408,35 @@ export class BookingsService {
     const meetingBookingsCount = await this.prisma.meetingBooking.count();
     const totalBookings = regularBookingsCount + meetingBookingsCount;
 
-    const activeMembers = await this.prisma.user.count();
-
-    const bookingRevenue = await this.prisma.booking.aggregate({
-      _sum: { totalAmount: true },
-    });
-    const meetingRevenue = await this.prisma.meetingBooking.aggregate({
-      _sum: { totalAmount: true },
+    const activeMembers = await this.prisma.user.count({
+      where: { role: Role.member },
     });
 
-    const monthlyRevenue =
-      Number(bookingRevenue._sum.totalAmount || 0) +
-      Number(meetingRevenue._sum.totalAmount || 0);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-    const totalRooms = await this.prisma.meetingRoom.count();
-    const activeReservations = await this.prisma.meetingBooking.count({
-      where: { status: BookingStatus.confirmed },
+    const paidRevenue = await this.prisma.payment.aggregate({
+      where: {
+        status: PaymentStatus.paid,
+        createdAt: { gte: startOfMonth, lt: startOfNextMonth },
+      },
+      _sum: { amount: true },
     });
-    const roomOccupancyRate = totalRooms > 0 ? Math.min(100, Math.round((activeReservations / (totalRooms * 10)) * 100)) : 75;
+
+    const monthlyRevenue = Number(paidRevenue._sum.amount || 0);
+
+    const totalRooms = await this.prisma.meetingRoom.count({ where: { isActive: true } });
+    const activeRoomsGroup = await this.prisma.meetingBooking.groupBy({
+      by: ['meetingRoomId'],
+      where: {
+        status: BookingStatus.confirmed,
+        startTime: { lte: now },
+        endTime: { gte: now },
+      },
+    });
+    const occupiedRoomsCount = activeRoomsGroup.length;
+    const roomOccupancyRate = totalRooms > 0 ? Math.min(100, Math.round((occupiedRoomsCount / totalRooms) * 100)) : 0;
 
     const recentRegular = await this.prisma.booking.findMany({
       take: 3,
@@ -420,7 +472,7 @@ export class BookingsService {
       stats: {
         totalBookings,
         activeMembers,
-        monthlyRevenue: monthlyRevenue > 0 ? monthlyRevenue : 2540,
+        monthlyRevenue,
         roomOccupancyRate,
       },
       recentActivity,
@@ -437,7 +489,7 @@ export class BookingsService {
     });
 
     const totalMembers = await this.prisma.user.count({
-      where: { role: 'member' },
+      where: { role: Role.member },
     });
 
     return {
@@ -453,15 +505,21 @@ export class BookingsService {
 
   async exportCsv() {
     const bookings = await this.prisma.booking.findMany({
-      include: { pricingPlan: true, branch: true },
+      where: {
+        NOT: [
+          { bookingCode: { startsWith: 'SRV-' } },
+          { notes: { contains: 'Solution:' } },
+        ],
+      },
+      include: { pricingPlan: true, branch: true, user: true },
       orderBy: { createdAt: 'desc' },
     });
 
-    const header = 'Booking Code,Customer Name,Customer Email,Customer Phone,Company,Plan,Status,Payment Status,Date\n';
+    const header = 'Booking Code,Customer Name,Email,Phone,Company,GSTIN,Plan Name,Preferred Date,Time Slot,Booking Type,Status,Payment Status,Created At\n';
     const rows = bookings
       .map(
         (b) =>
-          `"${b.bookingCode}","${b.customerName}","${b.customerEmail}","${b.customerPhone}","${b.companyName || ''}","${b.pricingPlan?.name || ''}","${b.status}","${b.paymentStatus}","${b.createdAt.toISOString()}"`,
+          `${this.escapeCsv(b.bookingCode)},${this.escapeCsv(b.customerName)},${this.escapeCsv(b.customerEmail)},${this.escapeCsv(b.customerPhone || '')},${this.escapeCsv(b.companyName || '')},${this.escapeCsv(b.gstin || '')},${this.escapeCsv(b.pricingPlan?.name || 'Pass')},${this.escapeCsv(b.preferredDate ? b.preferredDate.toISOString().split('T')[0] : '')},${this.escapeCsv(b.preferredTimeSlot || '')},${this.escapeCsv(b.bookingType || '')},${this.escapeCsv(b.status)},${this.escapeCsv(b.paymentStatus)},${this.escapeCsv(b.createdAt.toISOString())}`,
       )
       .join('\n');
 
@@ -470,7 +528,7 @@ export class BookingsService {
 
   private generateUniqueBookingCode(prefix: string): string {
     const timestamp = Date.now().toString(36).toUpperCase();
-    const random = require('crypto').randomBytes(3).toString('hex').toUpperCase();
+    const random = randomBytes(3).toString('hex').toUpperCase();
     return `${prefix}-${timestamp}-${random}`;
   }
 
@@ -484,7 +542,25 @@ export class BookingsService {
     const companyName = data.companyName ? String(data.companyName).trim() : null;
     const gstin = data.gstin ? String(data.gstin).trim() : null;
     const preferredDate = data.preferredDate ? new Date(data.preferredDate) : new Date();
-    const totalAmount = Number(data.totalAmount || 150);
+
+    let totalAmount = data.totalAmount !== undefined && data.totalAmount !== null && data.totalAmount !== ''
+      ? Number(data.totalAmount)
+      : 150;
+
+    let pricingPlanId: number | undefined = undefined;
+    if (data.pricingPlanId) {
+      pricingPlanId = Number(data.pricingPlanId);
+      if (isNaN(pricingPlanId)) {
+        throw new BadRequestException('Invalid pricing plan ID');
+      }
+      const plan = await this.prisma.pricingPlan.findUnique({
+        where: { id: pricingPlanId },
+      });
+      if (!plan) {
+        throw new BadRequestException('Referenced pricing plan does not exist');
+      }
+      totalAmount = Number(plan.priceDaily) > 0 ? Number(plan.priceDaily) : Number(plan.priceMonthly);
+    }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -494,7 +570,7 @@ export class BookingsService {
 
     // Validate amount
     if (isNaN(totalAmount) || totalAmount < 0) {
-      throw new BadRequestException('Total amount must be a positive number');
+      throw new BadRequestException('Total amount must be a non-negative number');
     }
 
     // Validate date
@@ -502,7 +578,7 @@ export class BookingsService {
       throw new BadRequestException('Invalid preferred date');
     }
 
-    const isPaid = data.paymentStatus === PaymentStatus.paid || data.paymentMethod === 'wallet' || data.paymentMethod === 'credits' || data.isPaid;
+    const isPaid = data.paymentStatus === PaymentStatus.paid || data.paymentStatus === 'paid' || data.isPaid === true;
 
     const payload: any = {
       bookingCode,
@@ -519,8 +595,8 @@ export class BookingsService {
       totalAmount,
     };
 
-    if (data.pricingPlanId) {
-      payload.pricingPlanId = Number(data.pricingPlanId);
+    if (pricingPlanId) {
+      payload.pricingPlanId = pricingPlanId;
     }
 
     if (data.userId) {
@@ -534,38 +610,135 @@ export class BookingsService {
       },
     });
 
+    if (isPaid) {
+      await this.prisma.payment.create({
+        data: {
+          bookingId: booking.id,
+          userId: booking.userId || null,
+          amount: totalAmount,
+          paymentMethod: data.paymentMethod === 'wallet' ? 'wallet' : data.paymentMethod === 'credits' ? 'credits' : 'cash',
+          status: PaymentStatus.paid,
+        },
+      }).catch((err) => {
+        this.logger.error(`Failed to create audit payment record for admin booking #${booking.id}: ${err.message}`, err.stack);
+      });
+    }
+
     return {
       success: true,
       booking,
     };
   }
 
-  async verifyAndCheckIn(code: string) {
+  async verifyAndCheckIn(code: string, branchId?: number) {
+    const cleanCode = String(code || '').trim();
+    if (!cleanCode) {
+      throw new BadRequestException('Access code or pass code is required');
+    }
+
     const meetingBooking = await this.prisma.meetingBooking.findFirst({
       where: {
         OR: [
-          { qrAccessCode: code },
-          { bookingCode: code },
+          { qrAccessCode: cleanCode },
+          { bookingCode: cleanCode },
         ],
       },
       include: { meetingRoom: true },
     });
 
     if (meetingBooking) {
-      if (meetingBooking.status === BookingStatus.cancelled) {
-        throw new BadRequestException(`Access Denied: Meeting Suite Reservation #${meetingBooking.bookingCode} was CANCELLED. Access revoked.`);
+      // 1. Branch Validation
+      if (branchId && meetingBooking.branchId !== Number(branchId)) {
+        throw new BadRequestException(
+          `Access Denied: Meeting Suite Reservation #${meetingBooking.bookingCode} is registered for a different branch.`,
+        );
       }
 
-      let updated = meetingBooking;
-      if (meetingBooking.status !== BookingStatus.completed) {
-        const isUnpaid = meetingBooking.paymentStatus === PaymentStatus.unpaid || meetingBooking.paymentStatus === PaymentStatus.pending;
-        updated = await this.prisma.meetingBooking.update({
-          where: { id: meetingBooking.id },
-          data: {
-            status: BookingStatus.confirmed,
-            paymentStatus: isUnpaid ? meetingBooking.paymentStatus : PaymentStatus.paid,
-          },
-          include: { meetingRoom: true },
+      // 2. Terminal State Checks
+      if (meetingBooking.status === BookingStatus.cancelled) {
+        throw new BadRequestException(
+          `Access Denied: Meeting Suite Reservation #${meetingBooking.bookingCode} was CANCELLED. Access revoked.`,
+        );
+      }
+      if (meetingBooking.status === BookingStatus.completed) {
+        throw new BadRequestException(
+          `Access Denied: Meeting Suite Reservation #${meetingBooking.bookingCode} is already COMPLETED.`,
+        );
+      }
+      if (meetingBooking.status === BookingStatus.not_checked_in) {
+        throw new BadRequestException(
+          `Access Denied: Meeting Suite Reservation #${meetingBooking.bookingCode} was NOT CHECKED-IN and has expired.`,
+        );
+      }
+
+      // 3. Payment Rule Check: Payment MUST be settled prior to check-in!
+      if (meetingBooking.paymentStatus !== PaymentStatus.paid) {
+        throw new BadRequestException(
+          `Access Denied: Meeting Suite Reservation #${meetingBooking.bookingCode} is UNPAID (Payment Status: ${meetingBooking.paymentStatus}). Payment must be settled before check-in.`,
+        );
+      }
+
+      // 4. Time Window Check
+      const nowTime = Date.now();
+      const startTimeMs = new Date(meetingBooking.startTime).getTime();
+      const endTimeMs = new Date(meetingBooking.endTime).getTime();
+
+      if (endTimeMs <= nowTime) {
+        throw new BadRequestException(
+          `Access Denied: Meeting Suite Reservation #${meetingBooking.bookingCode} has EXPIRED. Check-in is not permitted for past reservations.`,
+        );
+      }
+
+      // Allow check-in starting 30 minutes before scheduled start time
+      const earlyCheckInWindowMs = startTimeMs - 30 * 60 * 1000;
+      if (nowTime < earlyCheckInWindowMs) {
+        const startTimeStr = new Date(meetingBooking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        throw new BadRequestException(
+          `Access Denied: Early check-in is not open yet for #${meetingBooking.bookingCode}. Check-in opens 30 minutes prior to start time (${startTimeStr}).`,
+        );
+      }
+
+      // 5. Already Checked-In Check
+      if (meetingBooking.status === BookingStatus.confirmed) {
+        return {
+          success: true,
+          type: 'meeting_room',
+          detailName: meetingBooking.meetingRoom?.name,
+          customerName: meetingBooking.customerName,
+          booking: meetingBooking,
+          message: `Member is already checked in for ${meetingBooking.meetingRoom?.name || 'Meeting Room'}!`,
+        };
+      }
+
+      // 6. Atomic Update: Set status to confirmed (checked-in) preserving paymentStatus
+      const updateResult = await this.prisma.meetingBooking.updateMany({
+        where: {
+          id: meetingBooking.id,
+          status: { in: [BookingStatus.pending, BookingStatus.unpaid] },
+          paymentStatus: PaymentStatus.paid,
+        },
+        data: {
+          status: BookingStatus.confirmed,
+        },
+      });
+
+      if (updateResult.count === 0) {
+        throw new BadRequestException(`Check-In Failed: Reservation #${meetingBooking.bookingCode} status has been updated by another process.`);
+      }
+
+      const updated = await this.prisma.meetingBooking.findUnique({
+        where: { id: meetingBooking.id },
+        include: { meetingRoom: true },
+      });
+
+      if (this.notificationsService && updated) {
+        await this.notificationsService.createNotification(
+          updated.userId || null,
+          'Check-In Verified',
+          `Member verified and checked in for ${updated.meetingRoom?.name || 'Meeting Room'}!`,
+          'meeting',
+        ).catch((err) => {
+          this.logger.error(`Failed to send check-in notification: ${err?.message}`);
         });
       }
 
@@ -580,25 +753,103 @@ export class BookingsService {
     }
 
     const regularBooking = await this.prisma.booking.findFirst({
-      where: { bookingCode: code },
+      where: { bookingCode: cleanCode },
       include: { pricingPlan: true },
     });
 
     if (regularBooking) {
-      if (regularBooking.status === BookingStatus.cancelled) {
-        throw new BadRequestException(`Access Denied: Pass #${regularBooking.bookingCode} was CANCELLED. Access revoked.`);
+      // 1. Branch Validation
+      if (branchId && regularBooking.branchId !== Number(branchId)) {
+        throw new BadRequestException(
+          `Access Denied: Pass #${regularBooking.bookingCode} is registered for a different branch.`,
+        );
       }
 
-      let updated = regularBooking;
-      if (regularBooking.status !== BookingStatus.completed) {
-        const isUnpaid = regularBooking.paymentStatus === PaymentStatus.unpaid || regularBooking.paymentStatus === PaymentStatus.pending;
-        updated = await this.prisma.booking.update({
-          where: { id: regularBooking.id },
-          data: {
-            status: BookingStatus.confirmed,
-            paymentStatus: isUnpaid ? regularBooking.paymentStatus : PaymentStatus.paid,
-          },
-          include: { pricingPlan: true },
+      // 2. Terminal State Checks
+      if (regularBooking.status === BookingStatus.cancelled) {
+        throw new BadRequestException(
+          `Access Denied: Pass #${regularBooking.bookingCode} was CANCELLED. Access revoked.`,
+        );
+      }
+      if (regularBooking.status === BookingStatus.completed) {
+        throw new BadRequestException(
+          `Access Denied: Pass #${regularBooking.bookingCode} is already COMPLETED.`,
+        );
+      }
+      if (regularBooking.status === BookingStatus.not_checked_in) {
+        throw new BadRequestException(
+          `Access Denied: Pass #${regularBooking.bookingCode} was NOT CHECKED-IN and has expired.`,
+        );
+      }
+
+      // 3. Payment Rule Check: Payment MUST be settled prior to check-in!
+      if (regularBooking.paymentStatus !== PaymentStatus.paid) {
+        throw new BadRequestException(
+          `Access Denied: Pass #${regularBooking.bookingCode} is UNPAID (Payment Status: ${regularBooking.paymentStatus}). Payment must be settled before check-in.`,
+        );
+      }
+
+      // 4. Time Window Check
+      const nowTime = Date.now();
+      const { startTime, endTime } = this.getBookingTimeWindow(regularBooking.preferredDate, regularBooking.preferredTimeSlot);
+      const endTimeMs = endTime.getTime();
+
+      if (endTimeMs <= nowTime) {
+        throw new BadRequestException(
+          `Access Denied: Pass #${regularBooking.bookingCode} has EXPIRED. Check-in is not permitted for past dates.`,
+        );
+      }
+
+      const earlyCheckInWindowMs = startTime.getTime() - 30 * 60 * 1000;
+      if (nowTime < earlyCheckInWindowMs) {
+        const startTimeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateStr = new Date(regularBooking.preferredDate).toLocaleDateString();
+        throw new BadRequestException(
+          `Access Denied: Early check-in is not open yet for #${regularBooking.bookingCode} (${dateStr}). Check-in opens 30 minutes prior to pass start time (${startTimeStr}).`,
+        );
+      }
+
+      // 5. Already Checked-In Check
+      if (regularBooking.status === BookingStatus.confirmed) {
+        return {
+          success: true,
+          type: 'desk_pass',
+          detailName: regularBooking.pricingPlan?.name || 'Workspace Pass',
+          customerName: regularBooking.customerName,
+          booking: regularBooking,
+          message: `Member is already checked in for ${regularBooking.pricingPlan?.name || 'Workspace Pass'}!`,
+        };
+      }
+
+      // 6. Atomic Update: Set status to confirmed (checked-in) preserving paymentStatus
+      const updateResult = await this.prisma.booking.updateMany({
+        where: {
+          id: regularBooking.id,
+          status: { in: [BookingStatus.pending, BookingStatus.unpaid] },
+          paymentStatus: PaymentStatus.paid,
+        },
+        data: {
+          status: BookingStatus.confirmed,
+        },
+      });
+
+      if (updateResult.count === 0) {
+        throw new BadRequestException(`Check-In Failed: Pass #${regularBooking.bookingCode} status has been updated by another process.`);
+      }
+
+      const updated = await this.prisma.booking.findUnique({
+        where: { id: regularBooking.id },
+        include: { pricingPlan: true },
+      });
+
+      if (this.notificationsService && updated) {
+        await this.notificationsService.createNotification(
+          updated.userId || null,
+          'Check-In Verified',
+          `Member verified and checked in for ${updated.pricingPlan?.name || 'Workspace Pass'}!`,
+          'booking',
+        ).catch((err) => {
+          this.logger.error(`Failed to send check-in notification: ${err?.message}`);
         });
       }
 
@@ -615,3 +866,4 @@ export class BookingsService {
     throw new NotFoundException('Invalid access QR code or reservation reference');
   }
 }
+
