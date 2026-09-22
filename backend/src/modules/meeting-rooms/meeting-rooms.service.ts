@@ -481,6 +481,8 @@ export class MeetingRoomsService {
         });
       }
 
+      const isPaidMethod = useCredits || useWallet || dto.paymentStatus === PaymentStatus.paid || dto.isPaid;
+
       await tx.payment.create({
         data: {
           meetingBookingId: createdBooking.id,
@@ -488,7 +490,7 @@ export class MeetingRoomsService {
           amount: finalTotalAmount,
           taxAmount: finalTaxAmount,
           paymentMethod: payMethodEnum,
-          status: PaymentStatus.paid,
+          status: isPaidMethod ? PaymentStatus.paid : PaymentStatus.unpaid,
           razorpayPaymentId: dto.razorpayPaymentId || null,
           razorpayOrderId: dto.razorpayOrderId || null,
           razorpaySignature: dto.razorpaySignature || null,
@@ -521,17 +523,26 @@ export class MeetingRoomsService {
             amount: booking.totalAmount,
             viewToken: booking.viewToken,
           },
+          metadata: { bookingId: booking.id },
         }).catch(() => {});
       }
     }
 
+    const primaryPayment = await this.prisma.payment.findFirst({
+      where: { meetingBookingId: booking.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
     return {
       success: true,
       bookingCode: booking.bookingCode,
-      qrAccessCode: booking.qrAccessCode,
+      viewToken: booking.viewToken,
       receiptToken: booking.viewToken,
       receiptUrl: `/meeting-rooms/receipt/${booking.viewToken}`,
-      booking,
+      booking: {
+        ...booking,
+        paymentMethod: primaryPayment ? primaryPayment.paymentMethod : (booking.creditsUsed > 0 ? 'credits' : 'cash'),
+      },
     };
   }
 
@@ -562,9 +573,17 @@ export class MeetingRoomsService {
         }
       }
 
+      const primaryPayment = booking.payments && booking.payments.length > 0 ? booking.payments[0] : null;
+      const paymentMethodStr = primaryPayment
+        ? primaryPayment.paymentMethod
+        : (booking.creditsUsed > 0 ? 'credits' : 'cash');
+
       return {
         success: true,
-        booking,
+        booking: {
+          ...booking,
+          paymentMethod: paymentMethodStr,
+        },
       };
     }
 

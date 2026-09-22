@@ -221,10 +221,17 @@ export default function ReceiptPage() {
           {/* Header Badge & Title */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 print:border-slate-200 pb-4">
             <div className="space-y-1">
-              <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase">
-                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                <span>Reservation Confirmed & Paid</span>
-              </div>
+              {booking.paymentStatus === 'paid' ? (
+                <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  <span>Reservation Confirmed & Paid</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold uppercase">
+                  <Clock className="w-3 h-3 text-amber-600" />
+                  <span>Reservation Confirmed (Pay at Reception)</span>
+                </div>
+              )}
               <h1 className="text-2xl font-black text-slate-900">{booking.meetingRoom?.name || 'Executive Conference Suite'}</h1>
               <p className="text-xs text-slate-500 flex items-center space-x-2 font-medium">
                 <MapPin className="w-3.5 h-3.5 text-rose-500" />
@@ -302,10 +309,22 @@ export default function ReceiptPage() {
               )}
               <div className="space-y-0.5">
                 <span className="text-[11px] text-slate-400 block font-medium">Payment Method</span>
-                <span className="font-bold text-slate-900 uppercase">{booking.paymentMethod || 'Wallet'}</span>
+                <span className="font-bold text-slate-900">
+                  {(() => {
+                    const primaryPayment = booking.payments && booking.payments.length > 0 ? booking.payments[0] : null;
+                    const pm = String(booking.paymentMethod || primaryPayment?.paymentMethod || (booking.creditsUsed > 0 ? 'credits' : 'cash')).toLowerCase();
+                    if (pm === 'cash' || pm === 'reception') return 'Pay at Reception (Cash)';
+                    if (pm === 'wallet') return 'Credit Wallet';
+                    if (pm === 'credits') return 'Meeting Room Credits';
+                    if (pm === 'razorpay') return 'Razorpay Online';
+                    return pm.toUpperCase();
+                  })()}
+                </span>
               </div>
               <div className="space-y-0.5">
-                <span className="text-[11px] text-slate-400 block font-medium">Total Paid (incl. GST)</span>
+                <span className="text-[11px] text-slate-400 block font-medium">
+                  {booking.paymentStatus === 'paid' ? 'Total Paid (incl. GST)' : 'Total Amount Due (incl. GST)'}
+                </span>
                 <span className="font-extrabold text-indigo-600 text-sm">₹{Number(booking.totalAmount || 0).toFixed(2)}</span>
               </div>
             </div>
