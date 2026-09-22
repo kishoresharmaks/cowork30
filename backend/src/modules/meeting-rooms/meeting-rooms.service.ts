@@ -261,10 +261,38 @@ export class MeetingRoomsService {
     const qrAccessCode = `QR-MR-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
     const viewToken = crypto.randomBytes(16).toString('hex');
 
-    const totalSlotsCount = Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0 ? dto.selectedSlots.length : 1;
-    const totalHours = Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0
-      ? totalSlotsCount * 0.5
-      : (dto.totalHours ? Number(dto.totalHours) : 0.5);
+    let startTime = new Date();
+    let endTime = new Date(Date.now() + 1800000); // Default 30 min
+
+    if (Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0) {
+      const sortedSlots = [...dto.selectedSlots].sort();
+      startTime = new Date(sortedSlots[0]);
+      const lastSlotStart = new Date(sortedSlots[sortedSlots.length - 1]);
+      // Each slot is 30 minutes = 30 * 60 * 1000 = 1,800,000 ms
+      endTime = new Date(lastSlotStart.getTime() + 1800000);
+    } else if (dto.startTime && dto.endTime) {
+      const dateStr = dto.bookingDate ? new Date(dto.bookingDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+
+      if (typeof dto.startTime === 'string' && dto.startTime.includes('T')) {
+        startTime = new Date(dto.startTime);
+      } else {
+        const [sh, sm] = String(dto.startTime).split(':').map((v) => v.padStart(2, '0'));
+        startTime = new Date(`${dateStr}T${sh || '10'}:${sm || '00'}:00.000Z`);
+      }
+
+      if (typeof dto.endTime === 'string' && dto.endTime.includes('T')) {
+        endTime = new Date(dto.endTime);
+      } else {
+        const [eh, em] = String(dto.endTime).split(':').map((v) => v.padStart(2, '0'));
+        endTime = new Date(`${dateStr}T${eh || '11'}:${em || '00'}:00.000Z`);
+      }
+    }
+
+    // Calculate total hours and slots directly from the actual duration range [startTime -> endTime]
+    const durationMs = Math.max(1800000, endTime.getTime() - startTime.getTime());
+    const totalHours = Number((durationMs / 3600000).toFixed(2));
+    const totalSlotsCount = Math.round(totalHours * 2);
+
     const seatsCount = Number(dto.seatsBooked || 1);
     const minSeats = Number(room.minSeats || 1);
     const maxSeats = Number(room.maxSeats || room.capacity || 10);
@@ -296,33 +324,6 @@ export class MeetingRoomsService {
     // SECURITY: Always use server-calculated totalAmount. Never trust client-supplied price.
     const finalTotalAmount = calculatedGrandTotal;
     const finalTaxAmount = calculatedTaxAmount;
-
-    let startTime = new Date();
-    let endTime = new Date(Date.now() + 1800000); // Default 30 min
-
-    if (Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0) {
-      const sortedSlots = [...dto.selectedSlots].sort();
-      startTime = new Date(sortedSlots[0]);
-      const lastSlotStart = new Date(sortedSlots[sortedSlots.length - 1]);
-      // Each slot is 30 minutes = 30 * 60 * 1000 = 1,800,000 ms
-      endTime = new Date(lastSlotStart.getTime() + 1800000);
-    } else if (dto.startTime && dto.endTime) {
-      const dateStr = dto.bookingDate ? new Date(dto.bookingDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-
-      if (typeof dto.startTime === 'string' && dto.startTime.includes('T')) {
-        startTime = new Date(dto.startTime);
-      } else {
-        const [sh, sm] = String(dto.startTime).split(':').map((v) => v.padStart(2, '0'));
-        startTime = new Date(`${dateStr}T${sh || '10'}:${sm || '00'}:00.000Z`);
-      }
-
-      if (typeof dto.endTime === 'string' && dto.endTime.includes('T')) {
-        endTime = new Date(dto.endTime);
-      } else {
-        const [eh, em] = String(dto.endTime).split(':').map((v) => v.padStart(2, '0'));
-        endTime = new Date(`${dateStr}T${eh || '11'}:${em || '00'}:00.000Z`);
-      }
-    }
 
     // STRICT GUARD 1: Block booking if selected slot end time has already passed
     if (endTime.getTime() <= Date.now()) {

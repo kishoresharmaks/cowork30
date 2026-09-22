@@ -179,13 +179,65 @@ export default function MeetingRoomsPage() {
     });
   }, [rooms, selectedCategory, searchQuery]);
 
-  // Slot Selection Handlers
+  // Slot Selection Handlers (Enforces Contiguous Range Selection for Meeting Suite Reservations)
   const handleToggleSlot = (slotStartTime: string) => {
-    if (selectedSlots.includes(slotStartTime)) {
-      setSelectedSlots(selectedSlots.filter((s) => s !== slotStartTime));
-    } else {
-      setSelectedSlots([...selectedSlots, slotStartTime]);
+    if (!availability?.timeSlots || availability.timeSlots.length === 0) return;
+
+    const allSlots = availability.timeSlots;
+
+    // 1. If no slots selected, select the clicked slot
+    if (selectedSlots.length === 0) {
+      setSelectedSlots([slotStartTime]);
+      return;
     }
+
+    // 2. If clicking an already selected slot
+    if (selectedSlots.includes(slotStartTime)) {
+      if (selectedSlots.length === 1) {
+        setSelectedSlots([]);
+        return;
+      }
+      const sorted = [...selectedSlots].sort();
+      const clickedIdx = sorted.indexOf(slotStartTime);
+      if (clickedIdx === 0) {
+        // Remove earliest slot
+        setSelectedSlots(sorted.slice(1));
+      } else if (clickedIdx === sorted.length - 1) {
+        // Remove latest slot
+        setSelectedSlots(sorted.slice(0, sorted.length - 1));
+      } else {
+        // Reset to just clicked slot
+        setSelectedSlots([slotStartTime]);
+      }
+      return;
+    }
+
+    // 3. If clicking a new slot, form a continuous time range
+    const allSelectedAndNew = [...selectedSlots, slotStartTime].sort();
+    const minTime = new Date(allSelectedAndNew[0]).getTime();
+    const maxTime = new Date(allSelectedAndNew[allSelectedAndNew.length - 1]).getTime();
+
+    // Find all slots in availability that fall within [minTime, maxTime]
+    const rangeSlots = allSlots.filter((s) => {
+      const t = new Date(s.startTime).getTime();
+      return t >= minTime && t <= maxTime;
+    });
+
+    // Check if any slot in the requested range is unavailable
+    const hasUnavailableInBetween = rangeSlots.some((s) => !s.isAvailable);
+    if (hasUnavailableInBetween) {
+      setErrorModalData({
+        isOpen: true,
+        title: 'Unavailable Time Range',
+        message: 'Selected range contains unavailable slots. Please select a continuous block of available time.',
+      });
+      setSelectedSlots([slotStartTime]);
+      return;
+    }
+
+    // Expand selection to include all contiguous slots in the range
+    const newSelectedRange = rangeSlots.map((s) => s.startTime).sort();
+    setSelectedSlots(newSelectedRange);
   };
 
   const handleClearSlots = () => {
