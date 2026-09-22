@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Users, AlertCircle, ArrowRight, Info } from 'lucide-react';
 import { MeetingRoom, AvailabilityData } from '../types';
 import { SlotSelectorSkeleton } from './RoomSkeleton';
+import { getMediaUrl } from '@/lib/api-client';
 
 interface SlotSelectorProps {
   selectedRoom: MeetingRoom;
@@ -60,11 +61,12 @@ export const SlotSelector: React.FC<SlotSelectorProps> = ({
   }, []);
 
   const getImageSource = () => {
-    if (selectedRoom.imageUrl) return selectedRoom.imageUrl;
-    if (selectedRoom.featuredImage) return selectedRoom.featuredImage;
-    if (Array.isArray(selectedRoom.images) && selectedRoom.images.length > 0) return selectedRoom.images[0];
-    if (typeof selectedRoom.images === 'string' && selectedRoom.images.trim()) return selectedRoom.images;
-    return 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80';
+    let raw = 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80';
+    if (selectedRoom.imageUrl) raw = selectedRoom.imageUrl;
+    else if (selectedRoom.featuredImage) raw = selectedRoom.featuredImage;
+    else if (Array.isArray(selectedRoom.images) && selectedRoom.images.length > 0) raw = selectedRoom.images[0];
+    else if (typeof selectedRoom.images === 'string' && selectedRoom.images.trim()) raw = selectedRoom.images;
+    return getMediaUrl(raw);
   };
 
   return (

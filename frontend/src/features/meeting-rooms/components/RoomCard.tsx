@@ -1,6 +1,7 @@
 import React from 'react';
 import { Clock, MapPin, Users, Settings, ArrowRight, Star } from 'lucide-react';
 import { MeetingRoom } from '../types';
+import { getMediaUrl } from '@/lib/api-client';
 
 interface RoomCardProps {
   room: MeetingRoom;
@@ -13,11 +14,12 @@ const DEFAULT_ROOM_IMAGE =
 
 export const RoomCard: React.FC<RoomCardProps> = ({ room, isSelected, onSelect }) => {
   const getImageSource = () => {
-    if (room.imageUrl) return room.imageUrl;
-    if (room.featuredImage) return room.featuredImage;
-    if (Array.isArray(room.images) && room.images.length > 0) return room.images[0];
-    if (typeof room.images === 'string' && room.images.trim()) return room.images;
-    return DEFAULT_ROOM_IMAGE;
+    let raw = DEFAULT_ROOM_IMAGE;
+    if (room.imageUrl) raw = room.imageUrl;
+    else if (room.featuredImage) raw = room.featuredImage;
+    else if (Array.isArray(room.images) && room.images.length > 0) raw = room.images[0];
+    else if (typeof room.images === 'string' && room.images.trim()) raw = room.images;
+    return getMediaUrl(raw);
   };
 
   const imageSrc = getImageSource();

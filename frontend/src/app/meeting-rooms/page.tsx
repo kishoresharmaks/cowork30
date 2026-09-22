@@ -5,7 +5,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import RazorpayGatewayModal from '@/components/ui/RazorpayGatewayModal';
 import UnauthorizedNoticeModal from '@/components/ui/UnauthorizedNoticeModal';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, getMediaUrl } from '@/lib/api-client';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useBranch } from '@/context/BranchContext';
@@ -470,7 +470,8 @@ export default function MeetingRoomsPage() {
             <div className="flex items-center space-x-2.5 mt-2 overflow-x-auto pb-1 no-scrollbar">
               {filteredRooms.map((room) => {
                 const isSelected = selectedRoom?.id === room.id;
-                const img = room.imageUrl || room.featuredImage || (Array.isArray(room.images) && room.images[0]) || 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80';
+                const rawImg = room.imageUrl || room.featuredImage || (Array.isArray(room.images) && room.images[0]) || 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80';
+                const img = getMediaUrl(rawImg);
 
                 return (
                   <button

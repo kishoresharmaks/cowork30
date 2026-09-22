@@ -83,3 +83,45 @@ apiClient.interceptors.response.use(
   }
 );
 
+/**
+ * Normalizes uploaded image/file URLs.
+ * Strips legacy/hardcoded localhost origins and resolves relative paths
+ * against the current domain or API host dynamically.
+ */
+export function getMediaUrl(url?: string | null): string {
+  if (!url) return '';
+  let clean = String(url).trim();
+
+  // Strip hardcoded localhost / local IP origins from legacy DB records
+  clean = clean.replace(/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?/i, '');
+
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    return clean;
+  }
+
+  const path = clean.startsWith('/') ? clean : `/${clean}`;
+
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin;
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      const base = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '');
+      return `${base}${path}`;
+    }
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || /^192\.168\.\d+\.\d+$/.test(hostname)) {
+      return `${protocol}//${hostname}:4000${path}`;
+    }
+
+    return `${origin}${path}`;
+  }
+
+  const base = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '')
+    : 'http://localhost:4000';
+  return `${base}${path}`;
+}
+
+

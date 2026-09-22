@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle2, Image as ImageIcon, Loader2, X } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, getMediaUrl } from '@/lib/api-client';
 
 interface ImageUploaderProps {
   value?: string;
@@ -43,8 +43,11 @@ export default function ImageUploader({
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      if (res.data?.url) {
-        onChange(res.data.url);
+      const rawUrl = res.data?.relativeUrl || res.data?.url;
+      if (rawUrl) {
+        // Strip any hardcoded localhost prefix before saving to DB
+        const cleanPath = String(rawUrl).replace(/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?/i, '');
+        onChange(cleanPath);
       }
     } catch (err: any) {
       console.error('Image upload failed', err);
@@ -68,7 +71,7 @@ export default function ImageUploader({
 
       {value ? (
         <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 group h-36 w-full flex items-center justify-center">
-          <img src={value} alt="Uploaded Preview" className="w-full h-full object-cover" />
+          <img src={getMediaUrl(value)} alt="Uploaded Preview" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
             <button
               type="button"

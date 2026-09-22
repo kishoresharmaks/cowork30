@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { UploadCloud, X, Loader2, Plus, Image as ImageIcon } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, getMediaUrl } from '@/lib/api-client';
 
 interface MultiImageUploaderProps {
   value: string[];
@@ -39,8 +39,10 @@ export default function MultiImageUploader({
           headers: { 'Content-Type': 'multipart/form-data' },
         });
 
-        if (res.data?.url) {
-          newUrls.push(res.data.url);
+        const rawUrl = res.data?.relativeUrl || res.data?.url;
+        if (rawUrl) {
+          const cleanPath = String(rawUrl).replace(/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?/i, '');
+          newUrls.push(cleanPath);
         }
       }
 
@@ -69,7 +71,7 @@ export default function MultiImageUploader({
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {value.map((url, idx) => (
             <div key={idx} className="relative h-20 rounded-xl overflow-hidden bg-slate-900 border border-slate-800 group">
-              <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+              <img src={getMediaUrl(url)} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
               <button
                 type="button"
                 onClick={() => handleRemove(idx)}

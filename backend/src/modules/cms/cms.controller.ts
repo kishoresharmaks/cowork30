@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe, UseInterceptors, UploadedFile, BadRequestException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe, UseInterceptors, UploadedFile, BadRequestException, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CmsService } from './cms.service';
@@ -65,17 +65,23 @@ export class CmsController {
       },
     }),
   )
-  async uploadFile(@UploadedFile() file: any) {
+  async uploadFile(@UploadedFile() file: any, @Req() req: any) {
     if (!file) {
       throw new BadRequestException('Image file is required');
     }
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+
+    const reqProtocol = req?.headers?.['x-forwarded-proto'] || req?.protocol || 'http';
+    const reqHost = req?.headers?.['x-forwarded-host'] || req?.get?.('host') || 'localhost:4000';
+    const dynamicBase = `${reqProtocol}://${reqHost}`;
+    const backendUrl = process.env.BACKEND_URL || process.env.APP_URL || dynamicBase;
+
     const relativeUrl = `/uploads/${file.filename}`;
-    const fullUrl = `${backendUrl}${relativeUrl}`;
+    const fullUrl = `${backendUrl.replace(/\/+$/, '')}${relativeUrl}`;
 
     return {
       success: true,
-      url: fullUrl,
+      url: relativeUrl,
+      fullUrl,
       relativeUrl,
       filename: file.filename,
       originalName: file.originalname,

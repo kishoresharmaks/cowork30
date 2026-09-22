@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Users, Clock, MapPin, Sparkles, CheckCircle2, ShieldCheck, Tag, Building2, ArrowRight } from 'lucide-react';
 import { MeetingRoom } from '../types';
+import { getMediaUrl } from '@/lib/api-client';
 
 interface RoomDetailsModalProps {
   room: MeetingRoom | null;
@@ -34,26 +35,26 @@ function parseRealAmenities(amenitiesRaw: any): string[] {
 // Helper to parse dynamic images array/JSON from DB
 function parseRealImages(room: MeetingRoom): string[] {
   const images: string[] = [];
-  if (room.imageUrl && room.imageUrl.trim()) images.push(room.imageUrl);
-  if (room.featuredImage && room.featuredImage.trim()) images.push(room.featuredImage);
+  if (room.imageUrl && room.imageUrl.trim()) images.push(getMediaUrl(room.imageUrl));
+  if (room.featuredImage && room.featuredImage.trim()) images.push(getMediaUrl(room.featuredImage));
 
   const imagesRaw = room.images;
   if (Array.isArray(imagesRaw)) {
     imagesRaw.forEach((img) => {
-      if (typeof img === 'string' && img.trim()) images.push(img);
+      if (typeof img === 'string' && img.trim()) images.push(getMediaUrl(img));
     });
   } else if (typeof imagesRaw === 'string' && imagesRaw.trim()) {
     try {
       const parsed = JSON.parse(imagesRaw);
       if (Array.isArray(parsed)) {
         parsed.forEach((img) => {
-          if (typeof img === 'string' && img.trim()) images.push(img);
+          if (typeof img === 'string' && img.trim()) images.push(getMediaUrl(img));
         });
       } else {
-        images.push(imagesRaw);
+        images.push(getMediaUrl(imagesRaw));
       }
     } catch (e) {
-      images.push(imagesRaw);
+      images.push(getMediaUrl(imagesRaw));
     }
   }
 
