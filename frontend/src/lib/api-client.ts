@@ -95,7 +95,19 @@ export function getMediaUrl(url?: string | null): string {
   // Strip hardcoded localhost / local IP origins from legacy DB records
   clean = clean.replace(/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?/i, '');
 
+  // Convert legacy /uploads/ or raw img- filenames to /api/v1/cms/uploads/
+  if (clean.includes('/uploads/') && !clean.includes('/api/v1/')) {
+    clean = clean.replace('/uploads/', '/api/v1/cms/uploads/');
+  } else if (clean.startsWith('uploads/')) {
+    clean = `/api/v1/cms/uploads/${clean.substring(8)}`;
+  } else if (/^img-[a-zA-Z0-9.\-_]+$/.test(clean)) {
+    clean = `/api/v1/cms/uploads/${clean}`;
+  }
+
   if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    if (clean.includes('/uploads/') && !clean.includes('/api/v1/')) {
+      return clean.replace('/uploads/', '/api/v1/cms/uploads/');
+    }
     return clean;
   }
 

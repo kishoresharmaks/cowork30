@@ -32,9 +32,16 @@ async function bootstrap() {
     }),
   );
 
-  // Serve uploaded images statically at http://localhost:4000/uploads/...
-  app.useStaticAssets(join(process.cwd(), 'public', 'uploads'), {
+  // Serve uploaded images statically at /uploads/, /api/v1/uploads/, and /api/v1/cms/uploads/
+  const uploadsDir = join(process.cwd(), 'public', 'uploads');
+  app.useStaticAssets(uploadsDir, {
     prefix: '/uploads/',
+  });
+  app.useStaticAssets(uploadsDir, {
+    prefix: '/api/v1/uploads/',
+  });
+  app.useStaticAssets(uploadsDir, {
+    prefix: '/api/v1/cms/uploads/',
   });
 
   // Enable CORS for Next.js frontend (supports process.env.FRONTEND_URL, custom domain cowork30.com, onrender.com & local network IPs)

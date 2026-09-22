@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe, UseInterceptors, UploadedFile, BadRequestException, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe, UseInterceptors, UploadedFile, BadRequestException, NotFoundException, UseGuards, Req, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CmsService } from './cms.service';
@@ -18,6 +18,17 @@ if (!fs.existsSync(uploadsDir)) {
 @Controller('cms')
 export class CmsController {
   constructor(private readonly cmsService: CmsService) {}
+
+  @Get('uploads/:filename')
+  @ApiOperation({ summary: 'Serve uploaded image/media file' })
+  async getUploadedFile(@Param('filename') filename: string, @Res() res: any) {
+    const safeFilename = filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
+    const filePath = join(uploadsDir, safeFilename);
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundException('File not found');
+    }
+    return res.sendFile(filePath);
+  }
 
   @Get('homepage')
   @ApiOperation({ summary: 'Get home page dynamic data (slides, featured services, plans, logos)' })
@@ -75,7 +86,7 @@ export class CmsController {
     const dynamicBase = `${reqProtocol}://${reqHost}`;
     const backendUrl = process.env.BACKEND_URL || process.env.APP_URL || dynamicBase;
 
-    const relativeUrl = `/uploads/${file.filename}`;
+    const relativeUrl = `/api/v1/cms/uploads/${file.filename}`;
     const fullUrl = `${backendUrl.replace(/\/+$/, '')}${relativeUrl}`;
 
     return {
