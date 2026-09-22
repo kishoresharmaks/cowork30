@@ -12,11 +12,7 @@ export class BookingsService {
 
   async autoCompleteExpiredBookings() {
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-    const currentDay = now.getDate();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
+    const nowTime = now.getTime();
 
     // 1. Process Meeting Bookings whose slot time has finished
     const activeMeetings = await this.prisma.meetingBooking.findMany({
@@ -25,34 +21,21 @@ export class BookingsService {
           in: [BookingStatus.confirmed, BookingStatus.pending, BookingStatus.unpaid],
         },
       },
-      select: { id: true, bookingDate: true, startTime: true, endTime: true, status: true },
+      select: { id: true, startTime: true, endTime: true, status: true, paymentStatus: true },
     });
 
     const meetingIdsToComplete: number[] = [];
     const meetingIdsNotCheckedIn: number[] = [];
 
     for (const mb of activeMeetings) {
-      const bDate = new Date(mb.bookingDate);
-      const bYear = bDate.getFullYear();
-      const bMonth = bDate.getMonth();
-      const bDay = bDate.getDate();
+      const endTimeMs = new Date(mb.endTime).getTime();
 
-      const isPastDate =
-        new Date(bYear, bMonth, bDay).getTime() < new Date(currentYear, currentMonth, currentDay).getTime();
-
-      const endUtcHours = new Date(mb.endTime).getUTCHours();
-      const endUtcMinutes = new Date(mb.endTime).getUTCMinutes();
-
-      const isPastTimeToday =
-        bYear === currentYear &&
-        bMonth === currentMonth &&
-        bDay === currentDay &&
-        (endUtcHours < currentHour || (endUtcHours === currentHour && endUtcMinutes <= currentMinute));
-
-      if (isPastDate || isPastTimeToday) {
-        if (mb.status === BookingStatus.confirmed) {
+      if (endTimeMs <= nowTime) {
+        // If the booking was paid (or checked in/confirmed), mark completed once slot time finishes
+        if (mb.status === BookingStatus.confirmed || mb.paymentStatus === PaymentStatus.paid) {
           meetingIdsToComplete.push(mb.id);
         } else {
+          // Unpaid reservations that expired without payment/check-in
           meetingIdsNotCheckedIn.push(mb.id);
         }
       }
@@ -72,7 +55,7 @@ export class BookingsService {
       });
     }
 
-    // 2. Process Desk / Regular Bookings whose date/slot has finished
+    // 2. Process Desk / Regular Bookings whose preferred date/slot has finished
     const activeDeskBookings = await this.prisma.booking.findMany({
       where: {
         status: {
@@ -83,7 +66,7 @@ export class BookingsService {
           { notes: { contains: 'Solution:' } },
         ],
       },
-      select: { id: true, preferredDate: true, status: true },
+      select: { id: true, preferredDate: true, status: true, paymentStatus: true },
     });
 
     const deskIdsToComplete: number[] = [];
@@ -91,15 +74,10 @@ export class BookingsService {
 
     for (const db of activeDeskBookings) {
       const dDate = new Date(db.preferredDate);
-      const dYear = dDate.getFullYear();
-      const dMonth = dDate.getMonth();
-      const dDay = dDate.getDate();
+      const endOfDayMs = new Date(dDate.getFullYear(), dDate.getMonth(), dDate.getDate(), 23, 59, 59).getTime();
 
-      const isPastDate =
-        new Date(dYear, dMonth, dDay).getTime() < new Date(currentYear, currentMonth, currentDay).getTime();
-
-      if (isPastDate) {
-        if (db.status === BookingStatus.confirmed) {
+      if (endOfDayMs <= nowTime) {
+        if (db.status === BookingStatus.confirmed || db.paymentStatus === PaymentStatus.paid) {
           deskIdsToComplete.push(db.id);
         } else {
           deskIdsNotCheckedIn.push(db.id);
@@ -134,6 +112,9 @@ export class BookingsService {
   }
 
   async findAll(query: { status?: BookingStatus; search?: string; type?: string }) {
+    // Automatically trigger real-time auto-completion check before returning records
+    await this.autoCompleteExpiredBookings().catch(() => {});
+
     const where: any = {
       NOT: [
         { bookingCode: { startsWith: 'SRV-' } },
@@ -178,6 +159,9 @@ export class BookingsService {
   }
 
   async findMeetingBookings(query: { status?: BookingStatus; search?: string }) {
+    // Automatically trigger real-time auto-completion check before returning records
+    await this.autoCompleteExpiredBookings().catch(() => {});
+
     const where: any = {};
 
     if (query.status) {
