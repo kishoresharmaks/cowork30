@@ -578,4 +578,26 @@ export class AuthService {
       },
     };
   }
+
+  async adminResetPassword(userId: number, newPassword: string) {
+    if (!newPassword || newPassword.trim().length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters long');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword.trim(), 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    return {
+      success: true,
+      message: `Password successfully updated for ${user.name} (${user.email}).`,
+    };
+  }
 }

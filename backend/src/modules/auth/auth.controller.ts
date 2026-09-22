@@ -132,4 +132,17 @@ export class AuthController {
   ) {
     return this.pricingService.assignPlanToUser(Number(body.pricingPlanId), userId, body);
   }
+
+  @Put('admin/users/:id/reset-password')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin manual password reset for user account (Admin Only)' })
+  async adminResetPassword(
+    @Param('id') id: string,
+    @Body() body: { password?: string; newPassword?: string },
+  ) {
+    const password = body.newPassword || body.password || '';
+    return this.authService.adminResetPassword(Number(id), password);
+  }
 }

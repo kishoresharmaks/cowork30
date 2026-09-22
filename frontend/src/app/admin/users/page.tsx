@@ -21,6 +21,9 @@ import {
   ArrowRight,
   FileText,
   Download,
+  Key,
+  Lock,
+  RefreshCw,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import Link from 'next/link';
@@ -60,6 +63,11 @@ export default function AdminUsersPage() {
   const [adjustAmount, setAdjustAmount] = useState<string>('');
   const [adjustReason, setAdjustReason] = useState<string>('');
   const [adjusting, setAdjusting] = useState(false);
+
+  // Reset Password Modal State
+  const [resetPassUser, setResetPassUser] = useState<any>(null);
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [resettingPassword, setResettingPassword] = useState<boolean>(false);
 
   // Load Users Function
   async function fetchUsers() {
@@ -191,6 +199,37 @@ export default function AdminUsersPage() {
       alert(err.response?.data?.message || 'Failed to assign plan');
     } finally {
       setAssigning(false);
+    }
+  };
+
+  const generateRandomPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$';
+    let res = '';
+    for (let i = 0; i < 10; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setNewPassword(res);
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetPassUser || !newPassword || newPassword.trim().length < 6) {
+      alert('Password must be at least 6 characters long.');
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      const res = await apiClient.put(`/auth/admin/users/${resetPassUser.id}/reset-password`, {
+        newPassword: newPassword.trim(),
+      });
+      alert(res.data?.message || `Password successfully reset for ${resetPassUser.name}!`);
+      setResetPassUser(null);
+      setNewPassword('');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to reset password');
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -430,6 +469,18 @@ export default function AdminUsersPage() {
                           >
                             {u.role === 'admin' ? <UserX className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
                           </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setResetPassUser(u);
+                              setNewPassword('');
+                            }}
+                            className="p-2 rounded-xl bg-[#0F172A] border border-[#334155] hover:border-[#F59E0B] text-[#F59E0B] transition-all cursor-pointer"
+                            title="Reset User Password"
+                          >
+                            <Key className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -641,6 +692,24 @@ export default function AdminUsersPage() {
                     </button>
                   </div>
                 </div>
+
+                <div className="sm:col-span-2 p-4 rounded-2xl bg-[#0F172A] border border-[#334155] flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[#CBD5E1] font-bold block">Account Security & Credentials</span>
+                    <p className="text-[11px] text-[#94A3B8]">Reset or update this member's password manually.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetPassUser(selectedUserDetail.user);
+                      setNewPassword('');
+                    }}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-[#F59E0B] bg-[#F59E0B]/10 border border-[#F59E0B]/30 hover:bg-[#F59E0B]/20 cursor-pointer flex items-center space-x-1.5 shrink-0"
+                  >
+                    <Key className="w-3.5 h-3.5" />
+                    <span>Reset User Password</span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -801,6 +870,80 @@ export default function AdminUsersPage() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* RESET PASSWORD MODAL */}
+      {resetPassUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F172A]/80 backdrop-blur-xs">
+          <div className="bg-[#1E293B] border border-[#334155] rounded-3xl max-w-md w-full p-6 space-y-5 text-[#F8FAFC] shadow-2xl relative">
+            <button
+              type="button"
+              onClick={() => setResetPassUser(null)}
+              className="absolute top-4 right-4 text-[#94A3B8] hover:text-[#F8FAFC] text-sm font-bold p-1 rounded-full bg-[#0F172A]"
+            >
+              ✕
+            </button>
+
+            <div className="space-y-1 border-b border-[#334155] pb-3">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#F59E0B] flex items-center space-x-1">
+                <Lock className="w-3 h-3" />
+                <span>Manual Account Password Reset</span>
+              </span>
+              <h3 className="text-lg font-extrabold text-[#F8FAFC]">{resetPassUser.name}</h3>
+              <p className="text-xs text-[#94A3B8] font-mono">{resetPassUser.email}</p>
+            </div>
+
+            <form onSubmit={handleResetPasswordSubmit} className="space-y-4 text-xs">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[#CBD5E1] font-semibold">New Password *</label>
+                  <button
+                    type="button"
+                    onClick={generateRandomPassword}
+                    className="text-[11px] font-bold text-[#6366F1] hover:underline flex items-center space-x-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Auto-Generate</span>
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter min 6 characters..."
+                    className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3.5 py-2.5 text-[#F8FAFC] font-mono focus:border-[#6366F1] focus:outline-none font-bold"
+                  />
+                </div>
+                <p className="text-[10px] text-[#94A3B8] mt-1.5">
+                  The user can immediately log in with this new password.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-[#334155]">
+                <button
+                  type="button"
+                  onClick={() => setResetPassUser(null)}
+                  className="px-4 py-2.5 rounded-full bg-[#0F172A] border border-[#334155] text-[#CBD5E1] text-xs font-bold hover:text-[#F8FAFC]"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={resettingPassword || !newPassword || newPassword.trim().length < 6}
+                  className="px-6 py-2.5 rounded-full text-xs font-bold text-white bg-[#F59E0B] hover:bg-[#D97706] shadow-md disabled:opacity-50 cursor-pointer flex items-center space-x-1.5"
+                >
+                  <Key className="w-3.5 h-3.5" />
+                  <span>{resettingPassword ? 'Updating Password...' : 'Reset & Save Password'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
