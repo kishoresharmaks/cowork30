@@ -26,17 +26,23 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   let apiBase = process.env.NEXT_PUBLIC_API_URL;
 
-  if (!apiBase) {
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      if (hostname === 'localhost' || hostname === '127.0.0.1' || /^192\.168\.\d+\.\d+$/.test(hostname)) {
-        apiBase = `http://${hostname}:4000/api/v1`;
-      } else {
-        apiBase = `${window.location.origin}/api/v1`;
-      }
-    } else {
-      apiBase = 'http://localhost:4000/api/v1';
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const isLocalHost =
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      /^192\.168\.\d+\.\d+$/.test(hostname) ||
+      /^10\.\d+\.\d+\.\d+$/.test(hostname);
+
+    if (isLocalHost) {
+      apiBase = `http://${hostname}:4000/api/v1`;
+    } else if (!apiBase || apiBase.includes('localhost')) {
+      apiBase = `${window.location.origin}/api/v1`;
     }
+  }
+
+  if (!apiBase) {
+    apiBase = 'http://localhost:4000/api/v1';
   }
 
   if (config.url) {
@@ -48,7 +54,7 @@ apiClient.interceptors.request.use((config) => {
   }
 
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

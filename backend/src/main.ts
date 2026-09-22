@@ -14,16 +14,7 @@ async function bootstrap() {
   // Security headers via Helmet
   app.use(
     helmet.default({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
-          connectSrc: ["'self'", 'ws:', 'wss:'],
-          frameSrc: ["'none'"],
-        },
-      },
+      contentSecurityPolicy: false,
       crossOriginEmbedderPolicy: false,
       hsts: {
         maxAge: 31536000,

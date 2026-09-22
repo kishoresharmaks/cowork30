@@ -217,13 +217,27 @@ export class WalletBillingService {
     });
 
     if (this.notificationsService) {
-      this.notificationsService.create({
-        userId: params.userId,
-        title: 'Wallet Recharge Ready',
-        message: `Use instant 1-click booking with your ₹${totalCredit} wallet credits.`,
-        type: 'wallet',
-        link: '/dashboard?tab=wallet',
-      }).catch(() => {});
+      this.notificationsService.createNotification(
+        params.userId,
+        'Wallet Recharge Ready',
+        `Use instant 1-click booking with your ₹${totalCredit} wallet credits.`,
+        'wallet',
+        '/dashboard?tab=wallet',
+      ).catch(() => {});
+
+      if (user.email) {
+        this.notificationsService.sendMail({
+          to: user.email,
+          templateKey: 'wallet_receipt',
+          variables: {
+            name: user.name,
+            amount: totalCredit,
+            newBalance,
+            referenceId: transaction.referenceId,
+            date: new Date().toLocaleDateString(),
+          },
+        }).catch(() => {});
+      }
     }
 
     return {
@@ -393,13 +407,13 @@ export class WalletBillingService {
     });
 
     if (this.notificationsService) {
-      this.notificationsService.create({
+      this.notificationsService.createNotification(
         userId,
-        title: 'Wallet Recharge Ready',
-        message: `Use instant 1-click booking with your ₹${totalCredit} wallet credits.`,
-        type: 'wallet',
-        link: '/dashboard?tab=wallet',
-      }).catch(() => {});
+        'Wallet Recharge Ready',
+        `Use instant 1-click booking with your ₹${totalCredit} wallet credits.`,
+        'wallet',
+        '/dashboard?tab=wallet',
+      ).catch(() => {});
     }
 
     return {

@@ -26,7 +26,7 @@ export function isOriginAllowed(origin?: string): boolean {
   }
 
   // Allow local network IP addresses (e.g. 192.168.x.x, 10.x.x.x, 172.x.x.x)
-  if (/^http:\/\/(192\.168|10|172)\.\d+\.\d+:\d+$/.test(origin)) {
+  if (/^https?:\/\/(192\.168|10|172)\.\d+\.\d+(:\d+)?$/.test(origin)) {
     return true;
   }
 

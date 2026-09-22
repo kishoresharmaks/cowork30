@@ -22,6 +22,7 @@ import {
   ExternalLink,
   MapPin,
   Briefcase,
+  Mail,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -81,6 +82,7 @@ export default function AdminSidebar() {
     { label: 'Service Inquiries', href: '/admin/service-inquiries', icon: Briefcase },
     { label: 'Pricing Tiers', href: '/admin/pricing', icon: ShieldCheck },
     { label: 'Photo Gallery', href: '/admin/gallery', icon: Camera },
+    { label: 'Email Engine & Logs', href: '/admin/email-settings', icon: Mail },
     { label: 'Branding & Settings', href: '/admin/settings', icon: Settings },
   ];
 

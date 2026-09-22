@@ -244,13 +244,29 @@ export class BookingsService {
     });
 
     if (status === BookingStatus.confirmed && this.notificationsService) {
-      this.notificationsService.create({
-        userId: (updated as any).userId || undefined,
-        title: 'Desk Pass Active',
-        message: `Your QR pass is ready for Ishwarji Cowork 30 check-in (Code: #${updated.bookingCode}).`,
-        type: 'booking',
-        link: '/dashboard?tab=bookings',
-      }).catch(() => {});
+      this.notificationsService.createNotification(
+        (updated as any).userId || null,
+        'Desk Pass Active',
+        `Your QR pass is ready for Ishwarji Cowork 30 check-in (Code: #${updated.bookingCode}).`,
+        'booking',
+        '/dashboard?tab=bookings',
+      ).catch(() => {});
+
+      const emailTo = (updated as any).customerEmail || (updated as any).email;
+      if (emailTo) {
+        this.notificationsService.sendMail({
+          to: emailTo,
+          templateKey: 'booking_confirmation',
+          variables: {
+            name: (updated as any).customerName || 'Valued Guest',
+            bookingCode: updated.bookingCode,
+            bookingType: (updated as any).pricingPlan?.name || 'Day Pass / Workspace',
+            date: new Date(updated.preferredDate).toLocaleDateString(),
+            branchName: 'Ishwarji Cowork 30 Main Branch',
+            amount: updated.totalAmount || 0,
+          },
+        }).catch(() => {});
+      }
     }
 
     return {

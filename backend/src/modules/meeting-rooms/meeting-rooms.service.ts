@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, UnauthorizedException, ConflictException, Optional } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { AvailabilityCheckDto, CreateMeetingRoomDto, UpdateMeetingRoomDto } from './dto/meeting-room.dto';
 import { BookingStatus, PaymentStatus, PaymentMethod } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 import * as crypto from 'crypto';
 
 export function timeToMinutes(time: string | null | undefined): number {
@@ -70,7 +71,10 @@ export function generateTimeSlots(startTime: string | null | undefined, endTime:
 
 @Injectable()
 export class MeetingRoomsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private notificationsService?: NotificationsService,
+  ) {}
 
   async findAll(includeInactive = false, category?: string, branchId?: number) {
     const whereClause: any = includeInactive ? {} : { isActive: true };
@@ -492,6 +496,33 @@ export class MeetingRoomsService {
 
       return createdBooking;
     });
+
+    if (this.notificationsService) {
+      this.notificationsService.createNotification(
+        booking.userId || null,
+        'Meeting Suite Pass Ready',
+        `Your reservation for ${booking.meetingRoom?.name || 'Meeting Suite'} (Code: #${booking.bookingCode}) is confirmed.`,
+        'meeting',
+        `/meeting-rooms/receipt/${booking.viewToken}`,
+      ).catch(() => {});
+
+      if (booking.customerEmail) {
+        this.notificationsService.sendMail({
+          to: booking.customerEmail,
+          templateKey: 'meeting_confirmation',
+          variables: {
+            name: booking.customerName,
+            bookingCode: booking.bookingCode,
+            roomName: booking.meetingRoom?.name || 'Meeting Suite',
+            date: new Date(booking.bookingDate).toLocaleDateString(),
+            timeSlot: `${new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(booking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+            seatsBooked: booking.seatsBooked,
+            amount: booking.totalAmount,
+            viewToken: booking.viewToken,
+          },
+        }).catch(() => {});
+      }
+    }
 
     return {
       success: true,

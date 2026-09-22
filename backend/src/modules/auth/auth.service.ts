@@ -5,11 +5,14 @@ import { LoginDto, RegisterDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
 import { BookingStatus, BookingType, PaymentStatus, Role } from '@prisma/client';
 
+import { NotificationsService } from '../notifications/notifications.service';
+
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private notificationsService: NotificationsService,
   ) {}
 
   private getMembershipEndDate(booking: { createdAt: Date; preferredTimeSlot?: string | null }) {
@@ -594,6 +597,24 @@ export class AuthService {
       where: { id: userId },
       data: { passwordHash },
     });
+
+    // Trigger Email & In-App Notification
+    await this.notificationsService.sendMail({
+      to: user.email,
+      templateKey: 'password_reset',
+      variables: {
+        name: user.name,
+        email: user.email,
+        newPassword: newPassword.trim(),
+      },
+    }).catch(() => {});
+
+    await this.notificationsService.createNotification(
+      user.id,
+      'Security Alert: Password Reset',
+      'Your account password was updated by an administrator.',
+      'warning',
+    ).catch(() => {});
 
     return {
       success: true,

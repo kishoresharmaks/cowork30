@@ -233,15 +233,15 @@ export class ServicesService {
     this.chatGateway.notifyInquiryUpdate(id, 'status_change', updated);
 
     if (this.notificationsService) {
-      this.notificationsService.create({
-        userId: (updated as any).userId || undefined,
-        title: totalAmount !== undefined ? 'Custom Quote Update' : 'Solution Inquiry Update',
-        message: totalAmount !== undefined
+      this.notificationsService.createNotification(
+        (updated as any).userId || null,
+        totalAmount !== undefined ? 'Custom Quote Update' : 'Solution Inquiry Update',
+        totalAmount !== undefined
           ? `Center manager updated your corporate team inquiry quote to ₹${Number(totalAmount).toLocaleString()}.`
           : `Center manager updated your corporate team inquiry status to '${status}'.`,
-        type: 'inquiry',
-        link: '/dashboard',
-      }).catch(() => {});
+        'inquiry',
+        '/dashboard',
+      ).catch(() => {});
     }
 
     return {

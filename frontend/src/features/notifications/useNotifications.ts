@@ -26,16 +26,26 @@ export function useNotifications() {
 
   // Fetch from REST API on mount or user change
   const fetchNotifications = useCallback(async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') || localStorage.getItem('token') : null;
+    if (!token) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const res = await apiClient.get('/notifications');
+      const res = await apiClient.get('/notifications/in-app');
       const payload = res.data;
-      if (payload?.success && payload.data) {
-        setNotifications(payload.data.notifications || []);
-        setUnreadCount(payload.data.unreadCount || 0);
+      if (payload?.success) {
+        const list = payload.notifications || payload.data?.notifications || [];
+        const count = payload.unreadCount ?? payload.data?.unreadCount ?? 0;
+        setNotifications(list);
+        setUnreadCount(count);
       }
     } catch (err) {
-      console.warn('Failed to fetch initial notifications:', err);
+      // Quiet warning for unauthenticated or initial load
     } finally {
       setIsLoading(false);
     }
@@ -124,9 +134,9 @@ export function useNotifications() {
     setUnreadCount((prev) => Math.max(0, prev - 1));
 
     try {
-      await apiClient.patch(`/notifications/${id}/read`);
+      await apiClient.put(`/notifications/in-app/${id}/read`);
     } catch (err) {
-      console.warn(`Failed to mark notification ${id} as read:`, err);
+      // Quiet fail
     }
   };
 
@@ -137,9 +147,9 @@ export function useNotifications() {
     setUnreadCount(0);
 
     try {
-      await apiClient.post('/notifications/mark-all-read');
+      await apiClient.put('/notifications/in-app/read-all');
     } catch (err) {
-      console.warn('Failed to mark all notifications as read:', err);
+      // Quiet fail
     }
   };
 

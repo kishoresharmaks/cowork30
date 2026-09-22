@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -337,6 +337,7 @@ model Booking {
   paymentStatus     PaymentStatus @default(unpaid)
   totalAmount       Decimal       @default(0.00) @db.Decimal(10, 2)
   taxAmount         Decimal       @default(0.00) @db.Decimal(10, 2)
+  reminderSentAt    DateTime?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
@@ -402,6 +403,7 @@ model MeetingBooking {
   taxAmount      Decimal       @default(0.00) @db.Decimal(10, 2)
   qrAccessCode   String?       @db.Text
   viewToken      String        @unique
+  reminderSentAt DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -619,7 +621,34 @@ model Notification {
   link      String?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@map("notifications")
+}
+
+model EmailTemplate {
+  id            Int      @id @default(autoincrement())
+  key           String   @unique
+  name          String
+  subject       String
+  htmlBody      String   @db.Text
+  variablesJson Json?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id           Int      @id @default(autoincrement())
+  recipient    String
+  subject      String
+  templateKey  String?
+  status       String   @default("sent")
+  errorMessage String?  @db.Text
+  sentAt       DateTime @default(now())
+  metadata     Json?
+
+  @@map("email_logs")
 }
