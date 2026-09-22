@@ -21,6 +21,7 @@ export class NotificationsController {
     return this.notificationsService.getSmtpSettings();
   }
 
+  @Post('admin/smtp')
   @Put('admin/smtp')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
@@ -35,8 +36,9 @@ export class NotificationsController {
   @Roles('admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Send instant test email to verify SMTP configuration (Admin Only)' })
-  async sendTestEmail(@Body() body: { toEmail: string }) {
-    return this.notificationsService.sendTestEmail(body.toEmail);
+  async sendTestEmail(@Body() body: { toEmail?: string; to?: string }) {
+    const recipient = body.toEmail || body.to;
+    return this.notificationsService.sendTestEmail(recipient || '');
   }
 
   // --- ADMIN TEMPLATE EDITOR ---
