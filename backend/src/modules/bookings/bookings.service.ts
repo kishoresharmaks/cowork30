@@ -28,14 +28,28 @@ export class BookingsService {
     const meetingIdsNotCheckedIn: number[] = [];
 
     for (const mb of activeMeetings) {
+      let isExpired = false;
       const endTimeMs = new Date(mb.endTime).getTime();
 
       if (endTimeMs <= nowTime) {
-        // If the booking was paid (or checked in/confirmed), mark completed once slot time finishes
+        isExpired = true;
+      } else {
+        // Fallback: check wall-clock local date/time if endTime ISO string contains stored wall-clock hours (e.g. YYYY-MM-DDT14:00:00.000Z)
+        const mbEndIso = mb.endTime instanceof Date ? mb.endTime.toISOString() : String(mb.endTime);
+        const match = mbEndIso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+        if (match) {
+          const [, y, m, d, hh, mm] = match;
+          const localWallClockEnd = new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), 0, 0);
+          if (localWallClockEnd.getTime() <= nowTime) {
+            isExpired = true;
+          }
+        }
+      }
+
+      if (isExpired) {
         if (mb.status === BookingStatus.confirmed || mb.paymentStatus === PaymentStatus.paid) {
           meetingIdsToComplete.push(mb.id);
         } else {
-          // Unpaid reservations that expired without payment/check-in
           meetingIdsNotCheckedIn.push(mb.id);
         }
       }
@@ -73,8 +87,19 @@ export class BookingsService {
     const deskIdsNotCheckedIn: number[] = [];
 
     for (const db of activeDeskBookings) {
-      const dDate = new Date(db.preferredDate);
-      const endOfDayMs = new Date(dDate.getFullYear(), dDate.getMonth(), dDate.getDate(), 23, 59, 59).getTime();
+      const dbIso = db.preferredDate instanceof Date ? db.preferredDate.toISOString() : String(db.preferredDate);
+      const match = dbIso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      let y = new Date(db.preferredDate).getFullYear();
+      let m = new Date(db.preferredDate).getMonth();
+      let d = new Date(db.preferredDate).getDate();
+
+      if (match) {
+        y = Number(match[1]);
+        m = Number(match[2]) - 1;
+        d = Number(match[3]);
+      }
+
+      const endOfDayMs = new Date(y, m, d, 23, 59, 59, 999).getTime();
 
       if (endOfDayMs <= nowTime) {
         if (db.status === BookingStatus.confirmed || db.paymentStatus === PaymentStatus.paid) {
