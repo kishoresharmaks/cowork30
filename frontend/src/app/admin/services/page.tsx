@@ -25,7 +25,7 @@ import {
   Tag,
   CheckCircle2,
 } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, getMediaUrl } from '@/lib/api-client';
 
 const PRESET_SERVICE_PHOTOS = [
   { label: 'Hot Desking Area', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80' },
@@ -296,7 +296,7 @@ export default function AdminServicesPage() {
                   {/* Solution Cover Photo */}
                   <div className="h-40 w-full relative overflow-hidden bg-[#0F172A]">
                     <img
-                      src={service.featuredImage || service.imageUrl || PRESET_SERVICE_PHOTOS[0].url}
+                      src={getMediaUrl(service.featuredImage || service.imageUrl || PRESET_SERVICE_PHOTOS[0].url)}
                       alt={service.name}
                       className="w-full h-full object-cover"
                     />
@@ -412,7 +412,7 @@ export default function AdminServicesPage() {
                         formData.imageUrl === photo.url ? 'border-[#6366F1] ring-2 ring-[#6366F1]' : 'border-[#334155] opacity-70'
                       }`}
                     >
-                      <img src={photo.url} alt={photo.label} className="w-full h-full object-cover" />
+                      <img src={getMediaUrl(photo.url)} alt={photo.label} className="w-full h-full object-cover" />
                       <span className="absolute inset-x-0 bottom-0 bg-black/60 text-[8px] font-bold text-white text-center py-0.5 truncate px-1">
                         {photo.label}
                       </span>

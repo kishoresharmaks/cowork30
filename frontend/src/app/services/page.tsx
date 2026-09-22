@@ -13,7 +13,7 @@ import {
   MailCheck,
   Check,
 } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, getMediaUrl } from '@/lib/api-client';
 import { useAuth } from '@/context/AuthContext';
 import { useBranch } from '@/context/BranchContext';
 
@@ -220,7 +220,7 @@ export default function CustomerServicesPage() {
                     {/* Image Header with Ambient Gradient & Badges */}
                     <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100">
                       <img
-                        src={displayImage}
+                        src={getMediaUrl(displayImage)}
                         alt={service.name}
                         className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
                         onError={(e) => {
@@ -342,7 +342,7 @@ export default function CustomerServicesPage() {
             <div className="space-y-2">
               <div className="h-44 w-full rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
                 <img
-                  src={selectedPhoto || selectedService.featuredImage}
+                  src={getMediaUrl(selectedPhoto || selectedService.featuredImage)}
                   alt={selectedService.name}
                   className="w-full h-full object-cover"
                 />
@@ -358,7 +358,7 @@ export default function CustomerServicesPage() {
                       selectedPhoto === selectedService.featuredImage ? 'border-indigo-600 ring-2 ring-indigo-500/40' : 'border-slate-200 opacity-70'
                     }`}
                   >
-                    <img src={selectedService.featuredImage} alt="Cover" className="w-full h-full object-cover" />
+                    <img src={getMediaUrl(selectedService.featuredImage)} alt="Cover" className="w-full h-full object-cover" />
                   </button>
 
                   {selectedService.galleryImages.map((photoUrl: string, idx: number) => (
@@ -370,7 +370,7 @@ export default function CustomerServicesPage() {
                         selectedPhoto === photoUrl ? 'border-indigo-600 ring-2 ring-indigo-500/40' : 'border-slate-200 opacity-70'
                       }`}
                     >
-                      <img src={photoUrl} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                      <img src={getMediaUrl(photoUrl)} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>

@@ -17,7 +17,7 @@ import {
   AlertCircle,
   Tag,
 } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, getMediaUrl } from '@/lib/api-client';
 
 export default function StaffMeetingRoomsPage() {
   const [meetingRooms, setMeetingRooms] = useState<any[]>([]);
@@ -378,7 +378,7 @@ export default function StaffMeetingRoomsPage() {
                   {/* Room Image */}
                   <div className="relative h-40 w-full rounded-2xl overflow-hidden bg-[#0F172A] border border-[#334155]">
                     <img
-                      src={displayImage}
+                      src={getMediaUrl(displayImage)}
                       alt={room.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -450,7 +450,7 @@ export default function StaffMeetingRoomsPage() {
             {/* Room Photo Banner */}
             <div className="relative h-32 w-full rounded-2xl overflow-hidden bg-[#0F172A] border border-[#334155]">
               <img
-                src={selectedRoomForBooking.imageUrl || selectedRoomForBooking.featuredImage || (Array.isArray(selectedRoomForBooking.images) && selectedRoomForBooking.images.length > 0 ? selectedRoomForBooking.images[0] : (typeof selectedRoomForBooking.images === 'string' ? selectedRoomForBooking.images : 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80'))}
+                src={getMediaUrl(selectedRoomForBooking.imageUrl || selectedRoomForBooking.featuredImage || (Array.isArray(selectedRoomForBooking.images) && selectedRoomForBooking.images.length > 0 ? selectedRoomForBooking.images[0] : (typeof selectedRoomForBooking.images === 'string' ? selectedRoomForBooking.images : 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80')))}
                 alt={selectedRoomForBooking.name}
                 className="w-full h-full object-cover"
               />

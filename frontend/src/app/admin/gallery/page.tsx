@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import ImageUploader from '@/components/ui/ImageUploader';
 import { Plus, Trash2, Camera } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, getMediaUrl } from '@/lib/api-client';
 
 const PRESET_GALLERY_PHOTOS = [
   { label: 'Executive Boardroom', url: 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80' },
@@ -105,7 +105,7 @@ export default function AdminGalleryPage() {
             {gallery.map((item) => (
               <div key={item.id} className="bg-[#1E293B] p-3 rounded-2xl border border-[#334155] space-y-2 relative group shadow-xs">
                 <div className="relative h-44 w-full rounded-xl overflow-hidden bg-[#0F172A]">
-                  <img src={item.imageUrl || PRESET_GALLERY_PHOTOS[0].url} alt={item.title} className="w-full h-full object-cover" />
+                  <img src={getMediaUrl(item.imageUrl || PRESET_GALLERY_PHOTOS[0].url)} alt={item.title} className="w-full h-full object-cover" />
                   <span className="absolute top-2 left-2 text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-[#020617]/80 text-[#6366F1] border border-[#6366F1]/30 backdrop-blur-xs">
                     {item.category}
                   </span>

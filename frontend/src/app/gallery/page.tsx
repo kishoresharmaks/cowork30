@@ -5,7 +5,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import Image from 'next/image';
 import { Camera } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, getMediaUrl } from '@/lib/api-client';
 
 export default function GalleryPage() {
   const [photos, setPhotos] = useState<any[]>([]);
@@ -85,7 +85,7 @@ export default function GalleryPage() {
               >
                 <div className="relative h-56 w-full bg-slate-100">
                   <img
-                    src={photo.imageUrl || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80'}
+                    src={getMediaUrl(photo.imageUrl || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80')}
                     alt={photo.title || 'Gallery image'}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />

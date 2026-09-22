@@ -21,7 +21,7 @@ import {
   DollarSign,
   Layers,
 } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, getMediaUrl } from '@/lib/api-client';
 
 function formatTime12Hr(timeStr?: string | null): string {
   if (!timeStr) return '24/7 Access';
@@ -388,7 +388,7 @@ export default function AdminMeetingRoomsPage() {
               >
                 <div className="space-y-3">
                   <div className="relative h-44 rounded-2xl overflow-hidden bg-[#0F172A] border border-[#334155]">
-                    <img src={imgUrl} alt={room.name} className="w-full h-full object-cover" />
+                    <img src={getMediaUrl(imgUrl)} alt={room.name} className="w-full h-full object-cover" />
                     <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-[#0F172A]/80 backdrop-blur-xs text-[#6366F1] border border-[#6366F1]/30">
                       {room.category || 'Conference Room'}
                     </div>
