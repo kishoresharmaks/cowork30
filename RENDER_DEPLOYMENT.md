@@ -2,22 +2,17 @@
 
 ## Prerequisites
 - Push all code changes to your GitHub repository
-- Have your database credentials ready (or use Render PostgreSQL)
+- Have your MySQL database connection credentials ready (`mysql://...`)
 
 ---
 
-## Step 1: Create PostgreSQL Database
+## Step 1: Set Up MySQL Database
 
-1. Go to https://dashboard.render.com
-2. Click **"New +"** → **"PostgreSQL"**
-3. Fill in:
-   - **Name**: `cowork30-db`
-   - **Database**: `cowork30`
-   - **User**: `cowork30`
-   - **Region**: Choose closest to your users (e.g., Ohio or Frankfurt)
-   - **Plan**: Free or Starter
-4. Click **"Create Database"**
-5. **Copy the "Internal Database URL"** (you'll need this for the backend)
+1. Cowork30 uses **MySQL 8.0+** as configured in `backend/prisma/schema.prisma`.
+2. Set up a MySQL database on a cloud provider (e.g. Aiven MySQL, PlanetScale, Railway MySQL, Clever Cloud, AWS RDS, or MilesWeb MySQL).
+3. Obtain the connection string in the following format:
+   `mysql://USERNAME:PASSWORD@HOST:PORT/DATABASE_NAME`
+4. Copy this `DATABASE_URL` (it MUST start with `mysql://`).
 
 ---
 

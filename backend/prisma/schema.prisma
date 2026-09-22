@@ -1,11 +1,11 @@
-// Prisma Schema file for Cowork30 Platform (MySQL)
+// Prisma Schema file for Cowork30 Platform (PostgreSQL)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
