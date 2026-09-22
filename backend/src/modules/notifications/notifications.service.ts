@@ -25,36 +25,49 @@ export class NotificationsService implements OnModuleInit {
   // --- DYNAMIC SMTP TRANSPORT PROVIDER ---
 
   async getSmtpSettings() {
-    const settings = await this.prisma.siteSetting.findMany({
-      where: {
-        key: {
-          in: [
-            'smtp_host',
-            'smtp_port',
-            'smtp_user',
-            'smtp_pass',
-            'smtp_from_email',
-            'smtp_from_name',
-            'smtp_secure',
-          ],
+    try {
+      const settings = await this.prisma.siteSetting.findMany({
+        where: {
+          key: {
+            in: [
+              'smtp_host',
+              'smtp_port',
+              'smtp_user',
+              'smtp_pass',
+              'smtp_from_email',
+              'smtp_from_name',
+              'smtp_secure',
+            ],
+          },
         },
-      },
-    });
+      });
 
-    const kv: Record<string, string> = {};
-    settings.forEach((s) => {
-      kv[s.key] = s.value;
-    });
+      const kv: Record<string, string> = {};
+      settings.forEach((s) => {
+        kv[s.key] = s.value;
+      });
 
-    return {
-      host: kv.smtp_host || process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: Number(kv.smtp_port || process.env.SMTP_PORT || 587),
-      user: kv.smtp_user || process.env.SMTP_USER || '',
-      pass: kv.smtp_pass || process.env.SMTP_PASS || '',
-      fromEmail: kv.smtp_from_email || process.env.MAIL_FROM_ADDRESS || 'no-reply@cowork30.com',
-      fromName: kv.smtp_from_name || process.env.MAIL_FROM_NAME || 'Cowork30 Platform',
-      secure: kv.smtp_secure === 'true',
-    };
+      return {
+        host: kv.smtp_host || process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+        port: Number(kv.smtp_port || process.env.SMTP_PORT || 587),
+        user: kv.smtp_user || process.env.SMTP_USER || '',
+        pass: kv.smtp_pass || process.env.SMTP_PASS || '',
+        fromEmail: kv.smtp_from_email || process.env.MAIL_FROM_ADDRESS || 'no-reply@cowork30.com',
+        fromName: kv.smtp_from_name || process.env.MAIL_FROM_NAME || 'Cowork30 Platform',
+        secure: kv.smtp_secure === 'true',
+      };
+    } catch (err: any) {
+      this.logger.warn(`Could not read SMTP settings from DB, using env fallback: ${err.message}`);
+      return {
+        host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+        port: Number(process.env.SMTP_PORT || 587),
+        user: process.env.SMTP_USER || '',
+        pass: process.env.SMTP_PASS || '',
+        fromEmail: process.env.MAIL_FROM_ADDRESS || 'no-reply@cowork30.com',
+        fromName: process.env.MAIL_FROM_NAME || 'Cowork30 Platform',
+        secure: false,
+      };
+    }
   }
 
   async updateSmtpSettings(body: {
@@ -108,6 +121,9 @@ export class NotificationsService implements OnModuleInit {
       tls: {
         rejectUnauthorized: false,
       },
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 10000,
     });
   }
 
@@ -288,16 +304,22 @@ export class NotificationsService implements OnModuleInit {
       subject = this.compileTemplate(subject, variables);
     }
 
-    // Create Audit Log Entry
-    const log = await this.prisma.emailLog.create({
-      data: {
-        recipient: to,
-        subject,
-        templateKey: templateKey || 'custom',
-        status: 'pending',
-        metadata: metadata ? metadata : undefined,
-      },
-    });
+    // Create Audit Log Entry (Safe wrapper)
+    let logId: number | null = null;
+    try {
+      const log = await this.prisma.emailLog.create({
+        data: {
+          recipient: to,
+          subject,
+          templateKey: templateKey || 'custom',
+          status: 'pending',
+          metadata: metadata ? metadata : undefined,
+        },
+      });
+      logId = log.id;
+    } catch (dbErr: any) {
+      this.logger.warn(`Could not log email dispatch to DB: ${dbErr.message}`);
+    }
 
     try {
       const transporter = await this.createTransporter();
@@ -308,35 +330,39 @@ export class NotificationsService implements OnModuleInit {
         html,
       });
 
-      await this.prisma.emailLog.update({
-        where: { id: log.id },
-        data: {
-          status: 'sent',
-          sentAt: new Date(),
-        },
-      });
+      if (logId) {
+        await this.prisma.emailLog.update({
+          where: { id: logId },
+          data: {
+            status: 'sent',
+            sentAt: new Date(),
+          },
+        }).catch(() => {});
+      }
 
-      this.logger.log(`Email dispatched successfully to ${to} [Log ID: ${log.id}]`);
+      this.logger.log(`Email dispatched successfully to ${to} [Log ID: ${logId || 'N/A'}]`);
       return {
         success: true,
-        logId: log.id,
+        logId: logId || 0,
         messageId: mailInfo.messageId,
       };
     } catch (err: any) {
       const errMsg = err.message || String(err);
       this.logger.error(`Email dispatch failed to ${to}: ${errMsg}`);
 
-      await this.prisma.emailLog.update({
-        where: { id: log.id },
-        data: {
-          status: 'failed',
-          errorMessage: errMsg,
-        },
-      });
+      if (logId) {
+        await this.prisma.emailLog.update({
+          where: { id: logId },
+          data: {
+            status: 'failed',
+            errorMessage: errMsg,
+          },
+        }).catch(() => {});
+      }
 
       return {
         success: false,
-        logId: log.id,
+        logId: logId || 0,
         error: errMsg,
       };
     }
