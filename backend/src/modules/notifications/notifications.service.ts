@@ -106,12 +106,48 @@ export class NotificationsService implements OnModuleInit {
     };
   }
 
+  private async sendBrevoRestApi(
+    apiKey: string,
+    fromEmail: string,
+    fromName: string,
+    toEmail: string,
+    subject: string,
+    htmlContent: string,
+  ): Promise<string> {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'api-key': apiKey,
+      },
+      body: JSON.stringify({
+        sender: {
+          name: fromName || 'Cowork30 Platform',
+          email: fromEmail || 'no-reply@cowork30.com',
+        },
+        to: [{ email: toEmail }],
+        subject,
+        htmlContent,
+      }),
+    });
+
+    const data: any = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || `Brevo HTTP ${res.status}: ${JSON.stringify(data)}`);
+    }
+
+    return data.messageId || 'brevo-api-success';
+  }
+
   private async createTransporter() {
     const smtp = await this.getSmtpSettings();
+    // Port 2525 fallback for Brevo on cloud hosts (Render/AWS) where Port 587 is blocked
+    const port = (smtp.host.includes('brevo') && smtp.port === 587) ? 2525 : smtp.port;
     return nodemailer.createTransport({
       host: smtp.host,
-      port: smtp.port,
-      secure: smtp.secure || smtp.port === 465,
+      port,
+      secure: smtp.secure || port === 465,
       auth: smtp.user
         ? {
             user: smtp.user,
@@ -322,13 +358,35 @@ export class NotificationsService implements OnModuleInit {
     }
 
     try {
-      const transporter = await this.createTransporter();
-      const mailInfo = await transporter.sendMail({
-        from: `"${smtp.fromName}" <${smtp.fromEmail}>`,
-        to,
-        subject,
-        html,
-      });
+      let messageId = '';
+      const isBrevoApiKey = smtp.pass && smtp.pass.startsWith('xsmtpsib-');
+
+      if (isBrevoApiKey) {
+        try {
+          this.logger.log(`Attempting email dispatch to ${to} via Brevo HTTPS REST API...`);
+          messageId = await this.sendBrevoRestApi(
+            smtp.pass,
+            smtp.fromEmail,
+            smtp.fromName,
+            to,
+            subject,
+            html,
+          );
+        } catch (apiErr: any) {
+          this.logger.warn(`Brevo HTTPS REST API failed (${apiErr.message}), falling back to SMTP Transporter...`);
+        }
+      }
+
+      if (!messageId) {
+        const transporter = await this.createTransporter();
+        const mailInfo = await transporter.sendMail({
+          from: `"${smtp.fromName}" <${smtp.fromEmail}>`,
+          to,
+          subject,
+          html,
+        });
+        messageId = mailInfo.messageId;
+      }
 
       if (logId) {
         await this.prisma.emailLog.update({
@@ -344,7 +402,7 @@ export class NotificationsService implements OnModuleInit {
       return {
         success: true,
         logId: logId || 0,
-        messageId: mailInfo.messageId,
+        messageId,
       };
     } catch (err: any) {
       const errMsg = err.message || String(err);
