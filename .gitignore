@@ -32,7 +32,7 @@ Thumbs.db
 # Large archives
 *.zip
 
-# IDEs
+# IDEs and AI metadata
 .idea
 .vscode
 *.suo
@@ -40,3 +40,7 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+.claude
+.agents
+.planning
+.gemini

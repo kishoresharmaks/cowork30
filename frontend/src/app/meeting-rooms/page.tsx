@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useBranch } from '@/context/BranchContext';
 import { loadRazorpayScript } from '@/lib/razorpay';
 import Link from 'next/link';
-import { ShieldAlert, AlertCircle, UserCheck, CreditCard, Building2 } from 'lucide-react';
+import { ShieldAlert, AlertCircle, UserCheck, CreditCard, Building2, ArrowRight, Info } from 'lucide-react';
 
 import {
   MeetingRoom,
@@ -24,6 +24,7 @@ import {
   BookingSummaryCard,
   MobileBookingDrawer,
   RoomCardSkeleton,
+  RoomDetailsModal,
 } from '@/features/meeting-rooms';
 
 export default function MeetingRoomsPage() {
@@ -36,6 +37,15 @@ export default function MeetingRoomsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedRoom, setSelectedRoom] = useState<MeetingRoom | null>(null);
+
+  // Room Details Modal State
+  const [detailsRoom, setDetailsRoom] = useState<MeetingRoom | null>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState<boolean>(false);
+
+  const handleOpenDetails = (room: MeetingRoom) => {
+    setDetailsRoom(room);
+    setDetailsModalOpen(true);
+  };
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
@@ -401,87 +411,192 @@ export default function MeetingRoomsPage() {
     }
   };
 
+  const [mobileStep, setMobileStep] = useState<'suite' | 'slots' | 'checkout'>('slots');
+
   return (
-    <div className="min-h-screen bg-[#FAFAFC] text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
+    <div className="min-h-screen lg:h-screen lg:max-h-screen bg-[#FAFAFC] text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white overflow-x-hidden lg:overflow-hidden">
       <Navbar />
 
-      <main className="pt-6 sm:pt-8 pb-32 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grow">
-        {/* Two-Column Desktop Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column: Hero, Filters, & Room Showcase Grid (7 Cols on desktop) */}
-          <div className="lg:col-span-7 space-y-6">
-            <MeetingRoomHero
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onSelectCategory={(cat) => {
-                setSelectedCategory(cat);
-                const matched =
-                  cat === 'All Suites' || cat === 'All'
-                    ? rooms[0]
-                    : rooms.find((r) => (r.category || 'Conference Room') === cat);
-                if (matched) {
-                  setSelectedRoom(matched);
-                  setSelectedSeats(matched.minSeats || 1);
-                }
-              }}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              totalRoomsCount={filteredRooms.length}
-            />
+      <main className="flex-1 min-h-0 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-2.5 flex flex-col pb-32 lg:pb-2 overflow-y-auto lg:overflow-hidden">
+        {/* Compact Suite Selector Header Bar */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-3 mb-2.5 shrink-0 shadow-xs">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center space-x-2">
+              <h2 className="text-sm font-black text-slate-900 tracking-tight">Meeting Suites</h2>
+              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                {filteredRooms.length} Available
+              </span>
+            </div>
 
-            {/* Room Showcase Grid */}
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <RoomCardSkeleton key={i} />
-                ))}
-              </div>
-            ) : filteredRooms.length === 0 ? (
-              <div className="bg-white p-10 rounded-2xl text-center border border-slate-200 shadow-xs space-y-2">
-                <h3 className="text-base font-bold text-slate-900">No Suites Found</h3>
-                <p className="text-xs text-slate-500">
-                  No meeting rooms match your filter or search query. Try choosing another category.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {filteredRooms.map((room) => (
-                  <RoomCard
-                    key={room.id}
-                    room={room}
-                    isSelected={selectedRoom?.id === room.id}
-                    onSelect={handleRoomSelect}
-                  />
-                ))}
-              </div>
-            )}
-            {/* Mobile/Tablet Inline Slot Selector (< 1024px) */}
-            {selectedRoom && (
-              <div className="lg:hidden space-y-5 pt-4 border-t border-slate-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-slate-900">Configure & Book {selectedRoom.name}</h3>
-                  <span className="text-xs font-bold text-pink-600">₹{selectedRoom.hourlyRate}/hr</span>
-                </div>
-                <SlotSelector
-                  selectedRoom={selectedRoom}
-                  selectedDate={selectedDate}
-                  onDateChange={setSelectedDate}
-                  selectedSeats={selectedSeats}
-                  onSeatsChange={setSelectedSeats}
-                  availability={availability}
-                  selectedSlots={selectedSlots}
-                  onToggleSlot={handleToggleSlot}
-                  onClearSlots={handleClearSlots}
-                  onSelectAllAvailable={handleSelectAllAvailable}
-                  checking={checking}
-                />
-              </div>
-            )}
+            {/* Category Filter Chips */}
+            <div className="flex items-center space-x-1.5 overflow-x-auto max-w-full no-scrollbar">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory(cat);
+                    const matched =
+                      cat === 'All Suites' || cat === 'All'
+                        ? rooms[0]
+                        : rooms.find((r) => (r.category || 'Conference Room') === cat);
+                    if (matched) {
+                      setSelectedRoom(matched);
+                      setSelectedSeats(matched.minSeats || 1);
+                    }
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    selectedCategory === cat
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Right Column: Sticky Booking Console (5 Cols on desktop) */}
-          {selectedRoom && (
-            <div className="hidden lg:block lg:col-span-5 sticky top-24 space-y-5">
+          {/* Horizontal Selectable Room Cards Carousel */}
+          {loading ? (
+            <div className="flex space-x-3 mt-2 overflow-x-auto pb-1">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="w-48 h-14 bg-slate-100 animate-pulse rounded-xl shrink-0" />
+              ))}
+            </div>
+          ) : filteredRooms.length === 0 ? (
+            <p className="text-xs text-slate-400 mt-2">No suites matching search criteria.</p>
+          ) : (
+            <div className="flex items-center space-x-2.5 mt-2 overflow-x-auto pb-1 no-scrollbar">
+              {filteredRooms.map((room) => {
+                const isSelected = selectedRoom?.id === room.id;
+                const img = room.imageUrl || room.featuredImage || (Array.isArray(room.images) && room.images[0]) || 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80';
+
+                return (
+                  <button
+                    key={room.id}
+                    type="button"
+                    onClick={() => {
+                      handleRoomSelect(room);
+                      if (mobileStep === 'suite') setMobileStep('slots');
+                    }}
+                    className={`flex items-center space-x-2.5 p-1.5 pr-3 rounded-xl border text-left transition-all shrink-0 cursor-pointer ${
+                      isSelected
+                        ? 'bg-indigo-50/90 border-indigo-600 text-indigo-950 font-semibold ring-2 ring-indigo-500/20 shadow-xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-slate-200">
+                      <img src={img} alt={room.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 truncate leading-tight">{room.name}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5 font-medium">
+                        <span className="font-extrabold text-indigo-600">₹{room.hourlyRate}</span>/hr · {room.capacity || 10} seats
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Mobile View Navigation Stepper (< 1024px) */}
+        <div className="flex lg:hidden items-center justify-between bg-white border border-slate-200/90 rounded-xl p-1 mb-2 shrink-0 gap-1 shadow-xs">
+          <button
+            type="button"
+            onClick={() => setMobileStep('suite')}
+            className={`flex-1 py-2 text-center text-[11px] font-bold rounded-lg transition-all ${
+              mobileStep === 'suite' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 bg-slate-50 hover:bg-slate-100'
+            }`}
+          >
+            1. Suite {selectedRoom ? `(${selectedRoom.name})` : ''}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileStep('slots')}
+            className={`flex-1 py-2 text-center text-[11px] font-bold rounded-lg transition-all ${
+              mobileStep === 'slots' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 bg-slate-50 hover:bg-slate-100'
+            }`}
+          >
+            2. Date & Slots
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileStep('checkout')}
+            disabled={selectedSlots.length === 0}
+            className={`flex-1 py-2 text-center text-[11px] font-bold rounded-lg transition-all ${
+              mobileStep === 'checkout'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : selectedSlots.length === 0
+                ? 'text-slate-300 bg-slate-50 cursor-not-allowed'
+                : 'text-slate-600 bg-slate-50 hover:bg-slate-100'
+            }`}
+          >
+            3. Checkout ({selectedSlots.length})
+          </button>
+        </div>
+
+        {/* Main Split Grid (Non-Scrollable Viewport Fit) */}
+        {selectedRoom ? (
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden">
+            {/* Mobile Step 1: Suite Selection Showcase View */}
+            {mobileStep === 'suite' && (
+              <div className="lg:hidden col-span-1 flex flex-col min-h-0 overflow-y-auto bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-900">Choose a Suite</h3>
+                  <span className="text-[10px] text-slate-500 font-semibold">{filteredRooms.length} Available</span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2.5 flex-1 overflow-y-auto pr-1">
+                  {filteredRooms.map((room) => {
+                    const isSelected = selectedRoom?.id === room.id;
+                    const img = room.imageUrl || room.featuredImage || (Array.isArray(room.images) && room.images[0]) || 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80';
+                    return (
+                      <button
+                        key={room.id}
+                        type="button"
+                        onClick={() => {
+                          handleRoomSelect(room);
+                          setMobileStep('slots');
+                        }}
+                        className={`flex items-center space-x-3 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-indigo-50 border-indigo-600 ring-2 ring-indigo-500/20'
+                            : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-200">
+                          <img src={img} alt={room.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-bold text-slate-900 truncate">{room.name}</h4>
+                            <span className="text-xs font-black text-rose-600">₹{room.hourlyRate}/hr</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                            {room.description || `${room.capacity || 10} seats configuration available.`}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setMobileStep('slots')}
+                  className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all flex items-center justify-center space-x-1 cursor-pointer shrink-0 mt-2"
+                >
+                  <span>Continue with {selectedRoom.name}</span>
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </button>
+              </div>
+            )}
+
+            {/* Desktop Left / Mobile Slot Step (Step 2) */}
+            <div className={`lg:col-span-6 flex flex-col min-h-0 overflow-hidden ${mobileStep === 'slots' ? 'flex' : 'hidden lg:flex'}`}>
               <SlotSelector
                 selectedRoom={selectedRoom}
                 selectedDate={selectedDate}
@@ -494,8 +609,13 @@ export default function MeetingRoomsPage() {
                 onClearSlots={handleClearSlots}
                 onSelectAllAvailable={handleSelectAllAvailable}
                 checking={checking}
+                onNextStep={() => setMobileStep('checkout')}
+                onViewDetails={handleOpenDetails}
               />
+            </div>
 
+            {/* Desktop Right / Mobile Checkout Step (Step 3) */}
+            <div className={`lg:col-span-6 flex flex-col min-h-0 overflow-hidden ${mobileStep === 'checkout' ? 'flex' : 'hidden lg:flex'}`}>
               <BookingSummaryCard
                 selectedRoom={selectedRoom}
                 formData={formData}
@@ -508,37 +628,30 @@ export default function MeetingRoomsPage() {
                 taxRate={taxRate}
                 booking={booking}
                 onSubmit={handleBookingSubmit}
+                onBackStep={() => setMobileStep('slots')}
               />
             </div>
-          )}
-        </div>
-
-        {/* Mobile / Tablet Sticky Bar & Slide-Over Drawer (< 1024px) */}
-        {selectedRoom && (
-          <MobileBookingDrawer
-            selectedRoom={selectedRoom}
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-            selectedSeats={selectedSeats}
-            onSeatsChange={setSelectedSeats}
-            availability={availability}
-            selectedSlots={selectedSlots}
-            onToggleSlot={handleToggleSlot}
-            onClearSlots={handleClearSlots}
-            onSelectAllAvailable={handleSelectAllAvailable}
-            checking={checking}
-            formData={formData}
-            onFormDataChange={setFormData}
-            paymentMethod={paymentMethod}
-            onPaymentMethodChange={setPaymentMethod}
-            selectedSlotsCount={selectedSlots.length}
-            user={user}
-            taxRate={taxRate}
-            booking={booking}
-            onSubmit={handleBookingSubmit}
-          />
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-white border border-slate-200 rounded-2xl p-8 text-center">
+            <div>
+              <p className="text-sm font-bold text-slate-700">No meeting room selected.</p>
+              <p className="text-xs text-slate-400 mt-1">Please select a suite from the top bar above.</p>
+            </div>
+          </div>
         )}
       </main>
+
+      {/* Room Details Modal Popup */}
+      <RoomDetailsModal
+        room={detailsRoom}
+        isOpen={detailsModalOpen}
+        onClose={() => setDetailsModalOpen(false)}
+        onSelectSuite={(room) => {
+          handleRoomSelect(room);
+          setMobileStep('slots');
+        }}
+      />
 
       {/* Razorpay Gateway Fallback Modal */}
       <RazorpayGatewayModal
@@ -593,8 +706,6 @@ export default function MeetingRoomsPage() {
           </div>
         </div>
       )}
-
-      <Footer />
     </div>
   );
 }
