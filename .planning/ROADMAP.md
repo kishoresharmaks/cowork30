@@ -9,6 +9,7 @@ Development roadmap for Cowork30 platform. Milestone 1 (Multi-Domain Security & 
 - [x] **Phase 1: Multi-Domain Security & Core Verification** - Centralized CORS delegate, database transaction integrity, and API build verification.
 - [x] **Phase 2: Notification Engine, Admin SMTP Config, Template Editor & Audit Logs** - NestJS Mailer module, HTML email templates, event-driven email dispatch, admin SMTP settings portal, live template editor, and outbound email audit log viewer.
 - [x] **Phase 3: In-App Notification Feed & Multi-Channel Reminder Scheduler** - In-app header bell feed, cron reminder scheduler for upcoming bookings, and end-to-end verification.
+- [x] **Phase 4: Custom & Professional Business Services Engine** - Loan Syndicate, Land Promoters, Tax Experts, dynamic seat and date requirements in customer and admin portals.
 
 ## Phase Details
 
@@ -47,6 +48,18 @@ Development roadmap for Cowork30 platform. Milestone 1 (Multi-Domain Security & 
 **Plans**: 1 plan
 - [x] 03-01: Implement cron reminder scheduler, in-app notification feed UI, and complete full build verification.
 
+### Phase 4: Custom & Professional Business Services Engine
+**Goal**: Expand service catalog with professional business offerings (Loan Syndicate, Land Promoters, Tax Experts) with dynamic seat rules, flexible date scheduling, and unified customer and admin management.
+**Depends on**: Phase 3
+**Success Criteria**:
+  1. Prisma schema supports `category`, `requiresSeats`, `requiresDate`, `pricingUnit`, `serviceId`, `isSeatNeeded`, `isDateFlexible`, and `consultationType`.
+  2. Customer `/services` portal renders category filters, specialized cards, and adaptive inquiry modal (optional/no seats, flexible dates, virtual vs in-person).
+  3. Admin `/admin/services` allows configuring custom offerings, seat rules, date rules, and pricing units.
+  4. Admin `/admin/service-inquiries` displays category tags, remote vs desk-included status, and live negotiation quotes.
+  5. Full backend and frontend production builds pass with 0 errors.
+**Plans**: 1 plan
+- [x] 04-01: Implement Prisma schema updates, services seeding, adaptive customer inquiry form, and admin offering/inquiry portals.
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -54,3 +67,4 @@ Development roadmap for Cowork30 platform. Milestone 1 (Multi-Domain Security & 
 | 1. Multi-Domain Security & Core Verification | 1/1 | Complete | 2026-09-21 |
 | 2. Notification Engine & Admin Email Control Center | 1/1 | Complete | 2026-09-22 |
 | 3. In-App Notification Feed & Reminder Scheduler | 1/1 | Complete | 2026-09-22 |
+| 4. Custom & Professional Business Services Engine | 1/1 | Complete | 2026-09-23 |

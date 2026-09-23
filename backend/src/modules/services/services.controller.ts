@@ -63,14 +63,18 @@ export class ServicesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get workspace services catalog filterable by branch' })
-  async findAll(@Query('all') all?: string, @Query('branchId') branchId?: string) {
+  @ApiOperation({ summary: 'Get workspace and professional services catalog filterable by branch and category' })
+  async findAll(
+    @Query('all') all?: string,
+    @Query('branchId') branchId?: string,
+    @Query('category') category?: string,
+  ) {
     const branchIdNum = branchId ? parseInt(branchId, 10) : undefined;
-    return this.servicesService.findAll(all === 'true', branchIdNum);
+    return this.servicesService.findAll(all === 'true', branchIdNum, category);
   }
 
   @Post('inquiry')
-  @ApiOperation({ summary: 'Submit a workspace solution inquiry or reservation' })
+  @ApiOperation({ summary: 'Submit a workspace solution or professional advisory service inquiry' })
   async createServiceInquiry(@Body() body: any) {
     return this.servicesService.createServiceInquiry(body);
   }
@@ -79,10 +83,13 @@ export class ServicesController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin: Get all service solution inquiries' })
-  async findAllInquiries(@Query('branchId') branchId?: string) {
+  @ApiOperation({ summary: 'Admin: Get all service solution inquiries filterable by branch and category' })
+  async findAllInquiries(
+    @Query('branchId') branchId?: string,
+    @Query('category') category?: string,
+  ) {
     const branchIdNum = branchId ? parseInt(branchId, 10) : undefined;
-    return this.servicesService.findAllInquiries(branchIdNum);
+    return this.servicesService.findAllInquiries(branchIdNum, category);
   }
 
   @Put('admin/inquiries/:id/status')

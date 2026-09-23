@@ -12,6 +12,19 @@ import {
   Armchair,
   MailCheck,
   Check,
+  Landmark,
+  Compass,
+  ShieldCheck,
+  Briefcase,
+  Laptop,
+  Globe,
+  Coffee,
+  Users,
+  Wifi,
+  Video,
+  Calendar,
+  Layers,
+  Info,
 } from 'lucide-react';
 import { apiClient, getMediaUrl } from '@/lib/api-client';
 import { useAuth } from '@/context/AuthContext';
@@ -25,7 +38,26 @@ interface ServiceConfig {
   defaultImage: string;
   perks: string[];
   startingPrice: number;
+  pricingUnit?: string;
+  requiresSeats?: 'required' | 'optional' | 'none';
+  requiresDate?: 'required' | 'flexible' | 'none';
 }
+
+const ICON_MAP: Record<string, React.ElementType> = {
+  Sparkles,
+  Armchair,
+  Building2,
+  MailCheck,
+  Landmark,
+  Compass,
+  ShieldCheck,
+  Briefcase,
+  Laptop,
+  Globe,
+  Coffee,
+  Users,
+  Wifi,
+};
 
 const SERVICE_CATALOG_CONFIG: Record<string, ServiceConfig> = {
   'hot-desk': {
@@ -41,6 +73,9 @@ const SERVICE_CATALOG_CONFIG: Record<string, ServiceConfig> = {
       'Community mixers & weekly events',
     ],
     startingPrice: 4999,
+    pricingUnit: 'month',
+    requiresSeats: 'required',
+    requiresDate: 'required',
   },
   'dedicated-desk': {
     category: 'Permanent Desk',
@@ -55,6 +90,9 @@ const SERVICE_CATALOG_CONFIG: Record<string, ServiceConfig> = {
       '4h free monthly meeting credits',
     ],
     startingPrice: 7999,
+    pricingUnit: 'month',
+    requiresSeats: 'required',
+    requiresDate: 'required',
   },
   'private-cabin': {
     category: 'Private Office',
@@ -69,6 +107,9 @@ const SERVICE_CATALOG_CONFIG: Record<string, ServiceConfig> = {
       'Dedicated conference room hours',
     ],
     startingPrice: 14999,
+    pricingUnit: 'month',
+    requiresSeats: 'required',
+    requiresDate: 'required',
   },
   'virtual-office': {
     category: 'Corporate Presence',
@@ -83,6 +124,60 @@ const SERVICE_CATALOG_CONFIG: Record<string, ServiceConfig> = {
       'On-demand boardroom credits',
     ],
     startingPrice: 1999,
+    pricingUnit: 'month',
+    requiresSeats: 'none',
+    requiresDate: 'flexible',
+  },
+  'loan-syndicate': {
+    category: 'Debt & Financing',
+    badge: 'Fast Approval',
+    badgeBg: 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white',
+    icon: Landmark,
+    defaultImage: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=800&q=80',
+    perks: [
+      'Working capital & term loans',
+      'Multi-bank syndicate liaisons',
+      'Complete DPR & financial modeling',
+      'Fast-track institutional sanctions',
+    ],
+    startingPrice: 0,
+    pricingUnit: 'quote',
+    requiresSeats: 'optional',
+    requiresDate: 'flexible',
+  },
+  'land-promoters': {
+    category: 'Real Estate & Land',
+    badge: 'Verified Clearances',
+    badgeBg: 'bg-gradient-to-r from-amber-600 to-yellow-600 text-white',
+    icon: Compass,
+    defaultImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80',
+    perks: [
+      'Title due diligence & legal vetting',
+      'DTCP / CMDA approved layouts',
+      'Commercial & warehouse acquisitions',
+      'Joint-venture developer structuring',
+    ],
+    startingPrice: 2500,
+    pricingUnit: 'consultation',
+    requiresSeats: 'none',
+    requiresDate: 'flexible',
+  },
+  'tax-experts': {
+    category: 'Tax, CA & Audit',
+    badge: 'Certified CA',
+    badgeBg: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white',
+    icon: ShieldCheck,
+    defaultImage: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=800&q=80',
+    perks: [
+      'Company & LLP incorporation',
+      'Monthly GST & TDS compliance returns',
+      'Statutory & internal CA audits',
+      'Startup India 80IAC tax exemption',
+    ],
+    startingPrice: 1999,
+    pricingUnit: 'consultation',
+    requiresSeats: 'optional',
+    requiresDate: 'flexible',
   },
 };
 
@@ -95,9 +190,30 @@ function getServiceConfig(service: any, idx: number): ServiceConfig {
   if (name.includes('dedicat')) return SERVICE_CATALOG_CONFIG['dedicated-desk'];
   if (name.includes('cabin') || name.includes('private') || name.includes('suite')) return SERVICE_CATALOG_CONFIG['private-cabin'];
   if (name.includes('virtual') || name.includes('gst')) return SERVICE_CATALOG_CONFIG['virtual-office'];
+  if (name.includes('loan') || name.includes('finance') || name.includes('syndicate')) return SERVICE_CATALOG_CONFIG['loan-syndicate'];
+  if (name.includes('land') || name.includes('real estate') || name.includes('promoter')) return SERVICE_CATALOG_CONFIG['land-promoters'];
+  if (name.includes('tax') || name.includes('ca') || name.includes('audit')) return SERVICE_CATALOG_CONFIG['tax-experts'];
 
-  const keys = Object.keys(SERVICE_CATALOG_CONFIG);
-  return SERVICE_CATALOG_CONFIG[keys[idx % keys.length]];
+  const isProf = service.category === 'professional';
+  const ResolvedIcon = (service.iconClass && ICON_MAP[service.iconClass]) || (isProf ? Briefcase : Building2);
+
+  return {
+    category: isProf ? 'Advisory Service' : 'Workspace Solution',
+    badge: isProf ? 'Expert Advisory' : 'Flexible Terms',
+    badgeBg: isProf ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white' : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white',
+    icon: ResolvedIcon,
+    defaultImage: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
+    perks: [
+      'Direct partner consultation & advisory',
+      'Customized execution plan',
+      'Clear documentation & legal compliance',
+      'Access to center amenities on appointment',
+    ],
+    startingPrice: Number(service.startingPrice || 0),
+    pricingUnit: service.pricingUnit || (isProf ? 'consultation' : 'month'),
+    requiresSeats: service.requiresSeats || (isProf ? 'optional' : 'required'),
+    requiresDate: service.requiresDate || (isProf ? 'flexible' : 'required'),
+  };
 }
 
 export default function CustomerServicesPage() {
@@ -105,18 +221,24 @@ export default function CustomerServicesPage() {
   const { activeBranch } = useBranch();
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'all' | 'workspace' | 'professional'>('all');
 
   // Modal State
   const [selectedService, setSelectedService] = useState<any>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
+
+  // Form State
   const [formData, setFormData] = useState({
     customerName: '',
     customerEmail: '',
     customerPhone: '',
     companyName: '',
-    seatsCount: 2,
+    isSeatNeeded: true,
+    seatsCount: 1,
+    isDateFlexible: false,
     preferredDate: new Date().toISOString().split('T')[0],
+    consultationType: 'in_person',
     notes: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -139,16 +261,24 @@ export default function CustomerServicesPage() {
   }, [activeBranch]);
 
   const openReservationModal = (service: any) => {
+    const config = getServiceConfig(service, 0);
+    const reqSeats = service.requiresSeats || config.requiresSeats || 'required';
+    const reqDate = service.requiresDate || config.requiresDate || 'required';
+    const isProf = service.category === 'professional';
+
     setSelectedService(service);
-    setSelectedPhoto(service.featuredImage || service.imageUrl);
+    setSelectedPhoto(service.featuredImage || service.imageUrl || config.defaultImage);
     setSubmittedRef(null);
     setFormData({
       customerName: user?.name || '',
       customerEmail: user?.email || '',
       customerPhone: user?.phone || '',
       companyName: user?.companyName || '',
-      seatsCount: 2,
+      isSeatNeeded: reqSeats === 'required' ? true : false,
+      seatsCount: reqSeats === 'required' ? 1 : 0,
+      isDateFlexible: reqDate === 'flexible',
       preferredDate: new Date().toISOString().split('T')[0],
+      consultationType: isProf ? 'in_person' : 'desk_included',
       notes: '',
     });
     setShowModal(true);
@@ -160,56 +290,113 @@ export default function CustomerServicesPage() {
     try {
       const res = await apiClient.post('/services/inquiry', {
         ...formData,
-        userId: user?.id,
+        serviceId: selectedService?.id,
         serviceName: selectedService?.name,
+        userId: user?.id,
       });
       if (res.data?.booking?.bookingCode) {
         setSubmittedRef(res.data.booking.bookingCode);
       }
     } catch (err) {
-      alert('Failed to submit workspace solution reservation');
+      alert('Failed to submit solution inquiry');
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Filtered Services List
+  const filteredServices = services.filter((s) => {
+    if (activeTab === 'all') return true;
+    const cat = s.category || 'workspace';
+    return cat === activeTab;
+  });
+
   return (
     <div className="min-h-screen bg-[#FAFAFC] text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
       <Navbar />
 
-      <main className="pt-6 sm:pt-8 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-grow space-y-10 sm:space-y-12">
+      <main className="pt-6 sm:pt-8 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-grow space-y-8 sm:space-y-10">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-xs font-bold text-indigo-600 shadow-xs">
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Flexible Workspace Solutions</span>
+          <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-white border border-slate-200 text-xs font-bold text-indigo-600 shadow-xs">
+            <Layers className="w-3.5 h-3.5" />
+            <span>Integrated Business & Coworking Ecosystem</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900">
-            Tailored Workspace Offerings
+          <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+            Tailored Solutions & Advisory Services
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            From flexible day passes to enterprise private office suites, discover workspace solutions built for speed, privacy, and team collaboration.
+            From agile flexible seating and enterprise cabins to high-impact loan syndication, land promoter liaisons, and certified tax experts.
           </p>
+        </div>
+
+        {/* Category Filter Tabs */}
+        <div className="flex items-center justify-center">
+          <div className="inline-flex p-1.5 rounded-2xl bg-white border border-slate-200 shadow-xs gap-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab('all')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'all'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              All Offerings ({services.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('workspace')}
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'workspace'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Workspace Solutions</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('professional')}
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'professional'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Professional & Advisory Services</span>
+            </button>
+          </div>
         </div>
 
         {/* Services Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="bg-white rounded-3xl border border-slate-200 shadow-xs h-[460px] animate-pulse" />
             ))}
           </div>
+        ) : filteredServices.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center max-w-md mx-auto space-y-3">
+            <Info className="w-8 h-8 text-slate-400 mx-auto" />
+            <h3 className="text-base font-bold text-slate-800">No Services Found</h3>
+            <p className="text-xs text-slate-500">There are no services in this category currently available for the selected center.</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {services.map((service, idx) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredServices.map((service, idx) => {
               const config = getServiceConfig(service, idx);
-              const IconComp = config.icon;
+              const IconComp = (service.iconClass && ICON_MAP[service.iconClass]) || config.icon;
               const isLocalBroken =
                 !service.featuredImage ||
                 service.featuredImage.startsWith('/images/') ||
                 service.featuredImage.includes('img-1787582127214');
               const displayImage = isLocalBroken ? config.defaultImage : service.featuredImage;
               const price = Number(service.startingPrice || config.startingPrice);
+              const pricingUnit = service.pricingUnit || config.pricingUnit || 'month';
+              const isProfessional = service.category === 'professional';
 
               return (
                 <div
@@ -253,15 +440,23 @@ export default function CustomerServicesPage() {
                       {/* Bottom Floating Price Tag */}
                       <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
                         <div className="inline-flex items-baseline gap-1 px-3 py-1 rounded-xl bg-slate-900/85 backdrop-blur-md border border-white/10 text-white shadow-lg">
-                          <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-wide">Starting</span>
-                          <span className="text-sm sm:text-base font-extrabold text-white tracking-tight">
-                            ₹{price.toLocaleString('en-IN')}
-                          </span>
-                          <span className="text-[10px] font-medium text-slate-400">/mo</span>
+                          {pricingUnit === 'quote' || price === 0 ? (
+                            <span className="text-xs font-bold text-white tracking-tight">Custom Quote</span>
+                          ) : (
+                            <>
+                              <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-wide">Starting</span>
+                              <span className="text-sm sm:text-base font-extrabold text-white tracking-tight">
+                                ₹{price.toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-[10px] font-medium text-slate-400">
+                                {pricingUnit === 'consultation' ? '/fee' : '/mo'}
+                              </span>
+                            </>
+                          )}
                         </div>
 
                         <span className="text-[10px] font-semibold text-white/90 bg-white/15 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/20">
-                          Flexible Terms
+                          {isProfessional ? 'Advisory Hub' : 'Flexible Terms'}
                         </span>
                       </div>
                     </div>
@@ -302,13 +497,17 @@ export default function CustomerServicesPage() {
                       <button
                         type="button"
                         onClick={() => openReservationModal(service)}
-                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-700 hover:via-pink-700 hover:to-rose-700 text-white text-xs font-bold shadow-md shadow-purple-500/20 hover:shadow-lg hover:shadow-pink-500/30 transition-all flex items-center justify-center space-x-2 cursor-pointer group/btn"
+                        className={`w-full py-2.5 px-4 rounded-xl text-white text-xs font-bold shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer group/btn ${
+                          isProfessional
+                            ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 shadow-blue-500/20 hover:shadow-indigo-500/30'
+                            : 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-700 hover:via-pink-700 hover:to-rose-700 shadow-purple-500/20 hover:shadow-pink-500/30'
+                        }`}
                       >
-                        <span>Reserve Solution</span>
+                        <span>{isProfessional ? 'Book Consultation & Advisory' : 'Reserve Solution'}</span>
                         <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
                       </button>
                       <p className="text-[10px] text-center text-slate-400 mt-2">
-                        Instant inquiry • Zero brokerage
+                        {isProfessional ? 'Direct specialist connect • NDA protected' : 'Instant inquiry • Zero brokerage'}
                       </p>
                     </div>
                   </div>
@@ -326,21 +525,23 @@ export default function CustomerServicesPage() {
             <button
               type="button"
               onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 text-sm font-bold p-1 rounded-full bg-slate-100 hover:bg-slate-200"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 text-sm font-bold p-1 rounded-full bg-slate-100 hover:bg-slate-200 cursor-pointer"
             >
               ✕
             </button>
 
             <div className="space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
-                Workspace Solution Reservation
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                selectedService.category === 'professional' ? 'text-blue-600' : 'text-indigo-600'
+              }`}>
+                {selectedService.category === 'professional' ? 'Professional Service Advisory' : 'Workspace Solution Reservation'}
               </span>
               <h3 className="text-xl font-extrabold text-slate-900">{selectedService.name}</h3>
             </div>
 
             {/* Interactive Photo Gallery Viewer */}
             <div className="space-y-2">
-              <div className="h-44 w-full rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+              <div className="h-40 w-full rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
                 <img
                   src={getMediaUrl(selectedPhoto || selectedService.featuredImage)}
                   alt={selectedService.name}
@@ -382,17 +583,17 @@ export default function CustomerServicesPage() {
                 <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
-                <h4 className="text-base font-bold text-slate-900">Solution Inquiry Submitted!</h4>
+                <h4 className="text-base font-bold text-slate-900">Inquiry Submitted Successfully!</h4>
                 <p className="text-xs text-slate-600">
                   Reference Code: <strong className="text-emerald-700 font-mono">{submittedRef}</strong>
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  Our Community Lead will contact you shortly to confirm your setup and visit.
+                  Our specialist lead will review your requirements and contact you promptly.
                 </p>
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-6 py-2 rounded-full bg-slate-900 text-xs text-white font-bold"
+                  className="px-6 py-2 rounded-full bg-slate-900 text-xs text-white font-bold cursor-pointer hover:bg-slate-800"
                 >
                   Close Window
                 </button>
@@ -437,54 +638,170 @@ export default function CustomerServicesPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Company</label>
-                    <input
-                      type="text"
-                      value={formData.companyName}
-                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                      placeholder="Acme Tech"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:border-indigo-600 focus:bg-white focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Seats Needed</label>
-                    <input
-                      type="number"
-                      required
-                      min={1}
-                      value={formData.seatsCount}
-                      onChange={(e) => setFormData({ ...formData, seatsCount: Number(e.target.value) })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:border-indigo-600 focus:bg-white focus:outline-none"
-                    />
-                  </div>
-                </div>
-
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">
-                    Preferred Start / Move-In Date *
-                  </label>
-                  <span className="block text-[11px] text-slate-500 mb-1">
-                    When would you like to move in or activate your workspace solution?
-                  </span>
+                  <label className="block text-slate-700 font-semibold mb-1">Company / Organization</label>
                   <input
-                    type="date"
-                    required
-                    value={formData.preferredDate}
-                    onChange={(e) => setFormData({ ...formData, preferredDate: e.target.value })}
+                    type="text"
+                    value={formData.companyName}
+                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                    placeholder="Acme Enterprises Pvt Ltd"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:border-indigo-600 focus:bg-white focus:outline-none"
                   />
                 </div>
 
+                {/* Consultation Type (For Professional Services) */}
+                {selectedService.category === 'professional' && (
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1.5">Consultation Preference</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, consultationType: 'in_person' })}
+                        className={`flex items-center justify-center space-x-1.5 py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                          formData.consultationType === 'in_person'
+                            ? 'bg-blue-50 border-blue-600 text-blue-700 shadow-xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Building2 className="w-3.5 h-3.5" />
+                        <span>Center In-Person</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, consultationType: 'virtual' })}
+                        className={`flex items-center justify-center space-x-1.5 py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                          formData.consultationType === 'virtual'
+                            ? 'bg-blue-50 border-blue-600 text-blue-700 shadow-xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Video className="w-3.5 h-3.5" />
+                        <span>Online Video Call</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Dynamic Seat Requirement Section */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                  {selectedService.requiresSeats === 'none' ? (
+                    <div className="flex items-center space-x-2 text-slate-600">
+                      <Info className="w-4 h-4 text-indigo-500 shrink-0" />
+                      <span className="text-[11px]">
+                        <strong>No Physical Seats Required:</strong> This service is delivered as direct advisory or corporate documentation.
+                      </span>
+                    </div>
+                  ) : selectedService.requiresSeats === 'optional' ? (
+                    <div className="space-y-2">
+                      <label className="block text-slate-800 font-bold text-xs">
+                        Do you also need workspace seating at Cowork30?
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, isSeatNeeded: false, seatsCount: 0 })}
+                          className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all text-center cursor-pointer ${
+                            !formData.isSeatNeeded
+                              ? 'bg-white border-indigo-600 text-indigo-700 ring-2 ring-indigo-500/20 shadow-xs'
+                              : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-white'
+                          }`}
+                        >
+                          Advisory Only (No Desks)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, isSeatNeeded: true, seatsCount: Math.max(1, formData.seatsCount) })}
+                          className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all text-center cursor-pointer ${
+                            formData.isSeatNeeded
+                              ? 'bg-white border-indigo-600 text-indigo-700 ring-2 ring-indigo-500/20 shadow-xs'
+                              : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-white'
+                          }`}
+                        >
+                          Include Desks / Cabins
+                        </button>
+                      </div>
+
+                      {formData.isSeatNeeded && (
+                        <div className="pt-2">
+                          <label className="block text-slate-700 font-semibold mb-1">Seats Needed</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={50}
+                            value={formData.seatsCount}
+                            onChange={(e) => setFormData({ ...formData, seatsCount: Number(e.target.value) })}
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-slate-900 focus:border-indigo-600 focus:outline-none"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Seats Needed *</label>
+                      <input
+                        type="number"
+                        required
+                        min={1}
+                        max={100}
+                        value={formData.seatsCount}
+                        onChange={(e) => setFormData({ ...formData, seatsCount: Number(e.target.value), isSeatNeeded: true })}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:border-indigo-600 focus:outline-none"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Preferred Date & Flexible Toggle */}
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Notes / Requirements</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-700 font-semibold">
+                      {selectedService.category === 'professional' ? 'Preferred Consultation Date' : 'Preferred Move-In / Start Date'}
+                    </label>
+                    <label className="inline-flex items-center space-x-1.5 text-[11px] text-indigo-600 font-semibold cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.isDateFlexible}
+                        onChange={(e) => setFormData({ ...formData, isDateFlexible: e.target.checked })}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>Flexible / Earliest Available</span>
+                    </label>
+                  </div>
+
+                  {!formData.isDateFlexible ? (
+                    <input
+                      type="date"
+                      required
+                      value={formData.preferredDate}
+                      onChange={(e) => setFormData({ ...formData, preferredDate: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:border-indigo-600 focus:bg-white focus:outline-none"
+                    />
+                  ) : (
+                    <div className="py-2 px-3 rounded-xl bg-indigo-50/60 border border-indigo-200 text-indigo-700 text-[11px] flex items-center space-x-2">
+                      <Calendar className="w-3.5 h-3.5 shrink-0" />
+                      <span>No fixed date required — Our team will schedule at your earliest convenience.</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    {selectedService.category === 'professional' ? 'Project / Service Details' : 'Notes / Special Requests'}
+                  </label>
                   <textarea
                     rows={2}
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Dual monitor setup, 24/7 access pass..."
+                    placeholder={
+                      selectedService.slug === 'loan-syndicate'
+                        ? 'e.g., Working capital funding requirement, target loan amount...'
+                        : selectedService.slug === 'tax-experts'
+                        ? 'e.g., Quarterly GST filing, company incorporation, trademark...'
+                        : selectedService.slug === 'land-promoters'
+                        ? 'e.g., Commercial plot requirements, preferred square footage...'
+                        : 'Any specific questions or custom requirements...'
+                    }
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:border-indigo-600 focus:bg-white focus:outline-none"
                   />
                 </div>
@@ -492,10 +809,20 @@ export default function CustomerServicesPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-3.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 shadow-md flex items-center justify-center space-x-2 cursor-pointer"
+                  className={`w-full py-3.5 rounded-full text-xs font-bold text-white shadow-md flex items-center justify-center space-x-2 cursor-pointer transition-opacity ${
+                    selectedService.category === 'professional'
+                      ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-95'
+                      : 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95'
+                  }`}
                 >
                   <Send className="w-4 h-4" />
-                  <span>{submitting ? 'Submitting...' : 'Submit Solution Inquiry'}</span>
+                  <span>
+                    {submitting
+                      ? 'Submitting...'
+                      : selectedService.category === 'professional'
+                      ? 'Submit Advisory Inquiry'
+                      : 'Submit Solution Reservation'}
+                  </span>
                 </button>
               </form>
             )}

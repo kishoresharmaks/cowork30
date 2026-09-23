@@ -7,16 +7,19 @@ import {
   Search,
   CheckCircle2,
   Clock,
-  Users,
   Calendar,
   Building2,
   Trash2,
   MapPin,
   DollarSign,
+  Layers,
+  Video,
+  Users,
+  Info,
+  MessageSquare,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import InquiryChatModal from '@/components/ui/InquiryChatModal';
-import { MessageSquare } from 'lucide-react';
 
 export default function AdminServiceInquiriesPage() {
   const [inquiries, setInquiries] = useState<any[]>([]);
@@ -27,6 +30,7 @@ export default function AdminServiceInquiriesPage() {
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedBranchFilter, setSelectedBranchFilter] = useState('all');
 
   async function loadData() {
@@ -93,19 +97,24 @@ export default function AdminServiceInquiriesPage() {
   // Filtered List
   const filteredInquiries = inquiries.filter((inq) => {
     const q = searchQuery.toLowerCase().trim();
+    const serviceName = (inq.service?.name || inq.notes || '').toLowerCase();
     const matchesSearch =
       !q ||
       (inq.bookingCode && inq.bookingCode.toLowerCase().includes(q)) ||
       (inq.customerName && inq.customerName.toLowerCase().includes(q)) ||
       (inq.customerEmail && inq.customerEmail.toLowerCase().includes(q)) ||
       (inq.companyName && inq.companyName.toLowerCase().includes(q)) ||
+      serviceName.includes(q) ||
       (inq.notes && inq.notes.toLowerCase().includes(q));
 
     const matchesStatus = statusFilter === 'all' || inq.status === statusFilter;
     const matchesBranch =
       selectedBranchFilter === 'all' || String(inq.branchId || inq.branch?.id) === String(selectedBranchFilter);
 
-    return matchesSearch && matchesStatus && matchesBranch;
+    const inqCategory = inq.service?.category || (inq.notes && inq.notes.includes('CATEGORY: PROFESSIONAL') ? 'professional' : 'workspace');
+    const matchesCategory = categoryFilter === 'all' || inqCategory === categoryFilter;
+
+    return matchesSearch && matchesStatus && matchesBranch && matchesCategory;
   });
 
   // Calculate Pipeline Metrics
@@ -124,13 +133,13 @@ export default function AdminServiceInquiriesPage() {
           <div>
             <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#6366F1]/10 border border-[#6366F1]/30 text-xs font-bold text-[#6366F1] mb-2">
               <Briefcase className="w-3.5 h-3.5" />
-              <span>Dedicated Service Leads & Solution Requests</span>
+              <span>Workspace & Advisory Inquiries Pipeline</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#F8FAFC]">
-              Workspace Solution Inquiries Manager
+              Service & Solution Inquiries Manager
             </h1>
             <p className="text-xs text-[#94A3B8]">
-              Manage corporate office requests, team seat inquiries, move-in dates, and solution quotes submitted from the /services portal.
+              Manage office requests, loan syndication, land promoters, and tax expert inquiries with custom quote negotiations and real-time member chat.
             </p>
           </div>
         </div>
@@ -170,14 +179,24 @@ export default function AdminServiceInquiriesPage() {
             <Search className="w-4 h-4 text-[#94A3B8] absolute left-3 top-2.5" />
             <input
               type="text"
-              placeholder="Search by customer name, email, company, or SRV- ref code..."
+              placeholder="Search by customer name, email, company, service, or SRV- code..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#0F172A] border border-[#334155] rounded-xl pl-9 pr-3 py-2 text-[#F8FAFC] focus:border-[#6366F1] focus:outline-none"
             />
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="bg-[#0F172A] border border-[#334155] text-[#CBD5E1] rounded-xl px-3 py-2 font-semibold focus:border-[#6366F1] focus:outline-none cursor-pointer"
+            >
+              <option value="all">All Categories</option>
+              <option value="workspace">Workspace Solutions</option>
+              <option value="professional">Professional & Advisory</option>
+            </select>
+
             <select
               value={selectedBranchFilter}
               onChange={(e) => setSelectedBranchFilter(e.target.value)}
@@ -205,9 +224,9 @@ export default function AdminServiceInquiriesPage() {
           </div>
         </div>
 
-        {/* Inquiries Data Table */}
+        {/* Inquiries Data List */}
         {loading ? (
-          <div className="py-20 text-center text-xs font-semibold text-[#94A3B8]">Loading service solution inquiries...</div>
+          <div className="py-20 text-center text-xs font-semibold text-[#94A3B8]">Loading service inquiries...</div>
         ) : filteredInquiries.length === 0 ? (
           <div className="py-20 text-center space-y-3 bg-[#1E293B] rounded-3xl border border-[#334155]">
             <Briefcase className="w-10 h-10 text-[#6366F1] mx-auto" />
@@ -224,16 +243,28 @@ export default function AdminServiceInquiriesPage() {
                 badgeColor = 'bg-[#F43F5E]/20 text-[#F43F5E] border-[#F43F5E]/40';
               }
 
+              const isProf = inq.service?.category === 'professional' || (inq.notes && inq.notes.includes('CATEGORY: PROFESSIONAL'));
+              const isSeatNeeded = inq.isSeatNeeded !== undefined ? inq.isSeatNeeded : !inq.notes?.includes('Seats: None');
+              const seatsCount = inq.seatsCount || 1;
+              const isDateFlexible = inq.isDateFlexible || inq.notes?.includes('Flexible');
+
               return (
                 <div
                   key={inq.id}
                   className="bg-[#1E293B] border border-[#334155] rounded-2xl p-5 space-y-4 shadow-xs hover:border-[#6366F1]/50 transition-all text-xs"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#334155] pb-3">
-                    <div className="flex items-center space-x-3">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="px-2.5 py-1 rounded-lg bg-[#0F172A] border border-[#6366F1]/40 text-[#6366F1] font-mono font-extrabold text-xs">
                         {inq.bookingCode}
                       </span>
+
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${
+                        isProf ? 'bg-blue-900/60 text-blue-300 border-blue-500/40' : 'bg-purple-900/60 text-purple-300 border-purple-500/40'
+                      }`}>
+                        {isProf ? 'Professional Advisory' : 'Workspace Solution'}
+                      </span>
+
                       <span className="text-[#94A3B8] font-semibold text-[11px] flex items-center space-x-1">
                         <Calendar className="w-3.5 h-3.5" />
                         <span>Submitted: {new Date(inq.createdAt).toLocaleDateString()}</span>
@@ -270,7 +301,7 @@ export default function AdminServiceInquiriesPage() {
                       <button
                         type="button"
                         onClick={() => handleDeleteInquiry(inq.id)}
-                        className="p-1.5 rounded-lg bg-[#0F172A] border border-[#334155] text-[#94A3B8] hover:text-[#F43F5E] hover:border-[#F43F5E]"
+                        className="p-1.5 rounded-lg bg-[#0F172A] border border-[#334155] text-[#94A3B8] hover:text-[#F43F5E] hover:border-[#F43F5E] cursor-pointer"
                         title="Delete inquiry record"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -290,26 +321,49 @@ export default function AdminServiceInquiriesPage() {
                       )}
                     </div>
 
-                    {/* Service & Branch Info */}
-                    <div className="space-y-1 bg-[#0F172A] p-3 rounded-xl border border-[#334155]">
+                    {/* Service & Offering Info */}
+                    <div className="space-y-2 bg-[#0F172A] p-3 rounded-xl border border-[#334155]">
                       <span className="text-[10px] font-extrabold uppercase text-[#6366F1] block">Requested Offering</span>
                       <p className="font-bold text-[#F8FAFC] text-sm flex items-center space-x-1.5">
-                        <Building2 className="w-4 h-4 text-[#6366F1]" />
-                        <span>{inq.notes?.split('|')[0] || 'Workspace Solution'}</span>
+                        {isProf ? <Briefcase className="w-4 h-4 text-blue-400" /> : <Building2 className="w-4 h-4 text-[#6366F1]" />}
+                        <span>{inq.service?.name || inq.notes?.split('|')[0]?.replace('Service: ', '') || 'Custom Offering'}</span>
                       </p>
-                      <p className="text-[#CBD5E1] font-semibold flex items-center space-x-1 pt-1">
+
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {/* Seat Badge */}
+                        <span className={`px-2 py-0.5 rounded-md font-semibold text-[10px] border ${
+                          isSeatNeeded
+                            ? 'bg-purple-900/40 text-purple-300 border-purple-500/30'
+                            : 'bg-slate-800 text-slate-300 border-slate-700'
+                        }`}>
+                          {isSeatNeeded ? `🪑 ${seatsCount} Seats Requested` : '🚫 Pure Advisory (No Seats)'}
+                        </span>
+
+                        {/* Consultation Type */}
+                        {inq.consultationType && (
+                          <span className="px-2 py-0.5 rounded-md bg-blue-900/40 text-blue-300 border border-blue-500/30 font-semibold text-[10px] flex items-center space-x-1">
+                            {inq.consultationType === 'virtual' ? <Video className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
+                            <span>{inq.consultationType === 'virtual' ? 'Video Call' : 'Center In-Person'}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-[#CBD5E1] font-semibold flex items-center space-x-1 pt-0.5">
                         <MapPin className="w-3.5 h-3.5 text-pink-400" />
                         <span>{inq.branch?.name || 'Branch Location'} ({inq.branch?.city})</span>
                       </p>
-                      {inq.preferredDate && (
-                        <p className="text-[#94A3B8] pt-0.5">
-                          Target Move-in: <strong>{new Date(inq.preferredDate).toLocaleDateString()}</strong>
-                        </p>
-                      )}
+
+                      <p className="text-[#94A3B8] pt-0.5">
+                        {isDateFlexible ? (
+                          <span className="text-emerald-400 font-bold">⚡ Flexible / Earliest Available Date</span>
+                        ) : inq.preferredDate ? (
+                          <>Target Date: <strong>{new Date(inq.preferredDate).toLocaleDateString()}</strong></>
+                        ) : null}
+                      </p>
                     </div>
 
-                    {/* Financial Estimate & Notes */}
-                    <div className="space-y-1 bg-[#0F172A] p-3 rounded-xl border border-[#334155] flex flex-col justify-between">
+                    {/* Financial Estimate & Actions */}
+                    <div className="space-y-2 bg-[#0F172A] p-3 rounded-xl border border-[#334155] flex flex-col justify-between">
                       <div>
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-extrabold uppercase text-[#6366F1]">Negotiated Quote</span>
@@ -317,7 +371,7 @@ export default function AdminServiceInquiriesPage() {
                             <button
                               type="button"
                               onClick={() => setChatInquiry(inq)}
-                              className="px-2 py-0.5 rounded-lg bg-[#6366F1]/20 border border-[#6366F1]/40 text-[#818cf8] font-bold text-[10px] flex items-center space-x-1 hover:bg-[#6366F1]/30 transition-all"
+                              className="px-2 py-0.5 rounded-lg bg-[#6366F1]/20 border border-[#6366F1]/40 text-[#818cf8] font-bold text-[10px] flex items-center space-x-1 hover:bg-[#6366F1]/30 transition-all cursor-pointer"
                             >
                               <MessageSquare className="w-3 h-3" />
                               <span>Live Chat</span>
@@ -332,17 +386,20 @@ export default function AdminServiceInquiriesPage() {
                                     .catch(() => alert('Failed to update quote amount'));
                                 }
                               }}
-                              className="text-[10px] font-bold text-[#6366F1] hover:underline"
+                              className="text-[10px] font-bold text-[#6366F1] hover:underline cursor-pointer"
                             >
                               ✏️ Edit Quote
                             </button>
                           </div>
                         </div>
-                        <p className="text-lg font-extrabold text-[#10B981]">₹{Number(inq.totalAmount || 0).toLocaleString()}</p>
+
+                        <p className="text-lg font-extrabold text-[#10B981] pt-1">
+                          {Number(inq.totalAmount || 0) === 0 ? 'On Assessment / Quote' : `₹${Number(inq.totalAmount).toLocaleString()}`}
+                        </p>
                       </div>
 
                       {inq.notes && (
-                        <p className="text-[11px] text-[#94A3B8] italic border-t border-[#334155] pt-1 mt-1 line-clamp-2">
+                        <p className="text-[11px] text-[#94A3B8] italic border-t border-[#334155] pt-1.5 line-clamp-3">
                           "{inq.notes}"
                         </p>
                       )}

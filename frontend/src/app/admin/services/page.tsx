@@ -22,8 +22,10 @@ import {
   Sparkles,
   Search,
   X,
-  Tag,
+  Landmark,
+  Compass,
   CheckCircle2,
+  Layers,
 } from 'lucide-react';
 import { apiClient, getMediaUrl } from '@/lib/api-client';
 
@@ -32,14 +34,19 @@ const PRESET_SERVICE_PHOTOS = [
   { label: 'Dedicated Suite', url: 'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?auto=format&fit=crop&w=600&q=80' },
   { label: 'Private Cabin Office', url: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=600&q=80' },
   { label: 'Conference & Event Space', url: 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Loan Syndicate / Finance', url: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Land Promoters / Property', url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80' },
+  { label: 'Tax & CA Compliance', url: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=600&q=80' },
 ];
 
 const CATEGORY_ICONS = [
   { name: 'Building2', icon: Building2, label: 'Building Suite' },
   { name: 'Briefcase', icon: Briefcase, label: 'Corporate Office' },
+  { name: 'Landmark', icon: Landmark, label: 'Loan & Financing' },
+  { name: 'Compass', icon: Compass, label: 'Land & Property' },
+  { name: 'ShieldCheck', icon: ShieldCheck, label: 'Tax & Legal CA' },
   { name: 'Laptop', icon: Laptop, label: 'Tech Workspace' },
   { name: 'Globe', icon: Globe, label: 'Virtual Office' },
-  { name: 'ShieldCheck', icon: ShieldCheck, label: 'GST & Legal' },
   { name: 'Coffee', icon: Coffee, label: 'Lounge & Cafe' },
   { name: 'Users', icon: Users, label: 'Team Cabins' },
   { name: 'Wifi', icon: Wifi, label: 'High-Speed Hub' },
@@ -54,6 +61,7 @@ export default function AdminServicesPage() {
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedBranchFilter, setSelectedBranchFilter] = useState('all');
 
   // Modal State
@@ -63,6 +71,10 @@ export default function AdminServicesPage() {
     name: '',
     branchId: 1 as number,
     slug: '',
+    category: 'workspace' as string,
+    requiresSeats: 'required' as string,
+    requiresDate: 'required' as string,
+    pricingUnit: 'month' as string,
     shortDescription: '',
     fullDescription: '',
     startingPrice: 5000,
@@ -111,6 +123,10 @@ export default function AdminServicesPage() {
       name: '',
       branchId: branches[0]?.id || 1,
       slug: '',
+      category: 'workspace',
+      requiresSeats: 'required',
+      requiresDate: 'required',
+      pricingUnit: 'month',
       shortDescription: '',
       fullDescription: '',
       startingPrice: 5000,
@@ -129,9 +145,13 @@ export default function AdminServicesPage() {
       name: service.name || '',
       branchId: service.branchId || service.branch?.id || branches[0]?.id || 1,
       slug: service.slug || '',
+      category: service.category || 'workspace',
+      requiresSeats: service.requiresSeats || 'required',
+      requiresDate: service.requiresDate || 'required',
+      pricingUnit: service.pricingUnit || 'month',
       shortDescription: service.shortDescription || '',
       fullDescription: service.detailedDescription || service.fullDescription || '',
-      startingPrice: Number(service.startingPrice || 5000),
+      startingPrice: Number(service.startingPrice || 0),
       sortOrder: Number(service.sortOrder || 1),
       icon: service.iconClass || service.icon || 'Building2',
       imageUrl: service.featuredImage || service.imageUrl || PRESET_SERVICE_PHOTOS[0].url,
@@ -163,37 +183,46 @@ export default function AdminServicesPage() {
       }
       setShowModal(false);
       loadServices();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to save service solution');
+    } catch (err) {
+      alert('Failed to save service offering');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this workspace solution?')) return;
+    if (!confirm('Are you sure you want to delete this service solution?')) return;
     try {
       await apiClient.delete(`/services/${id}`);
       setShowModal(false);
       loadServices();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete service');
+    } catch (err) {
+      alert('Failed to delete service');
     }
   };
 
-  const filteredServices = services.filter((srv: any) => {
+  // Filtered List
+  const filteredServices = services.filter((s) => {
+    const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
-      !searchQuery.trim() ||
-      srv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (srv.shortDescription && srv.shortDescription.toLowerCase().includes(searchQuery.toLowerCase()));
+      !q ||
+      (s.name && s.name.toLowerCase().includes(q)) ||
+      (s.slug && s.slug.toLowerCase().includes(q)) ||
+      (s.shortDescription && s.shortDescription.toLowerCase().includes(q));
 
     const matchesStatus =
-      statusFilter === 'all' || (statusFilter === 'active' ? srv.isActive : !srv.isActive);
+      statusFilter === 'all' ||
+      (statusFilter === 'active' && s.isActive) ||
+      (statusFilter === 'draft' && !s.isActive);
+
+    const matchesCategory =
+      categoryFilter === 'all' || (s.category || 'workspace') === categoryFilter;
 
     const matchesBranch =
-      selectedBranchFilter === 'all' || String(srv.branchId || srv.branch?.id) === String(selectedBranchFilter);
+      selectedBranchFilter === 'all' ||
+      String(s.branchId || s.branch?.id) === String(selectedBranchFilter);
 
-    return matchesSearch && matchesStatus && matchesBranch;
+    return matchesSearch && matchesStatus && matchesCategory && matchesBranch;
   });
 
   return (
@@ -205,39 +234,51 @@ export default function AdminServicesPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#334155] pb-5">
           <div>
             <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#6366F1]/10 border border-[#6366F1]/30 text-xs font-bold text-[#6366F1] mb-2">
-              <FileText className="w-3.5 h-3.5" />
-              <span>Workspace Solutions Catalog</span>
+              <Layers className="w-3.5 h-3.5" />
+              <span>Workspace & Professional Services Catalog</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#F8FAFC]">Workspace Solutions & Offerings Manager</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#F8FAFC]">
+              Offerings & Custom Services Manager
+            </h1>
             <p className="text-xs text-[#94A3B8]">
-              Manage private office suites, starting prices (₹), detailed descriptions, gallery photos, icons, and status.
+              Manage workspace desks, private offices, and professional advisory offerings (Loan Syndicate, Land Promoters, Tax Experts) with dynamic seat and date rules.
             </p>
           </div>
 
           <button
             type="button"
             onClick={openCreateModal}
-            className="px-5 py-2.5 rounded-full bg-[#6366F1] hover:bg-[#4F46E5] text-xs font-bold text-white flex items-center space-x-2 w-fit shadow-md cursor-pointer shrink-0"
+            className="px-5 py-2.5 rounded-full bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-bold shadow-lg shadow-[#6366F1]/20 flex items-center justify-center space-x-2 cursor-pointer transition-all shrink-0"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Workspace Solution</span>
+            <span>Add New Offering</span>
           </button>
         </div>
 
-        {/* SEARCH & FILTERS BAR */}
+        {/* Search & Filter Bar */}
         <div className="bg-[#1E293B] p-4 rounded-2xl border border-[#334155] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-xs text-xs">
           <div className="relative flex-1 max-w-md">
             <Search className="w-4 h-4 text-[#94A3B8] absolute left-3 top-2.5" />
             <input
               type="text"
-              placeholder="Search solutions by name or summary..."
+              placeholder="Search solutions by title, keywords, or slug..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#0F172A] border border-[#334155] rounded-xl pl-9 pr-3 py-2 text-[#F8FAFC] focus:border-[#6366F1] focus:outline-none"
             />
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="bg-[#0F172A] border border-[#334155] text-[#CBD5E1] rounded-xl px-3 py-2 font-semibold focus:border-[#6366F1] focus:outline-none cursor-pointer"
+            >
+              <option value="all">All Categories</option>
+              <option value="workspace">Workspace Solutions</option>
+              <option value="professional">Professional & Advisory</option>
+            </select>
+
             <select
               value={selectedBranchFilter}
               onChange={(e) => setSelectedBranchFilter(e.target.value)}
@@ -265,11 +306,11 @@ export default function AdminServicesPage() {
 
         {/* Services Showcase Grid */}
         {loading ? (
-          <div className="py-20 text-center text-xs font-semibold text-[#94A3B8]">Loading workspace solutions catalog...</div>
+          <div className="py-20 text-center text-xs font-semibold text-[#94A3B8]">Loading solutions catalog...</div>
         ) : filteredServices.length === 0 ? (
           <div className="py-20 text-center space-y-3 bg-[#1E293B] rounded-3xl border border-[#334155]">
             <FileText className="w-10 h-10 text-[#6366F1] mx-auto" />
-            <h3 className="text-base font-bold text-[#F8FAFC]">No Workspace Solutions Found</h3>
+            <h3 className="text-base font-bold text-[#F8FAFC]">No Offerings Found</h3>
             <p className="text-xs text-[#94A3B8]">No solutions match your active search filters.</p>
             <button
               type="button"
@@ -277,7 +318,7 @@ export default function AdminServicesPage() {
               className="px-4 py-2 rounded-full bg-[#6366F1] text-white text-xs font-bold shadow-md cursor-pointer inline-flex items-center space-x-1"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Workspace Solution</span>
+              <span>Add Offering</span>
             </button>
           </div>
         ) : (
@@ -285,6 +326,8 @@ export default function AdminServicesPage() {
             {filteredServices.map((service) => {
               const galleryCount = Array.isArray(service.galleryImages) ? service.galleryImages.length : 0;
               const IconComp = CATEGORY_ICONS.find((i) => i.name === service.iconClass)?.icon || Building2;
+              const isProf = service.category === 'professional';
+              const price = Number(service.startingPrice || 0);
 
               return (
                 <div
@@ -293,21 +336,28 @@ export default function AdminServicesPage() {
                     service.isActive ? 'border-[#334155]' : 'border-[#F43F5E]/40 bg-[#F43F5E]/5'
                   }`}
                 >
-                  {/* Solution Cover Photo */}
+                  {/* Cover Photo */}
                   <div className="h-40 w-full relative overflow-hidden bg-[#0F172A]">
                     <img
                       src={getMediaUrl(service.featuredImage || service.imageUrl || PRESET_SERVICE_PHOTOS[0].url)}
                       alt={service.name}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute top-3 left-3 flex items-center space-x-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#020617]/80 text-[#10B981] border border-[#10B981]/30 backdrop-blur-xs">
-                        Starting ₹{service.startingPrice || 5000}/mo
+                    <div className="absolute top-3 left-3 flex items-center space-x-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#020617]/85 text-[#10B981] border border-[#10B981]/30 backdrop-blur-xs">
+                        {service.pricingUnit === 'quote' || price === 0
+                          ? 'On Quote'
+                          : `Starting ₹${price}/${service.pricingUnit === 'consultation' ? 'fee' : 'mo'}`}
+                      </span>
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                        isProf ? 'bg-blue-900/80 text-blue-300 border-blue-500/40' : 'bg-purple-900/80 text-purple-300 border-purple-500/40'
+                      }`}>
+                        {isProf ? 'Professional' : 'Workspace'}
                       </span>
                     </div>
 
                     <span className="absolute top-3 right-3 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#020617]/80 text-[#94A3B8] border border-[#334155]">
-                      Order #{service.sortOrder || 1}
+                      #{service.sortOrder || 1}
                     </span>
                   </div>
 
@@ -315,7 +365,9 @@ export default function AdminServicesPage() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <div className="w-8 h-8 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center border border-[#6366F1]/30">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${
+                            isProf ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-[#6366F1]/10 text-[#6366F1] border-[#6366F1]/30'
+                          }`}>
                             <IconComp className="w-4 h-4" />
                           </div>
                           <h3 className="text-base font-extrabold text-[#F8FAFC]">{service.name}</h3>
@@ -335,13 +387,17 @@ export default function AdminServicesPage() {
                         </button>
                       </div>
 
-                      <p className="text-xs text-[#94A3B8] leading-relaxed line-clamp-2">{service.shortDescription}</p>
+                      {/* Rule Badges */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        <span className="px-2 py-0.5 rounded-md bg-[#0F172A] border border-[#334155] text-[10px] text-[#94A3B8]">
+                          Seats: <strong className="text-[#CBD5E1]">{service.requiresSeats || 'required'}</strong>
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-[#0F172A] border border-[#334155] text-[10px] text-[#94A3B8]">
+                          Date: <strong className="text-[#CBD5E1]">{service.requiresDate || 'required'}</strong>
+                        </span>
+                      </div>
 
-                      {service.detailedDescription && (
-                        <p className="text-[11px] text-[#CBD5E1] bg-[#0F172A] p-2.5 rounded-xl border border-[#334155] line-clamp-2 italic">
-                          "{service.detailedDescription}"
-                        </p>
-                      )}
+                      <p className="text-xs text-[#94A3B8] leading-relaxed line-clamp-2">{service.shortDescription}</p>
 
                       {galleryCount > 0 && (
                         <div className="flex items-center space-x-1.5 text-[10px] text-[#6366F1] font-semibold pt-1">
@@ -358,14 +414,14 @@ export default function AdminServicesPage() {
                         className="px-3.5 py-1.5 rounded-xl bg-[#0F172A] border border-[#334155] text-xs font-bold text-[#CBD5E1] hover:text-[#F8FAFC] hover:border-[#6366F1] flex items-center space-x-1.5 cursor-pointer"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
-                        <span>Edit Solution</span>
+                        <span>Edit Offering</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => handleDelete(service.id)}
                         className="p-1.5 rounded-xl bg-[#0F172A] border border-[#334155] text-[#F43F5E] hover:bg-[#F43F5E]/10 cursor-pointer"
-                        title="Delete Solution"
+                        title="Delete Offering"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -378,31 +434,31 @@ export default function AdminServicesPage() {
         )}
       </main>
 
-      {/* FULLY POPULATED ADD / EDIT SOLUTION MODAL */}
+      {/* FULLY POPULATED ADD / EDIT OFFERING MODAL */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F172A]/80 backdrop-blur-xs">
           <div className="bg-[#1E293B] border border-[#334155] rounded-3xl max-w-2xl w-full p-6 space-y-4 text-[#F8FAFC] shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               type="button"
               onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 text-[#94A3B8] hover:text-[#F8FAFC] p-1 rounded-full bg-[#0F172A]"
+              className="absolute top-4 right-4 text-[#94A3B8] hover:text-[#F8FAFC] p-1 rounded-full bg-[#0F172A] cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="border-b border-[#334155] pb-3">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#6366F1]">
-                {editingService ? 'Solution Configurator' : 'Create Workspace Solution'}
+                {editingService ? 'Offering Configurator' : 'Create New Offering'}
               </span>
               <h3 className="text-xl font-extrabold text-[#F8FAFC]">
-                {editingService ? `Edit Solution: ${editingService.name}` : 'Add Workspace Solution'}
+                {editingService ? `Edit: ${editingService.name}` : 'Add Service Offering'}
               </h3>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
               {/* Cover Image & Presets */}
               <div className="space-y-2">
-                <label className="block text-[#CBD5E1] font-semibold">Featured Solution Cover Image</label>
+                <label className="block text-[#CBD5E1] font-semibold">Featured Cover Image</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                   {PRESET_SERVICE_PHOTOS.map((photo) => (
                     <div
@@ -427,32 +483,99 @@ export default function AdminServicesPage() {
                 />
               </div>
 
-              {/* Branch Assignment Selector */}
-              <div>
-                <label className="block text-[#CBD5E1] font-semibold mb-1">Branch Location *</label>
-                <select
-                  value={formData.branchId || ''}
-                  onChange={(e) => setFormData({ ...formData, branchId: Number(e.target.value) })}
-                  className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3 py-2 text-[#F8FAFC] focus:border-[#6366F1] focus:outline-none font-bold"
-                >
-                  {branches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({b.city}, {b.state})
-                    </option>
-                  ))}
-                </select>
+              {/* Service Category & Branch */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#CBD5E1] font-semibold mb-1">Service Category *</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      category: e.target.value,
+                      requiresSeats: e.target.value === 'professional' ? 'optional' : 'required',
+                      requiresDate: e.target.value === 'professional' ? 'flexible' : 'required',
+                      pricingUnit: e.target.value === 'professional' ? 'consultation' : 'month',
+                    })}
+                    className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3 py-2 text-[#F8FAFC] focus:border-[#6366F1] focus:outline-none font-bold cursor-pointer"
+                  >
+                    <option value="workspace">Workspace Solution (Desks, Cabins, Virtual Office)</option>
+                    <option value="professional">Professional & Advisory Service (Loan, Land, Tax)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[#CBD5E1] font-semibold mb-1">Branch Location *</label>
+                  <select
+                    value={formData.branchId || ''}
+                    onChange={(e) => setFormData({ ...formData, branchId: Number(e.target.value) })}
+                    className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3 py-2 text-[#F8FAFC] focus:border-[#6366F1] focus:outline-none font-bold cursor-pointer"
+                  >
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} ({b.city}, {b.state})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Dynamic Seat & Date Rules */}
+              <div className="p-3.5 rounded-2xl bg-[#0F172A] border border-[#334155] space-y-3">
+                <span className="text-[11px] font-bold text-[#6366F1] block uppercase tracking-wider">
+                  Inquiry & Reservation Form Rules
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[#94A3B8] font-semibold mb-1">Seats Requirement Rule</label>
+                    <select
+                      value={formData.requiresSeats}
+                      onChange={(e) => setFormData({ ...formData, requiresSeats: e.target.value })}
+                      className="w-full bg-[#1E293B] border border-[#334155] rounded-xl px-2.5 py-1.5 text-xs text-[#F8FAFC] focus:border-[#6366F1] cursor-pointer"
+                    >
+                      <option value="required">Mandatory Seats (Desks)</option>
+                      <option value="optional">Optional (Customer Choice)</option>
+                      <option value="none">No Seats Needed (Remote)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[#94A3B8] font-semibold mb-1">Date Requirement Rule</label>
+                    <select
+                      value={formData.requiresDate}
+                      onChange={(e) => setFormData({ ...formData, requiresDate: e.target.value })}
+                      className="w-full bg-[#1E293B] border border-[#334155] rounded-xl px-2.5 py-1.5 text-xs text-[#F8FAFC] focus:border-[#6366F1] cursor-pointer"
+                    >
+                      <option value="required">Fixed Date Required</option>
+                      <option value="flexible">Flexible / ASAP Allowed</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[#94A3B8] font-semibold mb-1">Pricing Model Unit</label>
+                    <select
+                      value={formData.pricingUnit}
+                      onChange={(e) => setFormData({ ...formData, pricingUnit: e.target.value })}
+                      className="w-full bg-[#1E293B] border border-[#334155] rounded-xl px-2.5 py-1.5 text-xs text-[#F8FAFC] focus:border-[#6366F1] cursor-pointer"
+                    >
+                      <option value="month">Per Month (₹/mo)</option>
+                      <option value="consultation">Per Consultation / Fee</option>
+                      <option value="quote">Custom Quote (₹0 Base)</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               {/* Title & Slug */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#CBD5E1] font-semibold mb-1">Solution Title / Name *</label>
+                  <label className="block text-[#CBD5E1] font-semibold mb-1">Offering Title *</label>
                   <input
                     type="text"
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. Dedicated Private Office Suite"
+                    placeholder="e.g. Loan Syndicate & Project Funding"
                     className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3 py-2 text-[#F8FAFC] focus:border-[#6366F1] focus:outline-none"
                   />
                 </div>
@@ -463,7 +586,7 @@ export default function AdminServicesPage() {
                     type="text"
                     value={formData.slug}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    placeholder="e.g. dedicated-office-suite"
+                    placeholder="e.g. loan-syndicate"
                     className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3 py-2 text-[#F8FAFC] font-mono focus:border-[#6366F1] focus:outline-none"
                   />
                 </div>
@@ -472,7 +595,9 @@ export default function AdminServicesPage() {
               {/* Price, Sort Order, Icon Picker */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[#CBD5E1] font-semibold mb-1">Starting Price (₹/mo) *</label>
+                  <label className="block text-[#CBD5E1] font-semibold mb-1">
+                    Starting Price (₹) {formData.pricingUnit === 'quote' ? '(0 = Quote)' : ''}
+                  </label>
                   <input
                     type="number"
                     required
@@ -519,18 +644,18 @@ export default function AdminServicesPage() {
                   required
                   value={formData.shortDescription}
                   onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-                  placeholder="Brief 1-line summary for workspace cards..."
+                  placeholder="Brief 1-line summary for cards..."
                   className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3 py-2 text-[#F8FAFC] focus:border-[#6366F1] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-[#CBD5E1] font-semibold mb-1">Detailed Overview & Full Specifications</label>
+                <label className="block text-[#CBD5E1] font-semibold mb-1">Detailed Overview & Specifications</label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={formData.fullDescription}
                   onChange={(e) => setFormData({ ...formData, fullDescription: e.target.value })}
-                  placeholder="Comprehensive details on seating options, ergonomics, inclusions, GST benefits, espresso bar access, 24/7 security..."
+                  placeholder="Comprehensive details on the offering, inclusions, legal scope, expert profiles..."
                   className="w-full bg-[#0F172A] border border-[#334155] rounded-xl p-3 text-[#F8FAFC] focus:border-[#6366F1] focus:outline-none resize-y"
                 ></textarea>
               </div>
@@ -541,7 +666,7 @@ export default function AdminServicesPage() {
                 <MultiImageUploader
                   value={formData.galleryImages}
                   onChange={(urls) => setFormData({ ...formData, galleryImages: urls })}
-                  label="Upload Additional Solution Photos"
+                  label="Upload Additional Photos"
                 />
               </div>
 
@@ -554,8 +679,8 @@ export default function AdminServicesPage() {
                   className="w-4 h-4 rounded text-[#6366F1] accent-[#6366F1]"
                 />
                 <div className="space-y-0.5">
-                  <span className="font-bold text-[#F8FAFC] block">Publish Workspace Solution Active</span>
-                  <span className="text-[10px] text-[#94A3B8]">Visible on public offerings page and member portal</span>
+                  <span className="font-bold text-[#F8FAFC] block">Publish Offering Active</span>
+                  <span className="text-[10px] text-[#94A3B8]">Visible on public /services portal</span>
                 </div>
               </label>
 
@@ -568,7 +693,7 @@ export default function AdminServicesPage() {
                     className="px-4 py-2.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold flex items-center space-x-1 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span>Delete Solution</span>
+                    <span>Delete Offering</span>
                   </button>
                 ) : (
                   <div></div>
@@ -578,7 +703,7 @@ export default function AdminServicesPage() {
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2.5 rounded-full bg-[#0F172A] border border-[#334155] text-[#CBD5E1] text-xs font-bold hover:text-[#F8FAFC]"
+                    className="px-4 py-2.5 rounded-full bg-[#0F172A] border border-[#334155] text-[#CBD5E1] text-xs font-bold hover:text-[#F8FAFC] cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -588,7 +713,7 @@ export default function AdminServicesPage() {
                     disabled={submitting}
                     className="px-6 py-2.5 rounded-full text-xs font-bold text-white bg-[#6366F1] hover:bg-[#4F46E5] shadow-md flex items-center space-x-1.5 cursor-pointer"
                   >
-                    <span>{submitting ? 'Saving Solution...' : 'Save Workspace Solution'}</span>
+                    <span>{submitting ? 'Saving Offering...' : 'Save Offering'}</span>
                   </button>
                 </div>
               </div>
