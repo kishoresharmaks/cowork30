@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { BookingStatus, PaymentStatus, Role } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { formatIsoTo12Hr } from '../meeting-rooms/meeting-rooms.service';
 
 @Injectable()
 export class BookingsService {
@@ -14,9 +15,21 @@ export class BookingsService {
     @Optional() private notificationsService?: NotificationsService,
   ) {}
 
-  private getBookingTimeWindow(preferredDate: Date, preferredTimeSlot?: string | null): { startTime: Date; endTime: Date } {
-    const startDate = new Date(preferredDate);
-    const endDate = new Date(preferredDate);
+  private getBookingTimeWindow(preferredDate: Date | string, preferredTimeSlot?: string | null): { startTime: Date; endTime: Date } {
+    let dateStr: string;
+    if (preferredDate instanceof Date) {
+      dateStr = preferredDate.toISOString().split('T')[0];
+    } else {
+      dateStr = String(preferredDate || '').split('T')[0];
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      dateStr = new Date().toISOString().split('T')[0];
+    }
+
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const nextDate = new Date(Date.UTC(y, m - 1, d + 1));
+    const nextDateStr = nextDate.toISOString().split('T')[0];
+
     const slot = (preferredTimeSlot || '').trim();
     const slotLower = slot.toLowerCase();
 
@@ -35,7 +48,6 @@ export class BookingsService {
       const sAmpm = startMatch[3].toUpperCase();
       if (sAmpm === 'PM' && sHours < 12) sHours += 12;
       if (sAmpm === 'AM' && sHours === 12) sHours = 0;
-      startDate.setHours(sHours, sMinutes, 0, 0);
 
       let eHours = parseInt(lastMatch[1], 10);
       const eMinutes = lastMatch[2] ? parseInt(lastMatch[2], 10) : 0;
@@ -45,12 +57,18 @@ export class BookingsService {
 
       const startTotalMins = sHours * 60 + sMinutes;
       const endTotalMins = eHours * 60 + eMinutes;
-      if (endTotalMins <= startTotalMins) {
-        endDate.setDate(endDate.getDate() + 1);
-      }
-      endDate.setHours(eHours, eMinutes, 0, 0);
+      const isOvernight = endTotalMins <= startTotalMins;
+      const finalEndDateStr = isOvernight ? nextDateStr : dateStr;
 
-      return { startTime: startDate, endTime: endDate };
+      const sHStr = sHours.toString().padStart(2, '0');
+      const sMStr = sMinutes.toString().padStart(2, '0');
+      const eHStr = eHours.toString().padStart(2, '0');
+      const eMStr = eMinutes.toString().padStart(2, '0');
+
+      const startTime = new Date(`${dateStr}T${sHStr}:${sMStr}:00+05:30`);
+      const endTime = new Date(`${finalEndDateStr}T${eHStr}:${eMStr}:00+05:30`);
+
+      return { startTime, endTime };
     }
 
     if (matches.length === 1) {
@@ -62,7 +80,6 @@ export class BookingsService {
 
       if (ampm === 'PM' && startHours < 12) startHours += 12;
       if (ampm === 'AM' && startHours === 12) startHours = 0;
-      startDate.setHours(startHours, startMins, 0, 0);
 
       // Half-day (morning/afternoon) = 4h, Day pass default = 8h
       const durationHours = (slotLower.includes('morning') || slotLower.includes('afternoon')) ? 4 : 8;
@@ -70,18 +87,22 @@ export class BookingsService {
       const finalEHours = endHours % 24;
 
       const startTotalMins = startHours * 60 + startMins;
+      const isOvernight = endHours >= 24 || (finalEHours * 60 + startMins) <= startTotalMins;
+      const finalEndDateStr = isOvernight ? nextDateStr : dateStr;
 
-      if (endHours >= 24 || (finalEHours * 60 + startMins) <= startTotalMins) {
-        endDate.setDate(endDate.getDate() + 1);
-      }
-      endDate.setHours(finalEHours, startMins, 0, 0);
-      return { startTime: startDate, endTime: endDate };
+      const sHStr = startHours.toString().padStart(2, '0');
+      const sMStr = startMins.toString().padStart(2, '0');
+      const eHStr = finalEHours.toString().padStart(2, '0');
+
+      const startTime = new Date(`${dateStr}T${sHStr}:${sMStr}:00+05:30`);
+      const endTime = new Date(`${finalEndDateStr}T${eHStr}:${sMStr}:00+05:30`);
+      return { startTime, endTime };
     }
 
-    // Default operating window: 8:00 AM to 8:00 PM (20:00)
-    startDate.setHours(8, 0, 0, 0);
-    endDate.setHours(20, 0, 0, 0);
-    return { startTime: startDate, endTime: endDate };
+    // Default operating window: 8:00 AM to 8:00 PM (20:00) IST
+    const startTime = new Date(`${dateStr}T08:00:00+05:30`);
+    const endTime = new Date(`${dateStr}T20:00:00+05:30`);
+    return { startTime, endTime };
   }
 
   @Cron(CronExpression.EVERY_5_MINUTES)
@@ -692,7 +713,7 @@ export class BookingsService {
       // Allow check-in starting 30 minutes before scheduled start time
       const earlyCheckInWindowMs = startTimeMs - 30 * 60 * 1000;
       if (nowTime < earlyCheckInWindowMs) {
-        const startTimeStr = new Date(meetingBooking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const startTimeStr = formatIsoTo12Hr(meetingBooking.startTime);
         throw new BadRequestException(
           `Access Denied: Early check-in is not open yet for #${meetingBooking.bookingCode}. Check-in opens 30 minutes prior to start time (${startTimeStr}).`,
         );
@@ -802,8 +823,8 @@ export class BookingsService {
 
       const earlyCheckInWindowMs = startTime.getTime() - 30 * 60 * 1000;
       if (nowTime < earlyCheckInWindowMs) {
-        const startTimeStr = startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const dateStr = new Date(regularBooking.preferredDate).toLocaleDateString();
+        const startTimeStr = startTime.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+        const dateStr = regularBooking.preferredDate instanceof Date ? regularBooking.preferredDate.toISOString().split('T')[0] : String(regularBooking.preferredDate).split('T')[0];
         throw new BadRequestException(
           `Access Denied: Early check-in is not open yet for #${regularBooking.bookingCode} (${dateStr}). Check-in opens 30 minutes prior to pass start time (${startTimeStr}).`,
         );

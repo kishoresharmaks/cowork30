@@ -69,6 +69,99 @@ export function generateTimeSlots(startTime: string | null | undefined, endTime:
   return slots;
 }
 
+export function getLocalZonedNow(timeZone = 'Asia/Kolkata') {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: false,
+  }).formatToParts(now);
+
+  const getPart = (type: string) => {
+    const p = parts.find((pt) => pt.type === type);
+    return p ? parseInt(p.value, 10) : 0;
+  };
+
+  const year = getPart('year');
+  const month = getPart('month');
+  const day = getPart('day');
+  let hours = getPart('hour');
+  if (hours === 24) hours = 0;
+  const minutes = getPart('minute');
+  const seconds = getPart('second');
+
+  const monthStr = month.toString().padStart(2, '0');
+  const dayStr = day.toString().padStart(2, '0');
+  const dateStr = `${year}-${monthStr}-${dayStr}`;
+
+  return {
+    dateStr,
+    year,
+    month,
+    day,
+    hours,
+    minutes,
+    seconds,
+    totalMinutes: hours * 60 + minutes,
+  };
+}
+
+export function formatIsoTo12Hr(isoVal: string | Date | null | undefined): string {
+  if (!isoVal) return '';
+  const iso = isoVal instanceof Date ? isoVal.toISOString() : String(isoVal);
+  const match = iso.match(/T(\d{2}):(\d{2})/);
+  if (!match) return '';
+  let h = parseInt(match[1], 10);
+  const m = match[2];
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${m} ${period}`;
+}
+
+export function formatIsoToDateStr(isoVal: string | Date | null | undefined): string {
+  if (!isoVal) return '';
+  const iso = isoVal instanceof Date ? isoVal.toISOString() : String(isoVal);
+  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return '';
+  const d = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10));
+  return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+export function parseBookingWallClock(val: string | Date | null | undefined): { dateStr: string; year: number; month: number; day: number; hours: number; minutes: number; totalMinutes: number; timestamp: number } | null {
+  if (!val) return null;
+  const iso = val instanceof Date ? val.toISOString() : String(val);
+  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!match) return null;
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+  const hours = match[4] ? parseInt(match[4], 10) : 0;
+  const minutes = match[5] ? parseInt(match[5], 10) : 0;
+
+  const monthStr = month.toString().padStart(2, '0');
+  const dayStr = day.toString().padStart(2, '0');
+  const hStr = hours.toString().padStart(2, '0');
+  const mStr = minutes.toString().padStart(2, '0');
+  const istIso = `${year}-${monthStr}-${dayStr}T${hStr}:${mStr}:00+05:30`;
+  const timestamp = new Date(istIso).getTime();
+
+  return {
+    dateStr: `${year}-${monthStr}-${dayStr}`,
+    year,
+    month,
+    day,
+    hours,
+    minutes,
+    totalMinutes: hours * 60 + minutes,
+    timestamp,
+  };
+}
+
 @Injectable()
 export class MeetingRoomsService {
   constructor(
@@ -116,16 +209,25 @@ export class MeetingRoomsService {
       throw new NotFoundException('Meeting room not found');
     }
 
-    const now = new Date();
-    const targetDateStr = (dto && dto.date) ? dto.date : new Date().toISOString().split('T')[0];
+    const timeZone = (dto && dto.timezone) ? dto.timezone : 'Asia/Kolkata';
+    const zonedNow = getLocalZonedNow(timeZone);
+    const targetDateStr = (dto && dto.date) ? dto.date : zonedNow.dateStr;
     const dateOnly = targetDateStr.split('T')[0];
     const parts = dateOnly.split('-').map(Number);
-    const year = parts[0] || now.getFullYear();
-    const month = parts[1] || (now.getMonth() + 1);
-    const day = parts[2] || now.getDate();
+    const year = parts[0] || zonedNow.year;
+    const month = parts[1] || zonedNow.month;
+    const day = parts[2] || zonedNow.day;
 
-    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
-    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+    const isTargetDatePast = dateOnly < zonedNow.dateStr;
+    const isTargetDateToday = dateOnly === zonedNow.dateStr;
+
+    const startOfDayUtc = new Date(`${dateOnly}T00:00:00.000Z`);
+    const endOfDayUtc = new Date(`${dateOnly}T23:59:59.999Z`);
+    const startOfDayLocal = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const endOfDayLocal = new Date(year, month - 1, day, 23, 59, 59, 999);
+
+    const minDateGte = startOfDayUtc.getTime() < startOfDayLocal.getTime() ? startOfDayUtc : startOfDayLocal;
+    const maxDateLte = endOfDayUtc.getTime() > endOfDayLocal.getTime() ? endOfDayUtc : endOfDayLocal;
 
     const existingBookings = await this.prisma.meetingBooking.findMany({
       where: {
@@ -134,14 +236,14 @@ export class MeetingRoomsService {
         OR: [
           {
             bookingDate: {
-              gte: startOfDay,
-              lte: endOfDay,
+              gte: minDateGte,
+              lte: maxDateLte,
             },
           },
           {
             startTime: {
-              gte: startOfDay,
-              lte: endOfDay,
+              gte: minDateGte,
+              lte: maxDateLte,
             },
           },
         ],
@@ -168,11 +270,19 @@ export class MeetingRoomsService {
       const endHStr = endH.toString().padStart(2, '0');
       const endMStr = endM.toString().padStart(2, '0');
 
-      // Filter out past hours using local date comparison if target date is today
-      const slotEndLocal = new Date(year, month - 1, day, endH, endM, 0, 0);
-      const isPast = slotEndLocal.getTime() <= now.getTime();
+      // Check if slot has already passed or started
+      let isPast = false;
+      if (isTargetDatePast) {
+        isPast = true;
+      } else if (isTargetDateToday) {
+        // Any slot whose start time has already arrived or passed is in the past
+        if (slot.startMinutes <= zonedNow.totalMinutes) {
+          isPast = true;
+        }
+      }
+
       if (isPast) {
-        // Skip past/gone time slots for today's date
+        // Skip past/already-started time slots
         continue;
       }
 
@@ -325,8 +435,39 @@ export class MeetingRoomsService {
     const finalTotalAmount = calculatedGrandTotal;
     const finalTaxAmount = calculatedTaxAmount;
 
-    // STRICT GUARD 1: Block booking if selected slot end time has already passed
-    if (endTime.getTime() <= Date.now()) {
+    // STRICT GUARD 1: Block booking if reservation date or time has already passed in Asia/Kolkata
+    const zonedNow = getLocalZonedNow('Asia/Kolkata');
+    const bookingDateStr = dto.bookingDate
+      ? String(dto.bookingDate).split('T')[0]
+      : (Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0
+          ? String(dto.selectedSlots[0]).split('T')[0]
+          : zonedNow.dateStr);
+
+    let bookingStartMinutes = 0;
+    if (Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0) {
+      const sortedSlots = [...dto.selectedSlots].sort();
+      const firstSlot = String(sortedSlots[0]);
+      const match = firstSlot.match(/T(\d{2}):(\d{2})/);
+      if (match) {
+        bookingStartMinutes = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+      }
+    } else if (dto.startTime) {
+      const sStr = String(dto.startTime);
+      if (sStr.includes('T')) {
+        const match = sStr.match(/T(\d{2}):(\d{2})/);
+        if (match) {
+          bookingStartMinutes = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+        }
+      } else {
+        bookingStartMinutes = timeToMinutes(sStr);
+      }
+    }
+
+    const isBookingInPast =
+      bookingDateStr < zonedNow.dateStr ||
+      (bookingDateStr === zonedNow.dateStr && bookingStartMinutes <= zonedNow.totalMinutes);
+
+    if (isBookingInPast) {
       throw new BadRequestException(
         'Selected reservation time slot has already passed. Please select an upcoming time slot.'
       );
@@ -517,8 +658,8 @@ export class MeetingRoomsService {
             name: booking.customerName,
             bookingCode: booking.bookingCode,
             roomName: booking.meetingRoom?.name || 'Meeting Suite',
-            date: new Date(booking.bookingDate).toLocaleDateString(),
-            timeSlot: `${new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(booking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+            date: formatIsoToDateStr(booking.bookingDate),
+            timeSlot: `${formatIsoTo12Hr(booking.startTime)} - ${formatIsoTo12Hr(booking.endTime)}`,
             seatsBooked: booking.seatsBooked,
             amount: booking.totalAmount,
             viewToken: booking.viewToken,

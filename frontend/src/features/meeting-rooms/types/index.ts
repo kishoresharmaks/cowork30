@@ -33,6 +33,8 @@ export interface TimeSlot {
   hour?: string;
   isAvailable: boolean;
   isPast?: boolean;
+  startMinutes?: number;
+  endMinutes?: number;
 }
 
 export interface AvailabilityData {

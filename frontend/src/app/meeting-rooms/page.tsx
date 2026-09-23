@@ -25,6 +25,8 @@ import {
   MobileBookingDrawer,
   RoomCardSkeleton,
   RoomDetailsModal,
+  getLocalDateString,
+  isSlotInPast,
 } from '@/features/meeting-rooms';
 
 export default function MeetingRoomsPage() {
@@ -46,9 +48,7 @@ export default function MeetingRoomsPage() {
     setDetailsRoom(room);
     setDetailsModalOpen(true);
   };
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  const [selectedDate, setSelectedDate] = useState<string>(() => getLocalDateString());
   const [availability, setAvailability] = useState<AvailabilityData | null>(null);
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [selectedSeats, setSelectedSeats] = useState<number>(1);
@@ -140,13 +140,13 @@ export default function MeetingRoomsPage() {
   useEffect(() => {
     if (!selectedRoom || !selectedDate) return;
     const roomSlug = selectedRoom.slug;
-
     async function checkAvailability() {
       setChecking(true);
       try {
+        const clientTz = typeof Intl !== 'undefined' && Intl.DateTimeFormat ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'Asia/Kolkata';
         const res = await apiClient.post(
           `/meeting-rooms/${roomSlug}/availability`,
-          { date: selectedDate }
+          { date: selectedDate, timezone: clientTz || 'Asia/Kolkata' }
         );
         setAvailability(res.data);
         setSelectedSlots([]);
@@ -184,6 +184,11 @@ export default function MeetingRoomsPage() {
     if (!availability?.timeSlots || availability.timeSlots.length === 0) return;
 
     const allSlots = availability.timeSlots;
+
+    const clickedSlot = allSlots.find((s) => s.startTime === slotStartTime);
+    if (clickedSlot && (!clickedSlot.isAvailable || clickedSlot.isPast || isSlotInPast(selectedDate, clickedSlot))) {
+      return;
+    }
 
     // 1. If no slots selected, select the clicked slot
     if (selectedSlots.length === 0) {
@@ -223,13 +228,13 @@ export default function MeetingRoomsPage() {
       return t >= minTime && t <= maxTime;
     });
 
-    // Check if any slot in the requested range is unavailable
-    const hasUnavailableInBetween = rangeSlots.some((s) => !s.isAvailable);
+    // Check if any slot in the requested range is unavailable or past
+    const hasUnavailableInBetween = rangeSlots.some((s) => !s.isAvailable || s.isPast || isSlotInPast(selectedDate, s));
     if (hasUnavailableInBetween) {
       setErrorModalData({
         isOpen: true,
         title: 'Unavailable Time Range',
-        message: 'Selected range contains unavailable slots. Please select a continuous block of available time.',
+        message: 'Selected range contains unavailable or past slots. Please select a continuous block of available upcoming time.',
       });
       setSelectedSlots([slotStartTime]);
       return;
@@ -246,7 +251,9 @@ export default function MeetingRoomsPage() {
 
   const handleSelectAllAvailable = () => {
     if (!availability?.timeSlots) return;
-    const available = availability.timeSlots.filter((s) => s.isAvailable).map((s) => s.startTime);
+    const available = availability.timeSlots
+      .filter((s) => s.isAvailable && !s.isPast && !isSlotInPast(selectedDate, s))
+      .map((s) => s.startTime);
     setSelectedSlots(available);
   };
 
@@ -301,6 +308,21 @@ export default function MeetingRoomsPage() {
     const maxSeats = selectedRoom.maxSeats || selectedRoom.capacity || 10;
     if (selectedSeats < minSeats || selectedSeats > maxSeats) {
       alert(`Seat Capacity Error: ${selectedRoom.name} allows between ${minSeats} and ${maxSeats} seats. Please adjust your seat count.`);
+      return;
+    }
+
+    const hasPastSlot = selectedSlots.some((slotStartTime) => {
+      const slotObj = availability?.timeSlots.find((s) => s.startTime === slotStartTime);
+      return isSlotInPast(selectedDate, slotObj || { startTime: slotStartTime });
+    });
+
+    if (hasPastSlot) {
+      setErrorModalData({
+        isOpen: true,
+        title: 'Expired Time Slot',
+        message: 'One or more selected time slots have already passed. Please select an upcoming time slot.',
+      });
+      setSelectedSlots([]);
       return;
     }
 

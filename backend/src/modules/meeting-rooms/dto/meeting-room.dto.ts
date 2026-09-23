@@ -6,6 +6,11 @@ export class AvailabilityCheckDto {
   @IsString()
   @IsNotEmpty()
   date!: string;
+
+  @ApiProperty({ example: 'Asia/Kolkata', required: false })
+  @IsOptional()
+  @IsString()
+  timezone?: string;
 }
 
 export class CreateMeetingRoomDto {

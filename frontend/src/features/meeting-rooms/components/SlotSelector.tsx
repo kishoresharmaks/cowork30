@@ -20,6 +20,40 @@ interface SlotSelectorProps {
   onViewDetails?: (room: MeetingRoom) => void;
 }
 
+export function getLocalDateString(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function isSlotInPast(selectedDateStr: string, slot: { isPast?: boolean; startMinutes?: number; startTime?: string }): boolean {
+  if (slot.isPast) return true;
+  const now = new Date();
+  const todayStr = getLocalDateString(now);
+
+  if (selectedDateStr < todayStr) return true;
+  if (selectedDateStr > todayStr) return false;
+
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  if (typeof slot.startMinutes === 'number') {
+    return slot.startMinutes <= currentMinutes;
+  }
+
+  if (slot.startTime && slot.startTime.includes('T')) {
+    const timePart = slot.startTime.split('T')[1];
+    if (timePart) {
+      const [h, m] = timePart.split(':').map(Number);
+      if (!isNaN(h) && !isNaN(m)) {
+        return (h * 60 + m) <= currentMinutes;
+      }
+    }
+  }
+
+  return false;
+}
+
 export const SlotSelector: React.FC<SlotSelectorProps> = ({
   selectedRoom,
   selectedDate,
@@ -46,7 +80,7 @@ export const SlotSelector: React.FC<SlotSelectorProps> = ({
     for (let i = 0; i < 7; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
-      const isoDate = d.toISOString().split('T')[0];
+      const isoDate = getLocalDateString(d);
       const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
       const dayNum = d.getDate();
       const monthName = d.toLocaleDateString('en-US', { month: 'short' });
@@ -117,7 +151,7 @@ export const SlotSelector: React.FC<SlotSelectorProps> = ({
           <input
             type="date"
             value={selectedDate}
-            min={new Date().toISOString().split('T')[0]}
+            min={getLocalDateString()}
             onChange={(e) => onDateChange(e.target.value)}
             className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-0.5 text-xs text-slate-700 font-semibold focus:border-indigo-600 focus:outline-none"
           />
@@ -221,14 +255,19 @@ export const SlotSelector: React.FC<SlotSelectorProps> = ({
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 gap-1.5 overflow-y-auto pr-1 flex-1 min-h-0">
             {availability.timeSlots.map((slot) => {
               const isSelected = selectedSlots.includes(slot.startTime);
-              const isUnavailable = !slot.isAvailable;
+              const isPastSlot = isSlotInPast(selectedDate, slot);
+              const isUnavailable = !slot.isAvailable || slot.isPast || isPastSlot;
 
               return (
                 <button
                   key={slot.startTime}
                   disabled={isUnavailable}
                   type="button"
-                  onClick={() => onToggleSlot(slot.startTime)}
+                  onClick={() => {
+                    if (!isUnavailable) {
+                      onToggleSlot(slot.startTime);
+                    }
+                  }}
                   className={`py-1.5 px-1.5 rounded-lg border text-[11px] font-semibold transition-all duration-150 text-center cursor-pointer ${
                     isUnavailable
                       ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed line-through'
