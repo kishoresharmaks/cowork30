@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # MySQL 8.0 Database Container
+  db:
+    image: mysql:8.0
+    container_name: cowork30-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-supersecret_root_pass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-cowork30}
+      MYSQL_USER: ${MYSQL_USER:-cowork_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-cowork_secure_pass}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Cowork30 Monorepo Application (Backend NestJS + Frontend Next.js)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cowork30-app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: mysql://${MYSQL_USER:-cowork_user}:${MYSQL_PASSWORD:-cowork_secure_pass}@db:3306/${MYSQL_DATABASE:-cowork30}
+      JWT_SECRET: ${JWT_SECRET:-your_super_secret_jwt_key_here}
+      BACKEND_PORT: 4000
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://cowork30.com/api/v1}
+      FRONTEND_URL: ${FRONTEND_URL:-https://cowork30.com}
+    ports:
+      - "3000:3000"
+      - "4000:4000"
+
+volumes:
+  mysql_data:
