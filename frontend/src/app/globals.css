@@ -53,8 +53,15 @@ body {
   border-image: var(--brand-gradient) 1;
 }
 
-/* User-facing Glassmorphism & Panel Classes */
+/* Sleek Dark Glassmorphism & Panel Classes */
 .glass-panel {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.glass-panel-light {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);

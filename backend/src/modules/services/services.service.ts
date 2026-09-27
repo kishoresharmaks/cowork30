@@ -13,7 +13,9 @@ export class ServicesService {
   ) {}
 
   async findAll(includeInactive = false, branchId?: number, category?: string) {
-    await this.ensureSeedServices();
+    if (process.env.SEED_ON_STARTUP === 'true') {
+      await this.ensureSeedServices();
+    }
 
     const whereClause: any = includeInactive ? {} : { isActive: true };
     if (category && category !== 'all') {

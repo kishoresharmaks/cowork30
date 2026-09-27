@@ -19,7 +19,9 @@ export class NotificationsService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit() {
-    await this.seedDefaultEmailTemplates();
+    if (process.env.SEED_ON_STARTUP === 'true') {
+      await this.seedDefaultEmailTemplates();
+    }
   }
 
   // --- DYNAMIC SMTP TRANSPORT PROVIDER ---

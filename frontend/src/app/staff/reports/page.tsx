@@ -96,7 +96,7 @@ export default function StaffReportsPage() {
 
         {/* Quick CSV Export Download Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 relative z-10">
-          <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center justify-between space-x-3 hover:border-purple-500/50 transition-all">
+          <div className="glass-panel bg-slate-900/80 p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between space-x-3 hover:border-purple-500/50 transition-all">
             <div className="flex items-center space-x-3">
               <FileSpreadsheet className="w-8 h-8 text-purple-400 shrink-0" />
               <div>
@@ -114,7 +114,7 @@ export default function StaffReportsPage() {
             </button>
           </div>
 
-          <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center justify-between space-x-3 hover:border-emerald-500/50 transition-all">
+          <div className="glass-panel bg-slate-900/80 p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between space-x-3 hover:border-emerald-500/50 transition-all">
             <div className="flex items-center space-x-3">
               <FileSpreadsheet className="w-8 h-8 text-emerald-400 shrink-0" />
               <div>
@@ -132,7 +132,7 @@ export default function StaffReportsPage() {
             </button>
           </div>
 
-          <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center justify-between space-x-3 hover:border-rose-500/50 transition-all">
+          <div className="glass-panel bg-slate-900/80 p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between space-x-3 hover:border-rose-500/50 transition-all">
             <div className="flex items-center space-x-3">
               <FileSpreadsheet className="w-8 h-8 text-rose-400 shrink-0" />
               <div>
@@ -153,7 +153,7 @@ export default function StaffReportsPage() {
 
         {/* Aceternity UI Executive Metrics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-5 relative z-10">
-          <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-2">
+          <div className="glass-panel bg-slate-900/80 p-6 rounded-3xl border border-slate-800/80 space-y-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Platform Members</span>
             <div className="text-3xl font-black text-white flex items-center justify-between">
               <span>{metrics.totalUsers || 0}</span>
@@ -162,7 +162,7 @@ export default function StaffReportsPage() {
             <span className="text-[10px] text-slate-500 block">{metrics.memberUsers || 0} Members • {metrics.staffUsers || 0} Staff</span>
           </div>
 
-          <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-2">
+          <div className="glass-panel bg-slate-900/80 p-6 rounded-3xl border border-slate-800/80 space-y-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Desk Revenue</span>
             <div className="text-3xl font-black text-rose-400 flex items-center justify-between">
               <span>₹{Number(metrics.deskRevenue || 0).toLocaleString()}</span>
@@ -171,7 +171,7 @@ export default function StaffReportsPage() {
             <span className="text-[10px] text-slate-400 block">{metrics.totalDeskBookings || 0} Desk Solution Passes</span>
           </div>
 
-          <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-2">
+          <div className="glass-panel bg-slate-900/80 p-6 rounded-3xl border border-slate-800/80 space-y-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Meeting Suite Revenue</span>
             <div className="text-3xl font-black text-emerald-400 flex items-center justify-between">
               <span>₹{Number(metrics.meetingRevenue || 0).toLocaleString()}</span>
@@ -180,7 +180,7 @@ export default function StaffReportsPage() {
             <span className="text-[10px] text-emerald-400/80 block">{metrics.totalMeetingBookings || 0} Suite Reservations</span>
           </div>
 
-          <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-2">
+          <div className="glass-panel bg-slate-900/80 p-6 rounded-3xl border border-slate-800/80 space-y-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Outstanding Wallet</span>
             <div className="text-3xl font-black text-amber-300 flex items-center justify-between">
               <span>₹{Number(metrics.totalWalletBalance || 0).toLocaleString()}</span>
@@ -193,7 +193,7 @@ export default function StaffReportsPage() {
         {/* Aceternity Styled Progress Meters & Recent Ledger Feed */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
           {/* Revenue Breakdown Meter Card */}
-          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
+          <div className="glass-panel bg-slate-900/80 p-6 sm:p-8 rounded-3xl border border-slate-800/80 space-y-6">
             <div className="space-y-1">
               <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Revenue Stream Analysis</span>
               <h3 className="text-xl font-extrabold text-white">Desk vs Meeting Suite Shares</h3>
@@ -255,7 +255,7 @@ export default function StaffReportsPage() {
           </div>
 
           {/* Pricing Plan Revenue Breakdown */}
-          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
+          <div className="glass-panel bg-slate-900/80 p-6 sm:p-8 rounded-3xl border border-slate-800/80 space-y-6">
             <div className="space-y-1">
               <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">Pricing Analytics</span>
               <h3 className="text-xl font-extrabold text-white">Plan Revenue Breakdown</h3>
@@ -280,7 +280,7 @@ export default function StaffReportsPage() {
           </div>
 
           {/* Recent Wallet Transactions Ledger */}
-          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
+          <div className="glass-panel bg-slate-900/80 p-6 sm:p-8 rounded-3xl border border-slate-800/80 space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Live Audit Stream</span>
