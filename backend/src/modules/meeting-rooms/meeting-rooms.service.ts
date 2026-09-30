@@ -1,6 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, UnauthorizedException, ConflictException, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  UnauthorizedException,
+  ConflictException,
+  Optional,
+} from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
-import { AvailabilityCheckDto, CreateMeetingRoomDto, UpdateMeetingRoomDto } from './dto/meeting-room.dto';
+import {
+  AvailabilityCheckDto,
+  CreateMeetingRoomDto,
+  UpdateMeetingRoomDto,
+} from './dto/meeting-room.dto';
 import { BookingStatus, PaymentStatus, PaymentMethod } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import * as crypto from 'crypto';
@@ -18,7 +30,9 @@ export function timeToMinutes(time: string | null | undefined): number {
     if (period === 'AM' && h === 12) h = 0;
     return h * 60 + m;
   }
-  const [hours, minutes] = cleanTime.split(':').map((v) => parseInt(v, 10) || 0);
+  const [hours, minutes] = cleanTime
+    .split(':')
+    .map((v) => parseInt(v, 10) || 0);
   return hours * 60 + (minutes || 0);
 }
 
@@ -32,7 +46,10 @@ export function formatMinutesTo12Hr(totalMinutes: number): string {
   return `${h12}:${minuteStr} ${period}`;
 }
 
-export function generateTimeSlots(startTime: string | null | undefined, endTime: string | null | undefined) {
+export function generateTimeSlots(
+  startTime: string | null | undefined,
+  endTime: string | null | undefined,
+) {
   // If neither start nor end time is set, support 24/7 round-the-clock (00:00 to 24:00) in 30-min intervals
   if (!startTime && !endTime) {
     const slots = [];
@@ -47,14 +64,18 @@ export function generateTimeSlots(startTime: string | null | undefined, endTime:
 
   // If only one is set
   if (!startTime || !endTime) {
-    throw new BadRequestException('Both Start Time and End Time must be configured together, or both left blank for 24/7 access.');
+    throw new BadRequestException(
+      'Both Start Time and End Time must be configured together, or both left blank for 24/7 access.',
+    );
   }
 
   const startMinutes = timeToMinutes(startTime);
   const endMinutes = timeToMinutes(endTime);
 
   if (startMinutes >= endMinutes) {
-    throw new BadRequestException('Start Time must be strictly earlier than End Time.');
+    throw new BadRequestException(
+      'Start Time must be strictly earlier than End Time.',
+    );
   }
 
   const slots = [];
@@ -111,28 +132,49 @@ export function getLocalZonedNow(timeZone = 'Asia/Kolkata') {
   };
 }
 
-export function formatIsoTo12Hr(isoVal: string | Date | null | undefined): string {
+export function formatIsoTo12Hr(
+  isoVal: string | Date | null | undefined,
+): string {
   if (!isoVal) return '';
   const iso = isoVal instanceof Date ? isoVal.toISOString() : String(isoVal);
   const match = iso.match(/T(\d{2}):(\d{2})/);
   if (!match) return '';
-  let h = parseInt(match[1], 10);
+  const h = parseInt(match[1], 10);
   const m = match[2];
   const period = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return `${h12}:${m} ${period}`;
 }
 
-export function formatIsoToDateStr(isoVal: string | Date | null | undefined): string {
+export function formatIsoToDateStr(
+  isoVal: string | Date | null | undefined,
+): string {
   if (!isoVal) return '';
   const iso = isoVal instanceof Date ? isoVal.toISOString() : String(isoVal);
   const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return '';
-  const d = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10));
-  return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+  const d = new Date(
+    parseInt(match[1], 10),
+    parseInt(match[2], 10) - 1,
+    parseInt(match[3], 10),
+  );
+  return d.toLocaleDateString('en-US', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
-export function parseBookingWallClock(val: string | Date | null | undefined): { dateStr: string; year: number; month: number; day: number; hours: number; minutes: number; totalMinutes: number; timestamp: number } | null {
+export function parseBookingWallClock(val: string | Date | null | undefined): {
+  dateStr: string;
+  year: number;
+  month: number;
+  day: number;
+  hours: number;
+  minutes: number;
+  totalMinutes: number;
+  timestamp: number;
+} | null {
   if (!val) return null;
   const iso = val instanceof Date ? val.toISOString() : String(val);
   const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
@@ -179,7 +221,9 @@ export class MeetingRoomsService {
     }
     return this.prisma.meetingRoom.findMany({
       where: whereClause,
-      include: { branch: { select: { id: true, name: true, city: true, state: true } } },
+      include: {
+        branch: { select: { id: true, name: true, city: true, state: true } },
+      },
       orderBy: { sortOrder: 'asc' },
     });
   }
@@ -209,9 +253,9 @@ export class MeetingRoomsService {
       throw new NotFoundException('Meeting room not found');
     }
 
-    const timeZone = (dto && dto.timezone) ? dto.timezone : 'Asia/Kolkata';
+    const timeZone = dto && dto.timezone ? dto.timezone : 'Asia/Kolkata';
     const zonedNow = getLocalZonedNow(timeZone);
-    const targetDateStr = (dto && dto.date) ? dto.date : zonedNow.dateStr;
+    const targetDateStr = dto && dto.date ? dto.date : zonedNow.dateStr;
     const dateOnly = targetDateStr.split('T')[0];
     const parts = dateOnly.split('-').map(Number);
     const year = parts[0] || zonedNow.year;
@@ -226,8 +270,14 @@ export class MeetingRoomsService {
     const startOfDayLocal = new Date(year, month - 1, day, 0, 0, 0, 0);
     const endOfDayLocal = new Date(year, month - 1, day, 23, 59, 59, 999);
 
-    const minDateGte = startOfDayUtc.getTime() < startOfDayLocal.getTime() ? startOfDayUtc : startOfDayLocal;
-    const maxDateLte = endOfDayUtc.getTime() > endOfDayLocal.getTime() ? endOfDayUtc : endOfDayLocal;
+    const minDateGte =
+      startOfDayUtc.getTime() < startOfDayLocal.getTime()
+        ? startOfDayUtc
+        : startOfDayLocal;
+    const maxDateLte =
+      endOfDayUtc.getTime() > endOfDayLocal.getTime()
+        ? endOfDayUtc
+        : endOfDayLocal;
 
     const existingBookings = await this.prisma.meetingBooking.findMany({
       where: {
@@ -321,9 +371,10 @@ export class MeetingRoomsService {
       roomName: room.name,
       startTime: room.startTime || null,
       endTime: room.endTime || null,
-      operatingHours: (room.startTime && room.endTime)
-        ? `${formatMinutesTo12Hr(timeToMinutes(room.startTime))} - ${formatMinutesTo12Hr(timeToMinutes(room.endTime))}`
-        : '24/7 Access',
+      operatingHours:
+        room.startTime && room.endTime
+          ? `${formatMinutesTo12Hr(timeToMinutes(room.startTime))} - ${formatMinutesTo12Hr(timeToMinutes(room.endTime))}`
+          : '24/7 Access',
       hourlyRate: room.hourlyRate,
       perSeatPrice: room.perSeatPrice,
       minSeats: room.minSeats,
@@ -337,13 +388,17 @@ export class MeetingRoomsService {
   async createBooking(dto: any) {
     // Input validation and sanitization
     if (!dto.customerName || !dto.customerEmail || !dto.customerPhone) {
-      throw new BadRequestException('Customer name, email, and phone are required');
+      throw new BadRequestException(
+        'Customer name, email, and phone are required',
+      );
     }
 
     const customerName = String(dto.customerName).trim().slice(0, 100);
     const customerEmail = String(dto.customerEmail).trim().toLowerCase();
     const customerPhone = String(dto.customerPhone).trim().slice(0, 20);
-    const companyName = dto.companyName ? String(dto.companyName).trim().slice(0, 100) : null;
+    const companyName = dto.companyName
+      ? String(dto.companyName).trim().slice(0, 100)
+      : null;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(customerEmail)) {
       throw new BadRequestException('Invalid email format');
@@ -351,9 +406,13 @@ export class MeetingRoomsService {
 
     let room = null;
     if (dto.roomSlug) {
-      room = await this.prisma.meetingRoom.findUnique({ where: { slug: dto.roomSlug } });
+      room = await this.prisma.meetingRoom.findUnique({
+        where: { slug: dto.roomSlug },
+      });
     } else if (dto.meetingRoomId) {
-      room = await this.prisma.meetingRoom.findUnique({ where: { id: Number(dto.meetingRoomId) } });
+      room = await this.prisma.meetingRoom.findUnique({
+        where: { id: Number(dto.meetingRoomId) },
+      });
     }
 
     if (!room) {
@@ -361,7 +420,9 @@ export class MeetingRoomsService {
     }
 
     if (!room.isActive) {
-      throw new BadRequestException('This meeting room is not available for booking');
+      throw new BadRequestException(
+        'This meeting room is not available for booking',
+      );
     }
 
     const branch = await this.prisma.branch.findFirst();
@@ -381,25 +442,34 @@ export class MeetingRoomsService {
       // Each slot is 30 minutes = 30 * 60 * 1000 = 1,800,000 ms
       endTime = new Date(lastSlotStart.getTime() + 1800000);
     } else if (dto.startTime && dto.endTime) {
-      const dateStr = dto.bookingDate ? new Date(dto.bookingDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      const dateStr = dto.bookingDate
+        ? new Date(dto.bookingDate).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0];
 
       if (typeof dto.startTime === 'string' && dto.startTime.includes('T')) {
         startTime = new Date(dto.startTime);
       } else {
-        const [sh, sm] = String(dto.startTime).split(':').map((v) => v.padStart(2, '0'));
+        const [sh, sm] = String(dto.startTime)
+          .split(':')
+          .map((v) => v.padStart(2, '0'));
         startTime = new Date(`${dateStr}T${sh || '10'}:${sm || '00'}:00.000Z`);
       }
 
       if (typeof dto.endTime === 'string' && dto.endTime.includes('T')) {
         endTime = new Date(dto.endTime);
       } else {
-        const [eh, em] = String(dto.endTime).split(':').map((v) => v.padStart(2, '0'));
+        const [eh, em] = String(dto.endTime)
+          .split(':')
+          .map((v) => v.padStart(2, '0'));
         endTime = new Date(`${dateStr}T${eh || '11'}:${em || '00'}:00.000Z`);
       }
     }
 
     // Calculate total hours and slots directly from the actual duration range [startTime -> endTime]
-    const durationMs = Math.max(1800000, endTime.getTime() - startTime.getTime());
+    const durationMs = Math.max(
+      1800000,
+      endTime.getTime() - startTime.getTime(),
+    );
     const totalHours = Number((durationMs / 3600000).toFixed(2));
     const totalSlotsCount = Math.round(totalHours * 2);
 
@@ -409,7 +479,7 @@ export class MeetingRoomsService {
 
     if (seatsCount < minSeats || seatsCount > maxSeats) {
       throw new BadRequestException(
-        `Seat Limit Exceeded: ${room.name} capacity is between ${minSeats} and ${maxSeats} seats. You requested ${seatsCount} seats.`
+        `Seat Limit Exceeded: ${room.name} capacity is between ${minSeats} and ${maxSeats} seats. You requested ${seatsCount} seats.`,
       );
     }
 
@@ -422,14 +492,20 @@ export class MeetingRoomsService {
     if (room.serviceChargeType === 'fixed') {
       serviceChargeAmount = Number(room.serviceChargeValue || 0);
     } else if (room.serviceChargeType === 'percentage') {
-      serviceChargeAmount = rawBaseSubtotal * (Number(room.serviceChargeValue || 0) / 100);
+      serviceChargeAmount =
+        rawBaseSubtotal * (Number(room.serviceChargeValue || 0) / 100);
     }
 
     const subtotal = rawBaseSubtotal + serviceChargeAmount;
-    const setting = await this.prisma.siteSetting.findUnique({ where: { key: 'tax_rate' } });
-    const taxRate = setting && !isNaN(Number(setting.value)) ? Number(setting.value) : 0.18;
+    const setting = await this.prisma.siteSetting.findUnique({
+      where: { key: 'tax_rate' },
+    });
+    const taxRate =
+      setting && !isNaN(Number(setting.value)) ? Number(setting.value) : 0.18;
     const calculatedTaxAmount = Number((subtotal * taxRate).toFixed(2));
-    const calculatedGrandTotal = Number((subtotal + calculatedTaxAmount).toFixed(2));
+    const calculatedGrandTotal = Number(
+      (subtotal + calculatedTaxAmount).toFixed(2),
+    );
 
     // SECURITY: Always use server-calculated totalAmount. Never trust client-supplied price.
     const finalTotalAmount = calculatedGrandTotal;
@@ -439,9 +515,9 @@ export class MeetingRoomsService {
     const zonedNow = getLocalZonedNow('Asia/Kolkata');
     const bookingDateStr = dto.bookingDate
       ? String(dto.bookingDate).split('T')[0]
-      : (Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0
-          ? String(dto.selectedSlots[0]).split('T')[0]
-          : zonedNow.dateStr);
+      : Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0
+        ? String(dto.selectedSlots[0]).split('T')[0]
+        : zonedNow.dateStr;
 
     let bookingStartMinutes = 0;
     if (Array.isArray(dto.selectedSlots) && dto.selectedSlots.length > 0) {
@@ -449,14 +525,16 @@ export class MeetingRoomsService {
       const firstSlot = String(sortedSlots[0]);
       const match = firstSlot.match(/T(\d{2}):(\d{2})/);
       if (match) {
-        bookingStartMinutes = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+        bookingStartMinutes =
+          parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
       }
     } else if (dto.startTime) {
       const sStr = String(dto.startTime);
       if (sStr.includes('T')) {
         const match = sStr.match(/T(\d{2}):(\d{2})/);
         if (match) {
-          bookingStartMinutes = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+          bookingStartMinutes =
+            parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
         }
       } else {
         bookingStartMinutes = timeToMinutes(sStr);
@@ -465,16 +543,19 @@ export class MeetingRoomsService {
 
     const isBookingInPast =
       bookingDateStr < zonedNow.dateStr ||
-      (bookingDateStr === zonedNow.dateStr && bookingStartMinutes <= zonedNow.totalMinutes);
+      (bookingDateStr === zonedNow.dateStr &&
+        bookingStartMinutes <= zonedNow.totalMinutes);
 
     if (isBookingInPast) {
       throw new BadRequestException(
-        'Selected reservation time slot has already passed. Please select an upcoming time slot.'
+        'Selected reservation time slot has already passed. Please select an upcoming time slot.',
       );
     }
 
     if (endTime.getTime() <= startTime.getTime()) {
-      throw new BadRequestException('Booking end time must be after booking start time.');
+      throw new BadRequestException(
+        'Booking end time must be after booking start time.',
+      );
     }
 
     // STRICT GUARD 2: Validate within room operating hours if configured
@@ -485,13 +566,19 @@ export class MeetingRoomsService {
       const bookingStart = new Date(startTime);
       const bookingEnd = new Date(endTime);
 
-      const bookingStartMinutes = bookingStart.getUTCHours() * 60 + bookingStart.getUTCMinutes();
-      const rawBookingEndMinutes = bookingEnd.getUTCHours() * 60 + bookingEnd.getUTCMinutes();
-      const bookingEndMinutes = rawBookingEndMinutes === 0 && bookingEnd.getTime() > bookingStart.getTime() ? 1440 : rawBookingEndMinutes;
+      const bookingStartMinutes =
+        bookingStart.getUTCHours() * 60 + bookingStart.getUTCMinutes();
+      const rawBookingEndMinutes =
+        bookingEnd.getUTCHours() * 60 + bookingEnd.getUTCMinutes();
+      const bookingEndMinutes =
+        rawBookingEndMinutes === 0 &&
+        bookingEnd.getTime() > bookingStart.getTime()
+          ? 1440
+          : rawBookingEndMinutes;
 
       if (bookingStartMinutes < roomStart || bookingEndMinutes > roomEnd) {
         throw new BadRequestException(
-          `Booking interval must be strictly within ${room.name}'s operating hours (${formatMinutesTo12Hr(roomStart)} - ${formatMinutesTo12Hr(roomEnd)}).`
+          `Booking interval must be strictly within ${room.name}'s operating hours (${formatMinutesTo12Hr(roomStart)} - ${formatMinutesTo12Hr(roomEnd)}).`,
         );
       }
     }
@@ -503,17 +590,14 @@ export class MeetingRoomsService {
         where: {
           meetingRoomId: room.id,
           status: { in: [BookingStatus.pending, BookingStatus.confirmed] },
-          AND: [
-            { startTime: { lt: endTime } },
-            { endTime: { gt: startTime } },
-          ],
+          AND: [{ startTime: { lt: endTime } }, { endTime: { gt: startTime } }],
         },
         include: { meetingRoom: true },
       });
 
       if (doubleBooking) {
         throw new ConflictException(
-          `Time Slot Conflict: ${room.name} is already reserved for the selected time slot (Booking Ref: #${doubleBooking.bookingCode}). Please select another time slot.`
+          `Time Slot Conflict: ${room.name} is already reserved for the selected time slot (Booking Ref: #${doubleBooking.bookingCode}). Please select another time slot.`,
         );
       }
 
@@ -522,7 +606,10 @@ export class MeetingRoomsService {
         payMethodEnum = PaymentMethod.wallet;
       } else if (dto.paymentMethod === 'credits') {
         payMethodEnum = PaymentMethod.credits;
-      } else if (dto.paymentMethod === 'cash' || dto.paymentMethod === 'reception') {
+      } else if (
+        dto.paymentMethod === 'cash' ||
+        dto.paymentMethod === 'reception'
+      ) {
         payMethodEnum = PaymentMethod.cash;
       } else {
         payMethodEnum = PaymentMethod.razorpay;
@@ -537,11 +624,13 @@ export class MeetingRoomsService {
       if (useCredits || useWallet) {
         if (!dto.userId) {
           throw new BadRequestException(
-            `A signed-in member is required to pay with ${useCredits ? 'meeting credits' : 'wallet balance'}.`
+            `A signed-in member is required to pay with ${useCredits ? 'meeting credits' : 'wallet balance'}.`,
           );
         }
 
-        const user = await tx.user.findUnique({ where: { id: Number(dto.userId) } });
+        const user = await tx.user.findUnique({
+          where: { id: Number(dto.userId) },
+        });
         if (!user) {
           throw new NotFoundException('Member not found for member payment.');
         }
@@ -550,11 +639,13 @@ export class MeetingRoomsService {
           const currentCredits = Number(user.meetingCreditsBalance || 0);
           if (currentCredits < creditsNeeded) {
             throw new BadRequestException(
-              `Insufficient meeting credits. Required: ${creditsNeeded}, Available: ${currentCredits}.`
+              `Insufficient meeting credits. Required: ${creditsNeeded}, Available: ${currentCredits}.`,
             );
           }
 
-          memberBalanceAfter = Number((currentCredits - creditsNeeded).toFixed(2));
+          memberBalanceAfter = Number(
+            (currentCredits - creditsNeeded).toFixed(2),
+          );
           await tx.user.update({
             where: { id: user.id },
             data: {
@@ -565,11 +656,13 @@ export class MeetingRoomsService {
           const currentBalance = Number(user.walletBalance || 0);
           if (currentBalance < finalTotalAmount) {
             throw new BadRequestException(
-              `Insufficient credit wallet balance. Required: ₹${finalTotalAmount}, Available: ₹${currentBalance}. Please top up your wallet.`
+              `Insufficient credit wallet balance. Required: ₹${finalTotalAmount}, Available: ₹${currentBalance}. Please top up your wallet.`,
             );
           }
 
-          memberBalanceAfter = Number((currentBalance - finalTotalAmount).toFixed(2));
+          memberBalanceAfter = Number(
+            (currentBalance - finalTotalAmount).toFixed(2),
+          );
           await tx.user.update({
             where: { id: user.id },
             data: {
@@ -599,8 +692,20 @@ export class MeetingRoomsService {
           taxAmount: finalTaxAmount,
           totalAmount: finalTotalAmount,
           seatsBooked: seatsCount,
-          status: (useCredits || useWallet || dto.paymentStatus === PaymentStatus.paid || dto.isPaid) ? BookingStatus.pending : BookingStatus.unpaid,
-          paymentStatus: (useCredits || useWallet || dto.paymentStatus === PaymentStatus.paid || dto.isPaid) ? PaymentStatus.paid : PaymentStatus.unpaid,
+          status:
+            useCredits ||
+            useWallet ||
+            dto.paymentStatus === PaymentStatus.paid ||
+            dto.isPaid
+              ? BookingStatus.pending
+              : BookingStatus.unpaid,
+          paymentStatus:
+            useCredits ||
+            useWallet ||
+            dto.paymentStatus === PaymentStatus.paid ||
+            dto.isPaid
+              ? PaymentStatus.paid
+              : PaymentStatus.unpaid,
         },
         include: {
           meetingRoom: true,
@@ -622,7 +727,11 @@ export class MeetingRoomsService {
         });
       }
 
-      const isPaidMethod = useCredits || useWallet || dto.paymentStatus === PaymentStatus.paid || dto.isPaid;
+      const isPaidMethod =
+        useCredits ||
+        useWallet ||
+        dto.paymentStatus === PaymentStatus.paid ||
+        dto.isPaid;
 
       await tx.payment.create({
         data: {
@@ -642,30 +751,34 @@ export class MeetingRoomsService {
     });
 
     if (this.notificationsService) {
-      this.notificationsService.createNotification(
-        booking.userId || null,
-        'Meeting Suite Pass Ready',
-        `Your reservation for ${booking.meetingRoom?.name || 'Meeting Suite'} (Code: #${booking.bookingCode}) is confirmed.`,
-        'meeting',
-        `/meeting-rooms/receipt/${booking.viewToken}`,
-      ).catch(() => {});
+      this.notificationsService
+        .createNotification(
+          booking.userId || null,
+          'Meeting Suite Pass Ready',
+          `Your reservation for ${booking.meetingRoom?.name || 'Meeting Suite'} (Code: #${booking.bookingCode}) is confirmed.`,
+          'meeting',
+          `/meeting-rooms/receipt/${booking.viewToken}`,
+        )
+        .catch(() => {});
 
       if (booking.customerEmail) {
-        this.notificationsService.sendMail({
-          to: booking.customerEmail,
-          templateKey: 'meeting_confirmation',
-          variables: {
-            name: booking.customerName,
-            bookingCode: booking.bookingCode,
-            roomName: booking.meetingRoom?.name || 'Meeting Suite',
-            date: formatIsoToDateStr(booking.bookingDate),
-            timeSlot: `${formatIsoTo12Hr(booking.startTime)} - ${formatIsoTo12Hr(booking.endTime)}`,
-            seatsBooked: booking.seatsBooked,
-            amount: booking.totalAmount,
-            viewToken: booking.viewToken,
-          },
-          metadata: { bookingId: booking.id },
-        }).catch(() => {});
+        this.notificationsService
+          .sendMail({
+            to: booking.customerEmail,
+            templateKey: 'meeting_confirmation',
+            variables: {
+              name: booking.customerName,
+              bookingCode: booking.bookingCode,
+              roomName: booking.meetingRoom?.name || 'Meeting Suite',
+              date: formatIsoToDateStr(booking.bookingDate),
+              timeSlot: `${formatIsoTo12Hr(booking.startTime)} - ${formatIsoTo12Hr(booking.endTime)}`,
+              seatsBooked: booking.seatsBooked,
+              amount: booking.totalAmount,
+              viewToken: booking.viewToken,
+            },
+            metadata: { bookingId: booking.id },
+          })
+          .catch(() => {});
       }
     }
 
@@ -682,7 +795,11 @@ export class MeetingRoomsService {
       receiptUrl: `/meeting-rooms/receipt/${booking.viewToken}`,
       booking: {
         ...booking,
-        paymentMethod: primaryPayment ? primaryPayment.paymentMethod : (booking.creditsUsed > 0 ? 'credits' : 'cash'),
+        paymentMethod: primaryPayment
+          ? primaryPayment.paymentMethod
+          : booking.creditsUsed > 0
+            ? 'credits'
+            : 'cash',
       },
     };
   }
@@ -707,17 +824,25 @@ export class MeetingRoomsService {
       if (requestingUser && requestingUser.role !== 'admin') {
         const isOwner =
           (booking.userId && booking.userId === requestingUser.id) ||
-          booking.customerEmail.toLowerCase() === requestingUser.email.toLowerCase();
+          booking.customerEmail.toLowerCase() ===
+            requestingUser.email.toLowerCase();
 
         if (!isOwner) {
-          throw new ForbiddenException('Access Denied. You do not have authorization to view this receipt.');
+          throw new ForbiddenException(
+            'Access Denied. You do not have authorization to view this receipt.',
+          );
         }
       }
 
-      const primaryPayment = booking.payments && booking.payments.length > 0 ? booking.payments[0] : null;
+      const primaryPayment =
+        booking.payments && booking.payments.length > 0
+          ? booking.payments[0]
+          : null;
       const paymentMethodStr = primaryPayment
         ? primaryPayment.paymentMethod
-        : (booking.creditsUsed > 0 ? 'credits' : 'cash');
+        : booking.creditsUsed > 0
+          ? 'credits'
+          : 'cash';
 
       return {
         success: true,
@@ -741,10 +866,13 @@ export class MeetingRoomsService {
       if (requestingUser && requestingUser.role !== 'admin') {
         const isOwner =
           (deskBooking.userId && deskBooking.userId === requestingUser.id) ||
-          deskBooking.customerEmail.toLowerCase() === requestingUser.email.toLowerCase();
+          deskBooking.customerEmail.toLowerCase() ===
+            requestingUser.email.toLowerCase();
 
         if (!isOwner) {
-          throw new ForbiddenException('Access Denied. You do not have authorization to view this receipt.');
+          throw new ForbiddenException(
+            'Access Denied. You do not have authorization to view this receipt.',
+          );
         }
       }
 
@@ -760,7 +888,9 @@ export class MeetingRoomsService {
           gstin: deskBooking.gstin,
           bookingDate: deskBooking.preferredDate,
           startTime: deskBooking.preferredDate,
-          endTime: new Date(new Date(deskBooking.preferredDate).getTime() + 86400000),
+          endTime: new Date(
+            new Date(deskBooking.preferredDate).getTime() + 86400000,
+          ),
           status: deskBooking.status,
           paymentStatus: deskBooking.paymentStatus,
           totalAmount: deskBooking.totalAmount,
@@ -777,11 +907,18 @@ export class MeetingRoomsService {
       };
     }
 
-    throw new NotFoundException(`Booking receipt not found for reference code/token '${token}'.`);
+    throw new NotFoundException(
+      `Booking receipt not found for reference code/token '${token}'.`,
+    );
   }
 
   async createRoom(data: CreateMeetingRoomDto | any) {
-    const slug = data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    const slug =
+      data.slug ||
+      data.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '');
     const branch = await this.prisma.branch.findFirst();
     const branchId = data.branchId || (branch ? branch.id : 1);
 
@@ -789,13 +926,17 @@ export class MeetingRoomsService {
     const endTime = data.endTime?.trim() || null;
 
     if ((startTime && !endTime) || (!startTime && endTime)) {
-      throw new BadRequestException('Both Start Time and End Time must be provided together, or both left blank for 24/7 access.');
+      throw new BadRequestException(
+        'Both Start Time and End Time must be provided together, or both left blank for 24/7 access.',
+      );
     }
     if (startTime && endTime) {
       const sMin = timeToMinutes(startTime);
       const eMin = timeToMinutes(endTime);
       if (sMin >= eMin) {
-        throw new BadRequestException('Start Time must be strictly earlier than End Time.');
+        throw new BadRequestException(
+          'Start Time must be strictly earlier than End Time.',
+        );
       }
     }
 
@@ -810,8 +951,18 @@ export class MeetingRoomsService {
       data: {
         branchId,
         floorMapId: data.floorMapId ? Number(data.floorMapId) : null,
-        xCoordinate: data.xCoordinate !== undefined && data.xCoordinate !== null && data.xCoordinate !== '' ? Number(data.xCoordinate) : null,
-        yCoordinate: data.yCoordinate !== undefined && data.yCoordinate !== null && data.yCoordinate !== '' ? Number(data.yCoordinate) : null,
+        xCoordinate:
+          data.xCoordinate !== undefined &&
+          data.xCoordinate !== null &&
+          data.xCoordinate !== ''
+            ? Number(data.xCoordinate)
+            : null,
+        yCoordinate:
+          data.yCoordinate !== undefined &&
+          data.yCoordinate !== null &&
+          data.yCoordinate !== ''
+            ? Number(data.yCoordinate)
+            : null,
         name: data.name,
         slug,
         capacity: Number(data.capacity || data.maxSeats || 6),
@@ -826,7 +977,11 @@ export class MeetingRoomsService {
         endTime,
         category: data.category?.trim() || 'Conference Room',
         description: data.description || '',
-        amenities: data.amenities || ['High-Speed Wi-Fi', 'Interactive Display', 'Whiteboard'],
+        amenities: data.amenities || [
+          'High-Speed Wi-Fi',
+          'Interactive Display',
+          'Whiteboard',
+        ],
         images: images,
         isActive: Boolean(data.isActive ?? true),
         sortOrder: Number(data.sortOrder || 1),
@@ -840,7 +995,9 @@ export class MeetingRoomsService {
   }
 
   async updateRoom(id: number, data: UpdateMeetingRoomDto | any) {
-    const existing = await this.prisma.meetingRoom.findUnique({ where: { id } });
+    const existing = await this.prisma.meetingRoom.findUnique({
+      where: { id },
+    });
     if (!existing) {
       throw new NotFoundException('Meeting room not found');
     }
@@ -856,20 +1013,29 @@ export class MeetingRoomsService {
     }
 
     if ((startTime && !endTime) || (!startTime && endTime)) {
-      throw new BadRequestException('Both Start Time and End Time must be provided together, or both left blank for 24/7 access.');
+      throw new BadRequestException(
+        'Both Start Time and End Time must be provided together, or both left blank for 24/7 access.',
+      );
     }
     if (startTime && endTime) {
       const sMin = timeToMinutes(startTime);
       const eMin = timeToMinutes(endTime);
       if (sMin >= eMin) {
-        throw new BadRequestException('Start Time must be strictly earlier than End Time.');
+        throw new BadRequestException(
+          'Start Time must be strictly earlier than End Time.',
+        );
       }
     }
 
     let imagesToUpdate = undefined;
     if (data.images !== undefined) {
-      imagesToUpdate = Array.isArray(data.images) ? data.images.filter(Boolean) : [data.images];
-    } else if (data.imageUrl !== undefined || data.featuredImage !== undefined) {
+      imagesToUpdate = Array.isArray(data.images)
+        ? data.images.filter(Boolean)
+        : [data.images];
+    } else if (
+      data.imageUrl !== undefined ||
+      data.featuredImage !== undefined
+    ) {
       const img = data.imageUrl || data.featuredImage;
       imagesToUpdate = img ? [img] : [];
     }
@@ -879,26 +1045,70 @@ export class MeetingRoomsService {
       data: {
         ...(data.name ? { name: data.name } : {}),
         ...(data.slug ? { slug: data.slug } : {}),
-        ...(data.branchId !== undefined ? { branchId: Number(data.branchId) } : {}),
-        ...(data.floorMapId !== undefined ? { floorMapId: data.floorMapId ? Number(data.floorMapId) : null } : {}),
-        ...(data.xCoordinate !== undefined ? { xCoordinate: data.xCoordinate !== null && data.xCoordinate !== '' ? Number(data.xCoordinate) : null } : {}),
-        ...(data.yCoordinate !== undefined ? { yCoordinate: data.yCoordinate !== null && data.yCoordinate !== '' ? Number(data.yCoordinate) : null } : {}),
-        ...(data.capacity !== undefined ? { capacity: Number(data.capacity) } : data.maxSeats !== undefined ? { capacity: Number(data.maxSeats) } : {}),
-        ...(data.minSeats !== undefined ? { minSeats: Number(data.minSeats) } : {}),
-        ...(data.maxSeats !== undefined ? { maxSeats: Number(data.maxSeats) } : {}),
-        ...(data.perSeatPrice !== undefined ? { perSeatPrice: Number(data.perSeatPrice) } : {}),
-        ...(data.hourlyRate !== undefined ? { hourlyRate: Number(data.hourlyRate) } : {}),
-        ...(data.dailyRate !== undefined ? { dailyRate: Number(data.dailyRate) } : {}),
-        ...(data.serviceChargeType ? { serviceChargeType: data.serviceChargeType } : {}),
-        ...(data.serviceChargeValue !== undefined ? { serviceChargeValue: Number(data.serviceChargeValue) } : {}),
+        ...(data.branchId !== undefined
+          ? { branchId: Number(data.branchId) }
+          : {}),
+        ...(data.floorMapId !== undefined
+          ? { floorMapId: data.floorMapId ? Number(data.floorMapId) : null }
+          : {}),
+        ...(data.xCoordinate !== undefined
+          ? {
+              xCoordinate:
+                data.xCoordinate !== null && data.xCoordinate !== ''
+                  ? Number(data.xCoordinate)
+                  : null,
+            }
+          : {}),
+        ...(data.yCoordinate !== undefined
+          ? {
+              yCoordinate:
+                data.yCoordinate !== null && data.yCoordinate !== ''
+                  ? Number(data.yCoordinate)
+                  : null,
+            }
+          : {}),
+        ...(data.capacity !== undefined
+          ? { capacity: Number(data.capacity) }
+          : data.maxSeats !== undefined
+            ? { capacity: Number(data.maxSeats) }
+            : {}),
+        ...(data.minSeats !== undefined
+          ? { minSeats: Number(data.minSeats) }
+          : {}),
+        ...(data.maxSeats !== undefined
+          ? { maxSeats: Number(data.maxSeats) }
+          : {}),
+        ...(data.perSeatPrice !== undefined
+          ? { perSeatPrice: Number(data.perSeatPrice) }
+          : {}),
+        ...(data.hourlyRate !== undefined
+          ? { hourlyRate: Number(data.hourlyRate) }
+          : {}),
+        ...(data.dailyRate !== undefined
+          ? { dailyRate: Number(data.dailyRate) }
+          : {}),
+        ...(data.serviceChargeType
+          ? { serviceChargeType: data.serviceChargeType }
+          : {}),
+        ...(data.serviceChargeValue !== undefined
+          ? { serviceChargeValue: Number(data.serviceChargeValue) }
+          : {}),
         startTime,
         endTime,
-        ...(data.category !== undefined ? { category: data.category?.trim() || 'Conference Room' } : {}),
-        ...(data.description !== undefined ? { description: data.description } : {}),
+        ...(data.category !== undefined
+          ? { category: data.category?.trim() || 'Conference Room' }
+          : {}),
+        ...(data.description !== undefined
+          ? { description: data.description }
+          : {}),
         ...(data.amenities !== undefined ? { amenities: data.amenities } : {}),
         ...(imagesToUpdate !== undefined ? { images: imagesToUpdate } : {}),
-        ...(data.isActive !== undefined ? { isActive: Boolean(data.isActive) } : {}),
-        ...(data.sortOrder !== undefined ? { sortOrder: Number(data.sortOrder) } : {}),
+        ...(data.isActive !== undefined
+          ? { isActive: Boolean(data.isActive) }
+          : {}),
+        ...(data.sortOrder !== undefined
+          ? { sortOrder: Number(data.sortOrder) }
+          : {}),
       },
     });
 
@@ -909,7 +1119,9 @@ export class MeetingRoomsService {
   }
 
   async deleteRoom(id: number) {
-    const existing = await this.prisma.meetingRoom.findUnique({ where: { id } });
+    const existing = await this.prisma.meetingRoom.findUnique({
+      where: { id },
+    });
     if (!existing) {
       throw new NotFoundException('Meeting room not found');
     }

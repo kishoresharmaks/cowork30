@@ -17,12 +17,16 @@ export class BookingsCronController {
   })
   @ApiOperation({
     summary: '[CRON JOB] Auto-complete expired bookings every 5 minutes',
-    description: 'This method is automatically invoked by NestJS Cron scheduler. It transitions past-time bookings to completed or not_checked_in.',
+    description:
+      'This method is automatically invoked by NestJS Cron scheduler. It transitions past-time bookings to completed or not_checked_in.',
   })
   async scheduledAutoComplete() {
     try {
       const result = await this.bookingsService.autoCompleteExpiredBookings();
-      Logger.log(`[Cron] Auto-complete result: ${JSON.stringify(result.processed)}`, 'Cron');
+      Logger.log(
+        `[Cron] Auto-complete result: ${JSON.stringify(result.processed)}`,
+        'Cron',
+      );
       return result;
     } catch (err) {
       Logger.error(`[Cron] Failed: ${err.message}`, err.stack, 'Cron');
@@ -34,7 +38,8 @@ export class BookingsCronController {
   @Get('complete-expired')
   @ApiOperation({
     summary: 'Manually trigger auto-complete expired bookings',
-    description: 'Admin/Staff can manually trigger the expiration check. Requires JWT auth.',
+    description:
+      'Admin/Staff can manually trigger the expiration check. Requires JWT auth.',
   })
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))

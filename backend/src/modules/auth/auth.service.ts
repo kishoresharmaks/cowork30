@@ -1,9 +1,20 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
-import { BookingStatus, BookingType, PaymentStatus, Role } from '@prisma/client';
+import {
+  BookingStatus,
+  BookingType,
+  PaymentStatus,
+  Role,
+} from '@prisma/client';
 
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -15,7 +26,10 @@ export class AuthService {
     private notificationsService: NotificationsService,
   ) {}
 
-  private getMembershipEndDate(booking: { createdAt: Date; preferredTimeSlot?: string | null }) {
+  private getMembershipEndDate(booking: {
+    createdAt: Date;
+    preferredTimeSlot?: string | null;
+  }) {
     const endDate = new Date(booking.createdAt);
     if ((booking.preferredTimeSlot || '').toLowerCase().includes('daily')) {
       endDate.setDate(endDate.getDate() + 1);
@@ -36,7 +50,9 @@ export class AuthService {
       select: { id: true, createdAt: true, preferredTimeSlot: true },
     });
     const expiredIds = memberships
-      .filter((booking) => this.getMembershipEndDate(booking).getTime() <= Date.now())
+      .filter(
+        (booking) => this.getMembershipEndDate(booking).getTime() <= Date.now(),
+      )
       .map((booking) => booking.id);
     if (expiredIds.length) {
       await this.prisma.booking.updateMany({
@@ -74,10 +90,12 @@ export class AuthService {
   async findUserByEmail(email: string, requesterId?: number) {
     if (!email) return { success: false, user: null };
 
-    const requester = requesterId ? await this.prisma.user.findUnique({
-      where: { id: requesterId },
-      select: { id: true, role: true },
-    }) : null;
+    const requester = requesterId
+      ? await this.prisma.user.findUnique({
+          where: { id: requesterId },
+          select: { id: true, role: true },
+        })
+      : null;
 
     if (!requester) {
       return { success: false, user: null, message: 'Authentication required' };
@@ -102,7 +120,9 @@ export class AuthService {
   async adminLogin(dto: LoginDto) {
     const res = await this.login(dto);
     if (res.user.role !== Role.admin) {
-      throw new UnauthorizedException('Access Denied: Account does not have administrator privileges.');
+      throw new UnauthorizedException(
+        'Access Denied: Account does not have administrator privileges.',
+      );
     }
     return res;
   }
@@ -120,7 +140,10 @@ export class AuthService {
     const bonusSetting = await this.prisma.siteSetting.findUnique({
       where: { key: 'welcome_bonus_amount' },
     });
-    const welcomeBonus = bonusSetting && !isNaN(Number(bonusSetting.value)) ? Number(bonusSetting.value) : 500.00;
+    const welcomeBonus =
+      bonusSetting && !isNaN(Number(bonusSetting.value))
+        ? Number(bonusSetting.value)
+        : 500.0;
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = await this.prisma.user.create({
@@ -195,7 +218,9 @@ export class AuthService {
       data: {
         ...(data.name ? { name: data.name } : {}),
         ...(data.phone !== undefined ? { phone: data.phone } : {}),
-        ...(data.companyName !== undefined ? { companyName: data.companyName } : {}),
+        ...(data.companyName !== undefined
+          ? { companyName: data.companyName }
+          : {}),
         ...(data.gstin !== undefined ? { gstin: data.gstin } : {}),
         ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl } : {}),
         ...(data.bio !== undefined ? { bio: data.bio } : {}),
@@ -222,10 +247,7 @@ export class AuthService {
 
     const deskBookings = await this.prisma.booking.findMany({
       where: {
-        OR: [
-          { userId },
-          { customerEmail: user.email },
-        ],
+        OR: [{ userId }, { customerEmail: user.email }],
       },
       include: {
         pricingPlan: true,
@@ -236,10 +258,7 @@ export class AuthService {
 
     const meetingBookings = await this.prisma.meetingBooking.findMany({
       where: {
-        OR: [
-          { userId },
-          { customerEmail: user.email },
-        ],
+        OR: [{ userId }, { customerEmail: user.email }],
       },
       include: {
         meetingRoom: true,
@@ -257,7 +276,12 @@ export class AuthService {
 
   // --- ADMIN USER MANAGEMENT METHODS ---
 
-  async getAdminUsers(params: { search?: string; role?: string; page?: number; limit?: number }) {
+  async getAdminUsers(params: {
+    search?: string;
+    role?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const { search, role, page = 1, limit = 50 } = params;
 
     const where: any = {};
@@ -331,7 +355,9 @@ export class AuthService {
             ...u,
             walletBalance: Number(u.walletBalance),
             deskCreditsBalance: Number((u as any).deskCreditsBalance || 0),
-            meetingCreditsBalance: Number((u as any).meetingCreditsBalance || 0),
+            meetingCreditsBalance: Number(
+              (u as any).meetingCreditsBalance || 0,
+            ),
             deskBookingsCount: u._count.bookings,
             meetingBookingsCount: u._count.meetingBookings,
             totalBookings: u._count.bookings + u._count.meetingBookings,
@@ -341,7 +367,7 @@ export class AuthService {
           };
         }
 
-        const expiresAt = this.getMembershipEndDate(membershipBooking as any);
+        const expiresAt = this.getMembershipEndDate(membershipBooking);
         const isActive = expiresAt.getTime() > Date.now();
 
         return {
@@ -361,14 +387,18 @@ export class AuthService {
 
     // Aggregate summary stats
     const totalUsersCount = await this.prisma.user.count();
-    const adminUsersCount = await this.prisma.user.count({ where: { role: Role.admin } });
+    const adminUsersCount = await this.prisma.user.count({
+      where: { role: Role.admin },
+    });
     const memberUsersCount = totalUsersCount - adminUsersCount;
 
     const walletSumAggregate = await this.prisma.user.aggregate({
       _sum: { walletBalance: true },
     });
 
-    const totalWalletBalance = Number(walletSumAggregate._sum.walletBalance || 0);
+    const totalWalletBalance = Number(
+      walletSumAggregate._sum.walletBalance || 0,
+    );
 
     const totalPages = Math.ceil(totalCount / limit);
 
@@ -421,10 +451,7 @@ export class AuthService {
 
     const deskBookings = await this.prisma.booking.findMany({
       where: {
-        OR: [
-          { userId },
-          { customerEmail: user.email },
-        ],
+        OR: [{ userId }, { customerEmail: user.email }],
       },
       include: { pricingPlan: true },
       orderBy: { createdAt: 'desc' },
@@ -432,10 +459,7 @@ export class AuthService {
 
     const meetingBookings = await this.prisma.meetingBooking.findMany({
       where: {
-        OR: [
-          { userId },
-          { customerEmail: user.email },
-        ],
+        OR: [{ userId }, { customerEmail: user.email }],
       },
       include: { meetingRoom: true },
       orderBy: { createdAt: 'desc' },
@@ -463,9 +487,13 @@ export class AuthService {
       orderBy: { createdAt: 'desc' },
     });
 
-    let membershipMeta = { membershipActive: false, membershipExpiresAt: null, membershipPlanName: null } as any;
+    let membershipMeta = {
+      membershipActive: false,
+      membershipExpiresAt: null,
+      membershipPlanName: null,
+    } as any;
     if (membershipBooking) {
-      const expiresAt = this.getMembershipEndDate(membershipBooking as any);
+      const expiresAt = this.getMembershipEndDate(membershipBooking);
       membershipMeta = {
         membershipActive: expiresAt.getTime() > Date.now(),
         membershipExpiresAt: expiresAt,
@@ -492,10 +520,15 @@ export class AuthService {
     };
   }
 
-  async adjustUserWallet(userId: number, data: { amount: number; type: 'credit' | 'debit'; reason: string }) {
+  async adjustUserWallet(
+    userId: number,
+    data: { amount: number; type: 'credit' | 'debit'; reason: string },
+  ) {
     // Input validation
     if (!data.amount || data.amount <= 0) {
-      throw new BadRequestException('Adjustment amount must be greater than zero');
+      throw new BadRequestException(
+        'Adjustment amount must be greater than zero',
+      );
     }
 
     if (!data.reason || data.reason.trim().length === 0) {
@@ -533,7 +566,9 @@ export class AuthService {
       });
 
       if (!updateResult) {
-        throw new ConflictException('Wallet balance was modified during processing. Please retry.');
+        throw new ConflictException(
+          'Wallet balance was modified during processing. Please retry.',
+        );
       }
 
       // Create Wallet Transaction Log
@@ -543,7 +578,9 @@ export class AuthService {
           type: data.type === 'credit' ? 'admin_credit' : 'admin_debit',
           amount: adjustAmount,
           balanceAfter: newBalance,
-          description: data.reason || `Admin Manual Wallet ${data.type === 'credit' ? 'Credit' : 'Debit'}`,
+          description:
+            data.reason ||
+            `Admin Manual Wallet ${data.type === 'credit' ? 'Credit' : 'Debit'}`,
           referenceId: `ADM-ADJ-${Date.now()}`,
         },
       });
@@ -584,7 +621,9 @@ export class AuthService {
 
   async adminResetPassword(userId: number, newPassword: string) {
     if (!newPassword || newPassword.trim().length < 6) {
-      throw new BadRequestException('Password must be at least 6 characters long');
+      throw new BadRequestException(
+        'Password must be at least 6 characters long',
+      );
     }
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -599,22 +638,26 @@ export class AuthService {
     });
 
     // Trigger Email & In-App Notification
-    await this.notificationsService.sendMail({
-      to: user.email,
-      templateKey: 'password_reset',
-      variables: {
-        name: user.name,
-        email: user.email,
-        newPassword: newPassword.trim(),
-      },
-    }).catch(() => {});
+    await this.notificationsService
+      .sendMail({
+        to: user.email,
+        templateKey: 'password_reset',
+        variables: {
+          name: user.name,
+          email: user.email,
+          newPassword: newPassword.trim(),
+        },
+      })
+      .catch(() => {});
 
-    await this.notificationsService.createNotification(
-      user.id,
-      'Security Alert: Password Reset',
-      'Your account password was updated by an administrator.',
-      'warning',
-    ).catch(() => {});
+    await this.notificationsService
+      .createNotification(
+        user.id,
+        'Security Alert: Password Reset',
+        'Your account password was updated by an administrator.',
+        'warning',
+      )
+      .catch(() => {});
 
     return {
       success: true,

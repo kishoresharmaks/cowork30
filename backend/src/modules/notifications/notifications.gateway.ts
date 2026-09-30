@@ -27,7 +27,11 @@ export class NotificationsGateway {
     if (data && data.userId) {
       const userRoom = `user_notifications_${data.userId}`;
       client.join(userRoom);
-      return { event: 'subscribed_notifications', room: userRoom, userId: data.userId };
+      return {
+        event: 'subscribed_notifications',
+        room: userRoom,
+        userId: data.userId,
+      };
     }
     return { event: 'subscribed_notifications', room: 'global_notifications' };
   }
@@ -56,7 +60,9 @@ export class NotificationsGateway {
 
   broadcast(notification: any) {
     if (this.server) {
-      this.server.to('global_notifications').emit('notification_received', notification);
+      this.server
+        .to('global_notifications')
+        .emit('notification_received', notification);
       this.server.emit('notification_received', notification);
     }
   }
@@ -71,7 +77,9 @@ export class NotificationsGateway {
   notifyNotificationRead(userId: number, notificationId: number) {
     if (this.server) {
       const room = `user_notifications_${userId}`;
-      this.server.to(room).emit('notification_marked_read', { id: notificationId });
+      this.server
+        .to(room)
+        .emit('notification_marked_read', { id: notificationId });
     }
   }
 

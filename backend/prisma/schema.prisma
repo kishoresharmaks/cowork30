@@ -245,8 +245,9 @@ model PricingPlan {
   name                   String
   slug                   String   @unique
   tagline                String?
-  priceMonthly           Decimal  @db.Decimal(10, 2)
+  priceMonthly           Decimal  @default(0.00) @db.Decimal(10, 2)
   priceDaily             Decimal  @default(0.00) @db.Decimal(10, 2)
+  priceAnnual            Decimal  @default(0.00) @db.Decimal(10, 2)
   billingPeriod          String   @default("Monthly")
   meetingCreditsIncluded Int      @default(0)
   deskCreditsIncluded    Int      @default(0)

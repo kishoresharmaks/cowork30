@@ -1,8 +1,20 @@
-import { Injectable, Logger, BadRequestException, NotFoundException, Optional, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+  Optional,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { RazorpayService } from './razorpay.service';
 import { InvoiceService } from './invoice.service';
-import { PaymentMethod, PaymentStatus, BookingStatus, Prisma } from '@prisma/client';
+import {
+  PaymentMethod,
+  PaymentStatus,
+  BookingStatus,
+  Prisma,
+} from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -17,8 +29,11 @@ export class WalletBillingService {
   ) {}
 
   private async getTaxRate(): Promise<number> {
-    const setting = await this.prisma.siteSetting.findUnique({ where: { key: 'tax_rate' } });
-    const rate = setting && !isNaN(Number(setting.value)) ? Number(setting.value) : 0.18;
+    const setting = await this.prisma.siteSetting.findUnique({
+      where: { key: 'tax_rate' },
+    });
+    const rate =
+      setting && !isNaN(Number(setting.value)) ? Number(setting.value) : 0.18;
     return rate;
   }
 
@@ -30,14 +45,17 @@ export class WalletBillingService {
     referenceNumber?: string;
     notes?: string;
   }) {
-    const { userId, amount, bonus, paymentProofUrl, referenceNumber, notes } = params;
+    const { userId, amount, bonus, paymentProofUrl, referenceNumber, notes } =
+      params;
 
     if (!amount || amount <= 0) {
       throw new BadRequestException('Top-up amount must be greater than zero');
     }
 
     if (!paymentProofUrl) {
-      throw new BadRequestException('Payment receipt proof image URL is required');
+      throw new BadRequestException(
+        'Payment receipt proof image URL is required',
+      );
     }
 
     const request = await (this.prisma as any).walletTopupRequest.create({
@@ -52,10 +70,13 @@ export class WalletBillingService {
       },
     });
 
-    this.logger.log(`User #${userId} submitted manual wallet top-up proof for ₹${amount} (Request #${request.id})`);
+    this.logger.log(
+      `User #${userId} submitted manual wallet top-up proof for ₹${amount} (Request #${request.id})`,
+    );
     return {
       success: true,
-      message: 'Payment proof submitted successfully! Pending admin verification.',
+      message:
+        'Payment proof submitted successfully! Pending admin verification.',
       request,
     };
   }
@@ -95,7 +116,9 @@ export class WalletBillingService {
     }
 
     if (req.status !== 'pending') {
-      throw new BadRequestException(`Request #${requestId} has already been processed (${req.status})`);
+      throw new BadRequestException(
+        `Request #${requestId} has already been processed (${req.status})`,
+      );
     }
 
     const topUpResult = await this.topUpManual({
@@ -132,7 +155,9 @@ export class WalletBillingService {
       where: { id: requestId },
       data: {
         status: 'rejected',
-        rejectionReason: rejectionReason || 'Payment proof verification failed or invalid receipt',
+        rejectionReason:
+          rejectionReason ||
+          'Payment proof verification failed or invalid receipt',
       },
     });
 
@@ -178,7 +203,9 @@ export class WalletBillingService {
         type: 'credit_topup',
         amount: totalCredit,
         balanceAfter: newBalance,
-        description: description || `Instant Wallet Top-Up (Paid ₹${amount.toLocaleString()}${bonus > 0 ? ` + ₹${bonus.toLocaleString()} Bonus` : ''})`,
+        description:
+          description ||
+          `Instant Wallet Top-Up (Paid ₹${amount.toLocaleString()}${bonus > 0 ? ` + ₹${bonus.toLocaleString()} Bonus` : ''})`,
         referenceId: `TX-TOPUP-${Date.now()}`,
       },
     });
@@ -186,7 +213,11 @@ export class WalletBillingService {
     let mappedMethod: PaymentMethod = PaymentMethod.wallet;
     if (paymentMethod === 'razorpay') {
       mappedMethod = PaymentMethod.razorpay;
-    } else if (paymentMethod === 'cash' || paymentMethod === 'manual' || paymentMethod === 'manual_cash') {
+    } else if (
+      paymentMethod === 'cash' ||
+      paymentMethod === 'manual' ||
+      paymentMethod === 'manual_cash'
+    ) {
       mappedMethod = PaymentMethod.cash;
     } else if (paymentMethod === 'credits') {
       mappedMethod = PaymentMethod.credits;
@@ -200,7 +231,10 @@ export class WalletBillingService {
         taxAmount: 0,
         paymentMethod: mappedMethod,
         status: PaymentStatus.paid,
-        rawResponse: { type: 'manual_topup', timestamp: new Date().toISOString() },
+        rawResponse: {
+          type: 'manual_topup',
+          timestamp: new Date().toISOString(),
+        },
       },
     });
 
@@ -217,26 +251,30 @@ export class WalletBillingService {
     });
 
     if (this.notificationsService) {
-      this.notificationsService.createNotification(
-        params.userId,
-        'Wallet Recharge Ready',
-        `Use instant 1-click booking with your ₹${totalCredit} wallet credits.`,
-        'wallet',
-        '/dashboard?tab=wallet',
-      ).catch(() => {});
+      this.notificationsService
+        .createNotification(
+          params.userId,
+          'Wallet Recharge Ready',
+          `Use instant 1-click booking with your ₹${totalCredit} wallet credits.`,
+          'wallet',
+          '/dashboard?tab=wallet',
+        )
+        .catch(() => {});
 
       if (user.email) {
-        this.notificationsService.sendMail({
-          to: user.email,
-          templateKey: 'wallet_receipt',
-          variables: {
-            name: user.name,
-            amount: totalCredit,
-            newBalance,
-            referenceId: transaction.referenceId,
-            date: new Date().toLocaleDateString(),
-          },
-        }).catch(() => {});
+        this.notificationsService
+          .sendMail({
+            to: user.email,
+            templateKey: 'wallet_receipt',
+            variables: {
+              name: user.name,
+              amount: totalCredit,
+              newBalance,
+              referenceId: transaction.referenceId,
+              date: new Date().toLocaleDateString(),
+            },
+          })
+          .catch(() => {});
       }
     }
 
@@ -256,7 +294,12 @@ export class WalletBillingService {
     };
   }
 
-  async createRazorpayOrder(params: { userId?: number; customerName?: string; customerEmail?: string; amount: number }) {
+  async createRazorpayOrder(params: {
+    userId?: number;
+    customerName?: string;
+    customerEmail?: string;
+    amount: number;
+  }) {
     const { userId, amount, customerName, customerEmail } = params;
     if (!amount || amount <= 0) {
       throw new BadRequestException('Order amount must be greater than zero');
@@ -305,7 +348,13 @@ export class WalletBillingService {
     razorpayPaymentId: string;
     razorpaySignature: string;
   }) {
-    const { userId, amount, razorpayOrderId, razorpayPaymentId, razorpaySignature } = params;
+    const {
+      userId,
+      amount,
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+    } = params;
     const bonus = Number(params.bonus || 0);
     const totalCredit = amount + bonus;
 
@@ -318,8 +367,14 @@ export class WalletBillingService {
       LIMIT 1
     `;
 
-    if (existingPayment && Array.isArray(existingPayment) && existingPayment.length > 0) {
-      throw new ConflictException(`Payment ${razorpayPaymentId} has already been processed`);
+    if (
+      existingPayment &&
+      Array.isArray(existingPayment) &&
+      existingPayment.length > 0
+    ) {
+      throw new ConflictException(
+        `Payment ${razorpayPaymentId} has already been processed`,
+      );
     }
 
     const isValid = this.razorpayService.verifyPaymentSignature({
@@ -329,14 +384,23 @@ export class WalletBillingService {
     });
 
     if (!isValid) {
-      throw new BadRequestException('Invalid Razorpay payment signature verification failed');
+      throw new BadRequestException(
+        'Invalid Razorpay payment signature verification failed',
+      );
     }
 
     // Use transaction with row-level locking to prevent race conditions on wallet balance
     const result = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, email: true, walletBalance: true, gstin: true, companyName: true }
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          walletBalance: true,
+          gstin: true,
+          companyName: true,
+        },
       });
       if (!user) {
         throw new NotFoundException('User not found');
@@ -349,14 +413,16 @@ export class WalletBillingService {
       const updateResult = await tx.user.update({
         where: {
           id: userId,
-          walletBalance: previousBalance,  // Optimistic lock: only update if balance unchanged
+          walletBalance: previousBalance, // Optimistic lock: only update if balance unchanged
         },
         data: { walletBalance: newBalance },
         select: { id: true, walletBalance: true },
       });
 
       if (!updateResult) {
-        throw new ConflictException('Wallet balance was modified during processing. Please retry.');
+        throw new ConflictException(
+          'Wallet balance was modified during processing. Please retry.',
+        );
       }
 
       // Create Wallet Transaction Log
@@ -382,7 +448,11 @@ export class WalletBillingService {
           taxAmount: 0,
           paymentMethod: PaymentMethod.razorpay,
           status: PaymentStatus.paid,
-          rawResponse: { razorpayOrderId, razorpayPaymentId, timestamp: new Date().toISOString() },
+          rawResponse: {
+            razorpayOrderId,
+            razorpayPaymentId,
+            timestamp: new Date().toISOString(),
+          },
         },
       });
 
@@ -407,13 +477,15 @@ export class WalletBillingService {
     });
 
     if (this.notificationsService) {
-      this.notificationsService.createNotification(
-        userId,
-        'Wallet Recharge Ready',
-        `Use instant 1-click booking with your ₹${totalCredit} wallet credits.`,
-        'wallet',
-        '/dashboard?tab=wallet',
-      ).catch(() => {});
+      this.notificationsService
+        .createNotification(
+          userId,
+          'Wallet Recharge Ready',
+          `Use instant 1-click booking with your ₹${totalCredit} wallet credits.`,
+          'wallet',
+          '/dashboard?tab=wallet',
+        )
+        .catch(() => {});
     }
 
     return {
@@ -436,37 +508,59 @@ export class WalletBillingService {
     creditsAmount?: number;
     description?: string;
   }) {
-    const { userId, amount, bookingType, bookingId, paymentMethod = 'wallet', creditType, creditsAmount } = params;
+    const {
+      userId,
+      amount,
+      bookingType,
+      bookingId,
+      paymentMethod = 'wallet',
+      creditType,
+      creditsAmount,
+    } = params;
 
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, email: true, walletBalance: true, deskCreditsBalance: true, meetingCreditsBalance: true }
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          walletBalance: true,
+          deskCreditsBalance: true,
+          meetingCreditsBalance: true,
+        },
       });
       if (!user) {
         throw new NotFoundException('User not found');
       }
 
       if (paymentMethod === 'credits') {
-        const field = creditType === 'meeting' ? 'meetingCreditsBalance' : 'deskCreditsBalance';
+        const field =
+          creditType === 'meeting'
+            ? 'meetingCreditsBalance'
+            : 'deskCreditsBalance';
         const currentCredits = Number((user as any)[field] || 0);
         const reqCredits = creditsAmount || 1;
 
         if (currentCredits < reqCredits) {
-          throw new BadRequestException(`Insufficient ${creditType || 'desk'} credits. Available: ${currentCredits}, required: ${reqCredits}`);
+          throw new BadRequestException(
+            `Insufficient ${creditType || 'desk'} credits. Available: ${currentCredits}, required: ${reqCredits}`,
+          );
         }
 
         const newCreditBal = Number((currentCredits - reqCredits).toFixed(2));
         const updateResult = await tx.user.update({
           where: {
             id: userId,
-            [field]: currentCredits,  // Optimistic lock: only update if balance unchanged
+            [field]: currentCredits, // Optimistic lock: only update if balance unchanged
           },
           data: { [field]: newCreditBal } as any,
         });
 
         if (!updateResult) {
-          throw new ConflictException('Credit balance was modified during processing. Please retry.');
+          throw new ConflictException(
+            'Credit balance was modified during processing. Please retry.',
+          );
         }
 
         const transaction = await tx.walletTransaction.create({
@@ -475,7 +569,9 @@ export class WalletBillingService {
             type: 'debit_booking',
             amount: 0,
             balanceAfter: Number(user.walletBalance || 0),
-            description: params.description || `Redeemed ${reqCredits} ${creditType || 'desk'} credit(s) for ${bookingType} reservation #${bookingId}`,
+            description:
+              params.description ||
+              `Redeemed ${reqCredits} ${creditType || 'desk'} credit(s) for ${bookingType} reservation #${bookingId}`,
             referenceId: `REF-${bookingType.toUpperCase()}-${bookingId}`,
           },
         });
@@ -487,15 +583,23 @@ export class WalletBillingService {
             taxAmount: 0,
             paymentMethod: PaymentMethod.credits,
             status: PaymentStatus.paid,
-            ...(bookingType === 'meeting' ? { meetingBookingId: bookingId } : { bookingId }),
+            ...(bookingType === 'meeting'
+              ? { meetingBookingId: bookingId }
+              : { bookingId }),
           },
         });
 
         return {
           success: true,
           walletBalance: Number(user.walletBalance || 0),
-          deskCreditsBalance: creditType === 'desk' ? newCreditBal : Number((user as any).deskCreditsBalance || 0),
-          meetingCreditsBalance: creditType === 'meeting' ? newCreditBal : Number((user as any).meetingCreditsBalance || 0),
+          deskCreditsBalance:
+            creditType === 'desk'
+              ? newCreditBal
+              : Number((user as any).deskCreditsBalance || 0),
+          meetingCreditsBalance:
+            creditType === 'meeting'
+              ? newCreditBal
+              : Number((user as any).meetingCreditsBalance || 0),
           transaction,
           payment,
         };
@@ -503,7 +607,9 @@ export class WalletBillingService {
 
       const currentBalance = Number(user.walletBalance || 0);
       if (currentBalance < amount) {
-        throw new BadRequestException(`Insufficient wallet balance. Available: ₹${currentBalance}, required: ₹${amount}`);
+        throw new BadRequestException(
+          `Insufficient wallet balance. Available: ₹${currentBalance}, required: ₹${amount}`,
+        );
       }
 
       const newBalance = Number((currentBalance - amount).toFixed(2));
@@ -518,7 +624,9 @@ export class WalletBillingService {
       });
 
       if (!updateResult) {
-        throw new ConflictException('Wallet balance was modified during processing. Please retry.');
+        throw new ConflictException(
+          'Wallet balance was modified during processing. Please retry.',
+        );
       }
 
       const transaction = await tx.walletTransaction.create({
@@ -527,7 +635,9 @@ export class WalletBillingService {
           type: 'debit_booking',
           amount: amount,
           balanceAfter: newBalance,
-          description: params.description || `Wallet Debit for ${bookingType} reservation #${bookingId}`,
+          description:
+            params.description ||
+            `Wallet Debit for ${bookingType} reservation #${bookingId}`,
           referenceId: `REF-${bookingType.toUpperCase()}-${bookingId}`,
         },
       });
@@ -552,7 +662,9 @@ export class WalletBillingService {
           taxAmount: Number((amount * taxRate).toFixed(2)),
           paymentMethod: PaymentMethod.wallet,
           status: PaymentStatus.paid,
-          ...(bookingType === 'meeting' ? { meetingBookingId: bookingId } : { bookingId }),
+          ...(bookingType === 'meeting'
+            ? { meetingBookingId: bookingId }
+            : { bookingId }),
         },
       });
 

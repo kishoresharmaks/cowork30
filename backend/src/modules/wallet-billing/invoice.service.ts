@@ -8,13 +8,18 @@ export class InvoiceService {
   constructor(private prisma: PrismaService) {}
 
   private async getTaxRate(): Promise<number> {
-    const setting = await this.prisma.siteSetting.findUnique({ where: { key: 'tax_rate' } });
-    const rate = setting && !isNaN(Number(setting.value)) ? Number(setting.value) : 0.18;
+    const setting = await this.prisma.siteSetting.findUnique({
+      where: { key: 'tax_rate' },
+    });
+    const rate =
+      setting && !isNaN(Number(setting.value)) ? Number(setting.value) : 0.18;
     return rate;
   }
 
   private async getSellerDetails() {
-    const siteInfoSetting = await this.prisma.siteSetting.findUnique({ where: { key: 'site_info' } });
+    const siteInfoSetting = await this.prisma.siteSetting.findUnique({
+      where: { key: 'site_info' },
+    });
     let siteInfo: any = {};
     if (siteInfoSetting && siteInfoSetting.value) {
       try {
@@ -24,7 +29,9 @@ export class InvoiceService {
 
     return {
       companyName: siteInfo.companyName || 'Ishwarji Cowork 30',
-      companyAddress: siteInfo.companyAddress || '201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala, Andheri East, Mumbai 400059',
+      companyAddress:
+        siteInfo.companyAddress ||
+        '201, 2nd Floor, ACME Plaza No 2, Opp. Sangam Cinema, Andheri Kurla Road, Chakala, Andheri East, Mumbai 400059',
       companyGstin: siteInfo.companyGstin || '07AAAAA0000A1Z5',
       sacCode: siteInfo.sacCode || '997212',
     };
@@ -40,14 +47,21 @@ export class InvoiceService {
     taxAmount?: number;
     isTaxable?: boolean;
   }) {
-    const { paymentId, userId, customerName, customerGstin, companyName, isTaxable = false } = params;
+    const {
+      paymentId,
+      userId,
+      customerName,
+      customerGstin,
+      companyName,
+      isTaxable = false,
+    } = params;
 
     const invoiceNumber = `INV-2026-${Date.now().toString(36).toUpperCase()}`;
     const paidAmount = Number(params.subtotal || 0);
 
     let netSubtotal = paidAmount;
     let halfTax = 0;
-    let grandTotal = paidAmount;
+    const grandTotal = paidAmount;
 
     if (isTaxable) {
       const taxRate = await this.getTaxRate();
@@ -67,13 +81,15 @@ export class InvoiceService {
         subtotal: netSubtotal,
         cgst: halfTax,
         sgst: halfTax,
-        igst: 0.00,
+        igst: 0.0,
         totalAmount: grandTotal,
         pdfUrl: `/api/v1/wallet/invoices/${invoiceNumber}/pdf`,
       },
     });
 
-    this.logger.log(`Generated Invoice #${invoice.invoiceNumber} for Payment #${paymentId} (Grand Total: ₹${grandTotal}, Taxable: ${isTaxable})`);
+    this.logger.log(
+      `Generated Invoice #${invoice.invoiceNumber} for Payment #${paymentId} (Grand Total: ₹${grandTotal}, Taxable: ${isTaxable})`,
+    );
     return invoice;
   }
 
@@ -97,14 +113,16 @@ export class InvoiceService {
       year: 'numeric',
     });
 
-    const isTopup = !invoice.payment?.bookingId && !invoice.payment?.meetingBookingId;
-    const isTaxable = !isTopup && (Number(invoice.cgst) > 0 || Number(invoice.sgst) > 0);
+    const isTopup =
+      !invoice.payment?.bookingId && !invoice.payment?.meetingBookingId;
+    const isTaxable =
+      !isTopup && (Number(invoice.cgst) > 0 || Number(invoice.sgst) > 0);
 
-    let grandTotalNum = Number(invoice.totalAmount);
-    let subtotalNum = isTaxable ? Number(invoice.subtotal) : grandTotalNum;
-    let cgstNum = isTaxable ? Number(invoice.cgst) : 0;
-    let sgstNum = isTaxable ? Number(invoice.sgst) : 0;
-    let totalTaxNum = isTaxable ? (cgstNum + sgstNum) : 0;
+    const grandTotalNum = Number(invoice.totalAmount);
+    const subtotalNum = isTaxable ? Number(invoice.subtotal) : grandTotalNum;
+    const cgstNum = isTaxable ? Number(invoice.cgst) : 0;
+    const sgstNum = isTaxable ? Number(invoice.sgst) : 0;
+    const totalTaxNum = isTaxable ? cgstNum + sgstNum : 0;
 
     const subtotal = subtotalNum.toFixed(2);
     const cgst = cgstNum.toFixed(2);
@@ -112,7 +130,9 @@ export class InvoiceService {
     const totalTax = totalTaxNum.toFixed(2);
     const totalAmount = grandTotalNum.toFixed(2);
 
-    const documentHeaderTitle = isTopup ? 'CREDIT WALLET RECHARGE RECEIPT' : 'GST TAX INVOICE';
+    const documentHeaderTitle = isTopup
+      ? 'CREDIT WALLET RECHARGE RECEIPT'
+      : 'GST TAX INVOICE';
     const serviceTitle = isTopup
       ? 'Cowork30 Wallet Credit Recharge (Advance Stored Value Deposit)'
       : 'Coworking Space Reservation / Membership Services';

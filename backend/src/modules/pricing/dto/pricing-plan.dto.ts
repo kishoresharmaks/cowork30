@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class CreatePricingPlanDto {
   @ApiProperty({ example: 'Dedicated Pro Member' })
@@ -11,21 +19,30 @@ export class CreatePricingPlanDto {
   @IsString()
   slug?: string;
 
-  @ApiPropertyOptional({ example: 'Best for full-time teams that need a fixed seat.' })
+  @ApiPropertyOptional({
+    example: 'Best for full-time teams that need a fixed seat.',
+  })
   @IsOptional()
   @IsString()
   tagline?: string;
 
-  @ApiProperty({ example: 8500 })
+  @ApiPropertyOptional({ example: 8500 })
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  priceMonthly!: number;
+  priceMonthly?: number;
 
   @ApiPropertyOptional({ example: 850 })
   @IsOptional()
   @IsNumber()
   @Min(0)
   priceDaily?: number;
+
+  @ApiPropertyOptional({ example: 85000 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  priceAnnual?: number;
 
   @ApiPropertyOptional({ example: 'Monthly' })
   @IsOptional()
@@ -60,7 +77,10 @@ export class CreatePricingPlanDto {
   @Min(0)
   sortOrder?: number;
 
-  @ApiPropertyOptional({ type: [String], example: ['24/7 Access', 'Meeting room credits'] })
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['24/7 Access', 'Meeting room credits'],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -78,7 +98,9 @@ export class UpdatePricingPlanDto {
   @IsString()
   slug?: string;
 
-  @ApiPropertyOptional({ example: 'Best for full-time teams that need a fixed seat.' })
+  @ApiPropertyOptional({
+    example: 'Best for full-time teams that need a fixed seat.',
+  })
   @IsOptional()
   @IsString()
   tagline?: string;
@@ -94,6 +116,12 @@ export class UpdatePricingPlanDto {
   @IsNumber()
   @Min(0)
   priceDaily?: number;
+
+  @ApiPropertyOptional({ example: 85000 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  priceAnnual?: number;
 
   @ApiPropertyOptional({ example: 'Monthly' })
   @IsOptional()
@@ -128,7 +156,10 @@ export class UpdatePricingPlanDto {
   @Min(0)
   sortOrder?: number;
 
-  @ApiPropertyOptional({ type: [String], example: ['24/7 Access', 'Meeting room credits'] })
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['24/7 Access', 'Meeting room credits'],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

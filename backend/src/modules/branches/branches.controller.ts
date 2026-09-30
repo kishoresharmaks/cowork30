@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { BranchesService } from './branches.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -20,7 +30,9 @@ export class BranchesController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin: Get all branches including inactive with counts' })
+  @ApiOperation({
+    summary: 'Admin: Get all branches including inactive with counts',
+  })
   async findAllAdmin() {
     return this.branchesService.findAllAdmin();
   }

@@ -80,7 +80,9 @@ export class FloorMapService {
 
     if (!floorMap) {
       // Auto create default floor 1 if branch exists but has no floors
-      const branch = await this.prisma.branch.findUnique({ where: { id: branchId } });
+      const branch = await this.prisma.branch.findUnique({
+        where: { id: branchId },
+      });
       if (branch) {
         floorMap = await this.prisma.floorMap.create({
           data: {
@@ -112,7 +114,13 @@ export class FloorMapService {
     };
   }
 
-  async createFloor(data: { branchId?: number; floorName: string; floorLevel: number; width?: number; height?: number }) {
+  async createFloor(data: {
+    branchId?: number;
+    floorName: string;
+    floorLevel: number;
+    width?: number;
+    height?: number;
+  }) {
     const branchId = data.branchId || 1;
     const floor = await this.prisma.floorMap.create({
       data: {
@@ -136,7 +144,9 @@ export class FloorMapService {
   }
 
   async deleteFloor(id: number) {
-    const count = await this.prisma.floorMap.count({ where: { isActive: true } });
+    const count = await this.prisma.floorMap.count({
+      where: { isActive: true },
+    });
     if (count <= 1) {
       throw new Error('Cannot delete the only remaining floor plan');
     }
@@ -151,7 +161,9 @@ export class FloorMapService {
   }
 
   async createDesk(data: any) {
-    const floorMap = await this.prisma.floorMap.findFirst({ where: { isActive: true } });
+    const floorMap = await this.prisma.floorMap.findFirst({
+      where: { isActive: true },
+    });
     const floorMapId = data.floorMapId || floorMap?.id || 1;
 
     const desk = await this.prisma.desk.create({
@@ -166,7 +178,9 @@ export class FloorMapService {
         dailyPrice: Number(data.dailyPrice || 500),
         hasPowerOutlet: Boolean(data.hasPowerOutlet ?? true),
         hasWindowView: Boolean(data.hasWindowView ?? false),
-        imageUrl: data.imageUrl || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80',
+        imageUrl:
+          data.imageUrl ||
+          'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80',
       },
     });
 
@@ -184,16 +198,24 @@ export class FloorMapService {
         ...(data.deskType ? { deskType: data.deskType } : {}),
         ...(data.status ? { status: data.status } : {}),
         ...(data.imageUrl !== undefined ? { imageUrl: data.imageUrl } : {}),
-        ...(data.monthlyPrice !== undefined ? { monthlyPrice: Number(data.monthlyPrice) } : {}),
-        ...(data.dailyPrice !== undefined ? { dailyPrice: Number(data.dailyPrice) } : {}),
+        ...(data.monthlyPrice !== undefined
+          ? { monthlyPrice: Number(data.monthlyPrice) }
+          : {}),
+        ...(data.dailyPrice !== undefined
+          ? { dailyPrice: Number(data.dailyPrice) }
+          : {}),
         ...(data.xCoordinate !== undefined || data.xPosition !== undefined
           ? { xCoordinate: Number(data.xCoordinate ?? data.xPosition) }
           : {}),
         ...(data.yCoordinate !== undefined || data.yPosition !== undefined
           ? { yCoordinate: Number(data.yCoordinate ?? data.yPosition) }
           : {}),
-        ...(data.hasPowerOutlet !== undefined ? { hasPowerOutlet: Boolean(data.hasPowerOutlet) } : {}),
-        ...(data.hasWindowView !== undefined ? { hasWindowView: Boolean(data.hasWindowView) } : {}),
+        ...(data.hasPowerOutlet !== undefined
+          ? { hasPowerOutlet: Boolean(data.hasPowerOutlet) }
+          : {}),
+        ...(data.hasWindowView !== undefined
+          ? { hasWindowView: Boolean(data.hasWindowView) }
+          : {}),
       },
     });
 
@@ -223,7 +245,10 @@ export class FloorMapService {
     };
   }
 
-  async updateFloorDetails(id: number, data: { floorName?: string; floorLevel?: number; branchName?: string }) {
+  async updateFloorDetails(
+    id: number,
+    data: { floorName?: string; floorLevel?: number; branchName?: string },
+  ) {
     const existing = await this.prisma.floorMap.findUnique({
       where: { id },
       include: { branch: true },
@@ -242,8 +267,12 @@ export class FloorMapService {
     const updated = await this.prisma.floorMap.update({
       where: { id },
       data: {
-        ...(data.floorName !== undefined ? { floorName: data.floorName.trim() } : {}),
-        ...(data.floorLevel !== undefined ? { floorLevel: Number(data.floorLevel) } : {}),
+        ...(data.floorName !== undefined
+          ? { floorName: data.floorName.trim() }
+          : {}),
+        ...(data.floorLevel !== undefined
+          ? { floorLevel: Number(data.floorLevel) }
+          : {}),
       },
       include: { branch: true, desks: true },
     });

@@ -1,9 +1,21 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateTourBookingDto } from './dto/tour-booking.dto';
-import { CreatePricingPlanDto, UpdatePricingPlanDto } from './dto/pricing-plan.dto';
+import {
+  CreatePricingPlanDto,
+  UpdatePricingPlanDto,
+} from './dto/pricing-plan.dto';
 import { PricingQuoteDto } from './dto/pricing-quote.dto';
-import { BookingType, BookingStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
+import {
+  BookingType,
+  BookingStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from '@prisma/client';
 import { RazorpayService } from '../wallet-billing/razorpay.service';
 
 @Injectable()
@@ -36,13 +48,25 @@ export class PricingService {
     return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
-  private resolvePlanBillingPrice(plan: { priceMonthly: any; priceDaily: any }, billingPeriod?: string) {
+  private resolvePlanBillingPrice(
+    plan: { priceMonthly: any; priceDaily: any; priceAnnual?: any },
+    billingPeriod?: string,
+  ) {
     const normalizedPeriod = (billingPeriod || 'Monthly').toLowerCase();
     if (normalizedPeriod === 'daily') {
       return Number(plan.priceDaily || 0) || Number(plan.priceMonthly || 0);
     }
+    if (normalizedPeriod === 'annual' || normalizedPeriod === 'yearly') {
+      return (
+        Number(plan.priceAnnual || 0) ||
+        Number(plan.priceMonthly || 0) * 12
+      );
+    }
 
-    return Number(plan.priceMonthly || 0);
+    return (
+      Number(plan.priceMonthly || 0) ||
+      (Number(plan.priceAnnual || 0) > 0 ? Number(plan.priceAnnual) / 12 : 0)
+    );
   }
 
   private resolveBookingType(bookingType?: string) {
@@ -63,7 +87,8 @@ export class PricingService {
     if (status === BookingStatus.confirmed) return BookingStatus.confirmed;
     if (status === BookingStatus.cancelled) return BookingStatus.cancelled;
     if (status === BookingStatus.completed) return BookingStatus.completed;
-    if (status === BookingStatus.not_checked_in) return BookingStatus.not_checked_in;
+    if (status === BookingStatus.not_checked_in)
+      return BookingStatus.not_checked_in;
 
     return fallback || BookingStatus.unpaid;
   }
@@ -86,10 +111,16 @@ export class PricingService {
     return PaymentStatus.paid;
   }
 
-  private getMembershipEndDate(booking: { createdAt: Date; preferredTimeSlot?: string | null }) {
+  private getMembershipEndDate(booking: {
+    createdAt: Date;
+    preferredTimeSlot?: string | null;
+  }) {
     const endDate = new Date(booking.createdAt);
-    if ((booking.preferredTimeSlot || '').toLowerCase().includes('daily')) {
+    const slot = (booking.preferredTimeSlot || '').toLowerCase();
+    if (slot.includes('daily')) {
       endDate.setDate(endDate.getDate() + 1);
+    } else if (slot.includes('annual') || slot.includes('yearly')) {
+      endDate.setFullYear(endDate.getFullYear() + 1);
     } else {
       endDate.setMonth(endDate.getMonth() + 1);
     }
@@ -107,7 +138,9 @@ export class PricingService {
       select: { id: true, createdAt: true, preferredTimeSlot: true },
     });
     const expiredIds = memberships
-      .filter((booking) => this.getMembershipEndDate(booking).getTime() <= Date.now())
+      .filter(
+        (booking) => this.getMembershipEndDate(booking).getTime() <= Date.now(),
+      )
       .map((booking) => booking.id);
     if (expiredIds.length) {
       await this.prisma.booking.updateMany({
@@ -160,8 +193,9 @@ export class PricingService {
         name: data.name,
         slug,
         tagline: data.tagline || null,
-        priceMonthly: Number(data.priceMonthly),
+        priceMonthly: Number(data.priceMonthly || 0),
         priceDaily: Number(data.priceDaily || 0),
+        priceAnnual: Number(data.priceAnnual || 0),
         billingPeriod: data.billingPeriod || 'Monthly',
         meetingCreditsIncluded: Number(data.meetingCreditsIncluded || 0),
         deskCreditsIncluded: Number(data.deskCreditsIncluded || 0),
@@ -188,13 +222,18 @@ export class PricingService {
   }
 
   async updatePlan(id: number, data: UpdatePricingPlanDto) {
-    const existing = await this.prisma.pricingPlan.findUnique({ where: { id } });
+    const existing = await this.prisma.pricingPlan.findUnique({
+      where: { id },
+    });
     if (!existing) {
       throw new NotFoundException('Pricing plan not found');
     }
 
-    const nextSlug = data.slug || (data.name ? this.normalizeSlug(data.name) : existing.slug);
-    const featuresList = data.featuresList ? this.normalizeFeatures(data.featuresList) : undefined;
+    const nextSlug =
+      data.slug || (data.name ? this.normalizeSlug(data.name) : existing.slug);
+    const featuresList = data.featuresList
+      ? this.normalizeFeatures(data.featuresList)
+      : undefined;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const plan = await tx.pricingPlan.update({
@@ -202,15 +241,36 @@ export class PricingService {
         data: {
           ...(data.name ? { name: data.name } : {}),
           ...(data.slug || data.name ? { slug: nextSlug } : {}),
-          ...(data.tagline !== undefined ? { tagline: data.tagline || null } : {}),
-          ...(data.priceMonthly !== undefined ? { priceMonthly: Number(data.priceMonthly) } : {}),
-          ...(data.priceDaily !== undefined ? { priceDaily: Number(data.priceDaily) } : {}),
-          ...(data.billingPeriod !== undefined ? { billingPeriod: data.billingPeriod } : {}),
-          ...(data.meetingCreditsIncluded !== undefined ? { meetingCreditsIncluded: Number(data.meetingCreditsIncluded) } : {}),
-          ...(data.deskCreditsIncluded !== undefined ? { deskCreditsIncluded: Number(data.deskCreditsIncluded) } : {}),
-          ...(data.isPopular !== undefined ? { isPopular: Boolean(data.isPopular) } : {}),
-          ...(data.sortOrder !== undefined ? { sortOrder: Number(data.sortOrder) } : {}),
-          ...(data.isActive !== undefined ? { isActive: Boolean(data.isActive) } : {}),
+          ...(data.tagline !== undefined
+            ? { tagline: data.tagline || null }
+            : {}),
+          ...(data.priceMonthly !== undefined
+            ? { priceMonthly: Number(data.priceMonthly) }
+            : {}),
+          ...(data.priceDaily !== undefined
+            ? { priceDaily: Number(data.priceDaily) }
+            : {}),
+          ...(data.priceAnnual !== undefined
+            ? { priceAnnual: Number(data.priceAnnual) }
+            : {}),
+          ...(data.billingPeriod !== undefined
+            ? { billingPeriod: data.billingPeriod }
+            : {}),
+          ...(data.meetingCreditsIncluded !== undefined
+            ? { meetingCreditsIncluded: Number(data.meetingCreditsIncluded) }
+            : {}),
+          ...(data.deskCreditsIncluded !== undefined
+            ? { deskCreditsIncluded: Number(data.deskCreditsIncluded) }
+            : {}),
+          ...(data.isPopular !== undefined
+            ? { isPopular: Boolean(data.isPopular) }
+            : {}),
+          ...(data.sortOrder !== undefined
+            ? { sortOrder: Number(data.sortOrder) }
+            : {}),
+          ...(data.isActive !== undefined
+            ? { isActive: Boolean(data.isActive) }
+            : {}),
         },
       });
 
@@ -243,7 +303,9 @@ export class PricingService {
   }
 
   async deletePlan(id: number) {
-    const existing = await this.prisma.pricingPlan.findUnique({ where: { id } });
+    const existing = await this.prisma.pricingPlan.findUnique({
+      where: { id },
+    });
     if (!existing) {
       throw new NotFoundException('Pricing plan not found');
     }
@@ -271,11 +333,17 @@ export class PricingService {
 
     const quantity = Number(dto.quantity || 1);
     const billingPeriod = dto.billingPeriod || plan.billingPeriod || 'Monthly';
-    const baseAmount = this.resolvePlanBillingPrice(plan, billingPeriod) * quantity;
+    const baseAmount =
+      this.resolvePlanBillingPrice(plan, billingPeriod) * quantity;
     const addons = Number(dto.addonAmount || 0);
     const subtotal = baseAmount + addons;
-    const siteSetting = await this.prisma.siteSetting.findUnique({ where: { key: 'tax_rate' } });
-    const defaultTaxRate = siteSetting && !isNaN(Number(siteSetting.value)) ? Number(siteSetting.value) : 0.18;
+    const siteSetting = await this.prisma.siteSetting.findUnique({
+      where: { key: 'tax_rate' },
+    });
+    const defaultTaxRate =
+      siteSetting && !isNaN(Number(siteSetting.value))
+        ? Number(siteSetting.value)
+        : 0.18;
     const taxRate = Number(dto.taxRate ?? defaultTaxRate);
     const taxAmount = this.roundCurrency(subtotal * taxRate);
     const totalAmount = this.roundCurrency(subtotal + taxAmount);
@@ -292,7 +360,8 @@ export class PricingService {
         taxRate,
         taxAmount,
         totalAmount,
-        includedMeetingCredits: Number(plan.meetingCreditsIncluded || 0) * quantity,
+        includedMeetingCredits:
+          Number(plan.meetingCreditsIncluded || 0) * quantity,
         includedDeskCredits: Number(plan.deskCreditsIncluded || 0) * quantity,
       },
     };
@@ -300,7 +369,9 @@ export class PricingService {
 
   async createTourBooking(dto: CreateTourBookingDto) {
     const plan = dto.pricingPlanId
-      ? await this.prisma.pricingPlan.findUnique({ where: { id: dto.pricingPlanId } })
+      ? await this.prisma.pricingPlan.findUnique({
+          where: { id: dto.pricingPlanId },
+        })
       : await this.prisma.pricingPlan.findFirst({
           where: { isActive: true },
           orderBy: { sortOrder: 'asc' },
@@ -321,10 +392,16 @@ export class PricingService {
     const bookingCode = `BK-${Date.now().toString(36).toUpperCase()}`;
     const validBookingType = this.resolveBookingType(dto.bookingType);
     const defaultStatus = this.resolveDefaultStatus(validBookingType);
-    const defaultPaymentStatus = this.resolveDefaultPaymentStatus(validBookingType);
+    const defaultPaymentStatus =
+      this.resolveDefaultPaymentStatus(validBookingType);
 
-    const siteSettingForTax = await this.prisma.siteSetting.findUnique({ where: { key: 'tax_rate' } });
-    const taxRate = siteSettingForTax && !isNaN(Number(siteSettingForTax.value)) ? Number(siteSettingForTax.value) : 0.18;
+    const siteSettingForTax = await this.prisma.siteSetting.findUnique({
+      where: { key: 'tax_rate' },
+    });
+    const taxRate =
+      siteSettingForTax && !isNaN(Number(siteSettingForTax.value))
+        ? Number(siteSettingForTax.value)
+        : 0.18;
 
     const booking = await this.prisma.booking.create({
       data: {
@@ -342,9 +419,16 @@ export class PricingService {
         bookingType: validBookingType,
         notes: dto.notes,
         status: this.resolveBookingStatus(dto.status, defaultStatus),
-        paymentStatus: this.resolvePaymentStatus(dto.paymentStatus, defaultPaymentStatus),
-        totalAmount: dto.totalAmount ? Number(dto.totalAmount) : Number(plan.priceMonthly || plan.priceDaily || 0),
-        taxAmount: dto.totalAmount ? this.roundCurrency(Number(dto.totalAmount) * taxRate) : 0,
+        paymentStatus: this.resolvePaymentStatus(
+          dto.paymentStatus,
+          defaultPaymentStatus,
+        ),
+        totalAmount: dto.totalAmount
+          ? Number(dto.totalAmount)
+          : Number(plan.priceMonthly || plan.priceDaily || 0),
+        taxAmount: dto.totalAmount
+          ? this.roundCurrency(Number(dto.totalAmount) * taxRate)
+          : 0,
       },
       include: {
         pricingPlan: true,
@@ -359,8 +443,20 @@ export class PricingService {
     };
   }
 
-  async subscribeToPlan(planId: number, userId: number, data: { billingPeriod?: string; paymentMethod?: string; razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string }) {
-    const plan = await this.prisma.pricingPlan.findUnique({ where: { id: planId } });
+  async subscribeToPlan(
+    planId: number,
+    userId: number,
+    data: {
+      billingPeriod?: string;
+      paymentMethod?: string;
+      razorpayOrderId?: string;
+      razorpayPaymentId?: string;
+      razorpaySignature?: string;
+    },
+  ) {
+    const plan = await this.prisma.pricingPlan.findUnique({
+      where: { id: planId },
+    });
     if (!plan || !plan.isActive) {
       throw new NotFoundException('Pricing plan not found');
     }
@@ -385,15 +481,26 @@ export class PricingService {
     // If there is an active membership, allow upgrade but prevent downgrade
     if (activeMembership) {
       const currentPlan = activeMembership.pricingPlan;
-      const requestedBilling = data.billingPeriod || plan.billingPeriod || 'Monthly';
-      const currentBilling = activeMembership.preferredTimeSlot?.includes('Daily') ? 'Daily' : 'Monthly';
-      const currentPrice = this.resolvePlanBillingPrice(currentPlan, currentBilling);
-      const requestedPrice = this.resolvePlanBillingPrice(plan, requestedBilling);
+      const requestedBilling =
+        data.billingPeriod || plan.billingPeriod || 'Monthly';
+      const currentBilling = activeMembership.preferredTimeSlot?.includes(
+        'Daily',
+      )
+        ? 'Daily'
+        : 'Monthly';
+      const currentPrice = this.resolvePlanBillingPrice(
+        currentPlan,
+        currentBilling,
+      );
+      const requestedPrice = this.resolvePlanBillingPrice(
+        plan,
+        requestedBilling,
+      );
 
       if (requestedPrice < currentPrice) {
         const endDate = this.getMembershipEndDate(activeMembership);
         throw new BadRequestException(
-          `Downgrades are not allowed. Current membership (${currentPlan?.name}) is active until ${endDate.toLocaleDateString('en-IN')}.`
+          `Downgrades are not allowed. Current membership (${currentPlan?.name}) is active until ${endDate.toLocaleDateString('en-IN')}.`,
         );
       }
 
@@ -411,15 +518,28 @@ export class PricingService {
 
     const billingPeriod = data.billingPeriod || plan.billingPeriod || 'Monthly';
     const subtotal = this.resolvePlanBillingPrice(plan, billingPeriod);
-    const siteSetting = await this.prisma.siteSetting.findUnique({ where: { key: 'tax_rate' } });
-    const taxRate = siteSetting && !isNaN(Number(siteSetting.value)) ? Number(siteSetting.value) : 0.18;
+    const siteSetting = await this.prisma.siteSetting.findUnique({
+      where: { key: 'tax_rate' },
+    });
+    const taxRate =
+      siteSetting && !isNaN(Number(siteSetting.value))
+        ? Number(siteSetting.value)
+        : 0.18;
     const taxAmount = this.roundCurrency(subtotal * taxRate);
     const totalAmount = this.roundCurrency(subtotal + taxAmount);
-    const paymentMethod = data.paymentMethod === 'wallet' ? PaymentMethod.wallet : PaymentMethod.razorpay;
+    const paymentMethod =
+      data.paymentMethod === 'wallet'
+        ? PaymentMethod.wallet
+        : PaymentMethod.razorpay;
 
     if (paymentMethod === PaymentMethod.razorpay) {
-      if (!data.razorpaySignature || data.razorpaySignature.startsWith('sig_demo_')) {
-        throw new BadRequestException('Real Razorpay payment is required for membership subscription.');
+      if (
+        !data.razorpaySignature ||
+        data.razorpaySignature.startsWith('sig_demo_')
+      ) {
+        throw new BadRequestException(
+          'Real Razorpay payment is required for membership subscription.',
+        );
       }
 
       const isValid = this.razorpayService.verifyPaymentSignature({
@@ -429,7 +549,9 @@ export class PricingService {
       });
 
       if (!isValid) {
-        throw new BadRequestException('Razorpay payment verification failed. Subscription was not activated.');
+        throw new BadRequestException(
+          'Razorpay payment verification failed. Subscription was not activated.',
+        );
       }
     }
 
@@ -437,16 +559,33 @@ export class PricingService {
       if (paymentMethod === PaymentMethod.wallet) {
         const walletBalance = Number(user.walletBalance || 0);
         if (walletBalance < totalAmount) {
-          throw new BadRequestException(`Insufficient wallet balance. Required: ₹${totalAmount}, Available: ₹${walletBalance}.`);
+          throw new BadRequestException(
+            `Insufficient wallet balance. Required: ₹${totalAmount}, Available: ₹${walletBalance}.`,
+          );
         }
       }
 
       const updatedUser = await tx.user.update({
         where: { id: user.id },
         data: {
-          walletBalance: paymentMethod === PaymentMethod.wallet ? Number((Number(user.walletBalance || 0) - totalAmount).toFixed(2)) : user.walletBalance,
-          meetingCreditsBalance: Number((Number((user as any).meetingCreditsBalance || 0) + Number(plan.meetingCreditsIncluded || 0)).toFixed(2)),
-          deskCreditsBalance: Number((Number((user as any).deskCreditsBalance || 0) + Number(plan.deskCreditsIncluded || 0)).toFixed(2)),
+          walletBalance:
+            paymentMethod === PaymentMethod.wallet
+              ? Number(
+                  (Number(user.walletBalance || 0) - totalAmount).toFixed(2),
+                )
+              : user.walletBalance,
+          meetingCreditsBalance: Number(
+            (
+              Number((user as any).meetingCreditsBalance || 0) +
+              Number(plan.meetingCreditsIncluded || 0)
+            ).toFixed(2),
+          ),
+          deskCreditsBalance: Number(
+            (
+              Number((user as any).deskCreditsBalance || 0) +
+              Number(plan.deskCreditsIncluded || 0)
+            ).toFixed(2),
+          ),
         },
       });
 
@@ -506,15 +645,25 @@ export class PricingService {
         user: {
           ...updatedUser,
           walletBalance: Number(updatedUser.walletBalance || 0),
-          meetingCreditsBalance: Number((updatedUser as any).meetingCreditsBalance || 0),
-          deskCreditsBalance: Number((updatedUser as any).deskCreditsBalance || 0),
+          meetingCreditsBalance: Number(
+            (updatedUser as any).meetingCreditsBalance || 0,
+          ),
+          deskCreditsBalance: Number(
+            (updatedUser as any).deskCreditsBalance || 0,
+          ),
         },
       };
     });
   }
 
-  async assignPlanToUser(planId: number, userId: number, data: { waivePayment?: boolean; billingPeriod?: string }) {
-    const plan = await this.prisma.pricingPlan.findUnique({ where: { id: planId } });
+  async assignPlanToUser(
+    planId: number,
+    userId: number,
+    data: { waivePayment?: boolean; billingPeriod?: string },
+  ) {
+    const plan = await this.prisma.pricingPlan.findUnique({
+      where: { id: planId },
+    });
     if (!plan) throw new NotFoundException('Pricing plan not found');
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -533,7 +682,10 @@ export class PricingService {
     });
 
     if (activeMembership) {
-      await this.prisma.booking.updateMany({ where: { id: activeMembership.id }, data: { status: BookingStatus.completed } });
+      await this.prisma.booking.updateMany({
+        where: { id: activeMembership.id },
+        data: { status: BookingStatus.completed },
+      });
     }
 
     const branch = await this.prisma.branch.findFirst();
@@ -541,17 +693,34 @@ export class PricingService {
 
     const billingPeriod = data.billingPeriod || plan.billingPeriod || 'Monthly';
     const subtotal = this.resolvePlanBillingPrice(plan, billingPeriod);
-    const siteSetting2 = await this.prisma.siteSetting.findUnique({ where: { key: 'tax_rate' } });
-    const taxRate2 = siteSetting2 && !isNaN(Number(siteSetting2.value)) ? Number(siteSetting2.value) : 0.18;
+    const siteSetting2 = await this.prisma.siteSetting.findUnique({
+      where: { key: 'tax_rate' },
+    });
+    const taxRate2 =
+      siteSetting2 && !isNaN(Number(siteSetting2.value))
+        ? Number(siteSetting2.value)
+        : 0.18;
     const taxAmount = this.roundCurrency(subtotal * taxRate2);
-    const totalAmount = data.waivePayment ? 0 : this.roundCurrency(subtotal + taxAmount);
+    const totalAmount = data.waivePayment
+      ? 0
+      : this.roundCurrency(subtotal + taxAmount);
 
     return this.prisma.$transaction(async (tx) => {
       const updatedUser = await tx.user.update({
         where: { id: user.id },
         data: {
-          meetingCreditsBalance: Number((Number((user as any).meetingCreditsBalance || 0) + Number(plan.meetingCreditsIncluded || 0)).toFixed(2)),
-          deskCreditsBalance: Number((Number((user as any).deskCreditsBalance || 0) + Number(plan.deskCreditsIncluded || 0)).toFixed(2)),
+          meetingCreditsBalance: Number(
+            (
+              Number((user as any).meetingCreditsBalance || 0) +
+              Number(plan.meetingCreditsIncluded || 0)
+            ).toFixed(2),
+          ),
+          deskCreditsBalance: Number(
+            (
+              Number((user as any).deskCreditsBalance || 0) +
+              Number(plan.deskCreditsIncluded || 0)
+            ).toFixed(2),
+          ),
         },
       });
 
@@ -609,8 +778,12 @@ export class PricingService {
         user: {
           ...updatedUser,
           walletBalance: Number(updatedUser.walletBalance || 0),
-          meetingCreditsBalance: Number((updatedUser as any).meetingCreditsBalance || 0),
-          deskCreditsBalance: Number((updatedUser as any).deskCreditsBalance || 0),
+          meetingCreditsBalance: Number(
+            (updatedUser as any).meetingCreditsBalance || 0,
+          ),
+          deskCreditsBalance: Number(
+            (updatedUser as any).deskCreditsBalance || 0,
+          ),
         },
       };
     });

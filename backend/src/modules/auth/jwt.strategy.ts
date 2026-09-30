@@ -8,7 +8,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private prisma: PrismaService) {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
-      throw new Error('JWT_SECRET environment variable is required but not set. Application startup aborted.');
+      throw new Error(
+        'JWT_SECRET environment variable is required but not set. Application startup aborted.',
+      );
     }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

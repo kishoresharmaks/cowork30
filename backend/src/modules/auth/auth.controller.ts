@@ -1,4 +1,14 @@
-import { Controller, Post, Body, Get, Put, Param, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Put,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
@@ -30,7 +40,9 @@ export class AuthController {
   }
 
   @Post('register')
-  @ApiOperation({ summary: 'Register a new member account with ₹500 welcome bonus' })
+  @ApiOperation({
+    summary: 'Register a new member account with ₹500 welcome bonus',
+  })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
@@ -38,7 +50,10 @@ export class AuthController {
   @Get('user-by-email')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Auto-lookup member details by email address for booking forms (authenticated)' })
+  @ApiOperation({
+    summary:
+      'Auto-lookup member details by email address for booking forms (authenticated)',
+  })
   async findUserByEmail(@Query('email') email: string, @Request() req: any) {
     return this.authService.findUserByEmail(email, req.user?.id);
   }
@@ -46,7 +61,9 @@ export class AuthController {
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current logged-in user profile & wallet balance' })
+  @ApiOperation({
+    summary: 'Get current logged-in user profile & wallet balance',
+  })
   async getProfile(@Request() req: any) {
     return this.authService.getProfile(req.user.id);
   }
@@ -62,7 +79,9 @@ export class AuthController {
   @Get('my-bookings')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get member active & past reservations (desk & meeting rooms)' })
+  @ApiOperation({
+    summary: 'Get member active & past reservations (desk & meeting rooms)',
+  })
   async getMyBookings(@Request() req: any) {
     return this.authService.getMyBookings(req.user.id);
   }
@@ -73,7 +92,10 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all platform users with search, role filter, and booking metrics (Admin Only)' })
+  @ApiOperation({
+    summary:
+      'Get all platform users with search, role filter, and booking metrics (Admin Only)',
+  })
   async getAdminUsers(
     @Query('search') search?: string,
     @Query('role') role?: string,
@@ -92,7 +114,10 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get detailed member profile with all desk/meeting room bookings, wallet logs, and invoices (Admin Only)' })
+  @ApiOperation({
+    summary:
+      'Get detailed member profile with all desk/meeting room bookings, wallet logs, and invoices (Admin Only)',
+  })
   async getAdminUserDetail(@Param('id') id: string) {
     return this.authService.getAdminUserDetail(Number(id));
   }
@@ -101,7 +126,9 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin manual wallet credit/debit adjustment (Admin Only)' })
+  @ApiOperation({
+    summary: 'Admin manual wallet credit/debit adjustment (Admin Only)',
+  })
   async adjustUserWallet(
     @Param('id') id: string,
     @Body() body: { amount: number; type: 'credit' | 'debit'; reason: string },
@@ -113,7 +140,9 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Change user account role between member and admin (Admin Only)' })
+  @ApiOperation({
+    summary: 'Change user account role between member and admin (Admin Only)',
+  })
   async updateUserRole(
     @Param('id') id: string,
     @Body() body: { role: string },
@@ -128,16 +157,27 @@ export class AuthController {
   @ApiOperation({ summary: 'Assign pricing plan to user (Admin Only)' })
   async assignPlanToUser(
     @Param('id', ParseIntPipe) userId: number,
-    @Body() body: { pricingPlanId: number; waivePayment?: boolean; billingPeriod?: string },
+    @Body()
+    body: {
+      pricingPlanId: number;
+      waivePayment?: boolean;
+      billingPeriod?: string;
+    },
   ) {
-    return this.pricingService.assignPlanToUser(Number(body.pricingPlanId), userId, body);
+    return this.pricingService.assignPlanToUser(
+      Number(body.pricingPlanId),
+      userId,
+      body,
+    );
   }
 
   @Put('admin/users/:id/reset-password')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin manual password reset for user account (Admin Only)' })
+  @ApiOperation({
+    summary: 'Admin manual password reset for user account (Admin Only)',
+  })
   async adminResetPassword(
     @Param('id') id: string,
     @Body() body: { password?: string; newPassword?: string },

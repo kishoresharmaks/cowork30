@@ -25,6 +25,7 @@ type PricingPlan = {
   billingPeriod?: string | null;
   priceMonthly: number;
   priceDaily: number;
+  priceAnnual?: number;
   meetingCreditsIncluded: number;
   deskCreditsIncluded: number;
   isPopular: boolean;
@@ -71,7 +72,7 @@ export default function PricingPage() {
   const [activeMembership, setActiveMembership] = useState<any>(null);
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [showTourModal, setShowTourModal] = useState(false);
-  const [billingMode, setBillingMode] = useState<'monthly' | 'daily'>('monthly');
+  const [billingMode, setBillingMode] = useState<'monthly' | 'daily' | 'annual'>('monthly');
   const [quote, setQuote] = useState<any>(null);
   const [loadingQuote, setLoadingQuote] = useState(false);
 
@@ -111,7 +112,7 @@ export default function PricingPage() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const billing = params.get('billing');
-      if (billing === 'daily' || billing === 'monthly') {
+      if (billing === 'daily' || billing === 'monthly' || billing === 'annual') {
         setBillingMode(billing);
       }
       const tab = params.get('tab');
@@ -152,9 +153,18 @@ export default function PricingPage() {
 
       setLoadingQuote(true);
       try {
+        const isAnnualPlan = selectedPlan.billingPeriod === 'Annual' || selectedPlan.billingPeriod === 'Annual Only';
+        const requestedPeriod = isAnnualPlan
+          ? 'Annual'
+          : billingMode === 'daily'
+          ? 'Daily'
+          : billingMode === 'annual'
+          ? 'Annual'
+          : 'Monthly';
+
         const res = await apiClient.post('/pricing/quote', {
           pricingPlanId: selectedPlan.id,
-          billingPeriod: billingMode === 'daily' ? 'Daily' : 'Monthly',
+          billingPeriod: requestedPeriod,
           quantity: 1,
         });
         setQuote(res.data?.quote || null);
@@ -206,20 +216,36 @@ export default function PricingPage() {
     }
   };
 
+  const computePlanSubtotal = (plan: PricingPlan, mode: 'daily' | 'monthly' | 'annual') => {
+    const isAnnualPlan = plan.billingPeriod === 'Annual' || plan.billingPeriod === 'Annual Only';
+    if (isAnnualPlan || mode === 'annual') {
+      return Number(plan.priceAnnual || (plan.priceMonthly ? plan.priceMonthly * 12 : 0));
+    }
+    if (mode === 'daily') {
+      return Number(plan.priceDaily || plan.priceMonthly);
+    }
+    return Number(plan.priceMonthly || (plan.priceAnnual ? Math.round(plan.priceAnnual / 12) : 0));
+  };
+
   const getPlanTotal = (plan: PricingPlan) => {
-    const subtotal = billingMode === 'daily' ? Number(plan.priceDaily || plan.priceMonthly) : Number(plan.priceMonthly || plan.priceDaily);
+    const isAnnualPlan = plan.billingPeriod === 'Annual' || plan.billingPeriod === 'Annual Only';
+    const effectiveMode = isAnnualPlan ? 'annual' : billingMode;
+    const subtotal = computePlanSubtotal(plan, effectiveMode);
     return Math.round((subtotal * 1.18 + Number.EPSILON) * 100) / 100;
   };
 
-  const computePlanTotalWithBilling = (plan: PricingPlan, billing: 'daily' | 'monthly') => {
-    const subtotal = billing === 'daily' ? Number(plan.priceDaily || plan.priceMonthly) : Number(plan.priceMonthly || plan.priceDaily);
+  const computePlanTotalWithBilling = (plan: PricingPlan, billing: 'daily' | 'monthly' | 'annual') => {
+    const subtotal = computePlanSubtotal(plan, billing);
     return Math.round((subtotal * 1.18 + Number.EPSILON) * 100) / 100;
   };
 
   const getMembershipEndDate = (membership: any) => {
     const endDate = new Date(membership.createdAt);
-    if ((membership.preferredTimeSlot || '').toLowerCase().includes('daily')) {
+    const slot = (membership.preferredTimeSlot || '').toLowerCase();
+    if (slot.includes('daily')) {
       endDate.setDate(endDate.getDate() + 1);
+    } else if (slot.includes('annual') || slot.includes('yearly')) {
+      endDate.setFullYear(endDate.getFullYear() + 1);
     } else {
       endDate.setMonth(endDate.getMonth() + 1);
     }
@@ -227,8 +253,11 @@ export default function PricingPage() {
   };
 
   const subscribeToPlan = async (plan: PricingPlan, paymentMethod: 'wallet' | 'razorpay', razorpayResponse?: any) => {
+    const isAnnualPlan = plan.billingPeriod === 'Annual' || plan.billingPeriod === 'Annual Only';
+    const effectivePeriod = isAnnualPlan ? 'Annual' : billingMode === 'daily' ? 'Daily' : billingMode === 'annual' ? 'Annual' : 'Monthly';
+
     const res = await apiClient.post(`/pricing/plans/${plan.id}/subscribe`, {
-      billingPeriod: billingMode === 'daily' ? 'Daily' : 'Monthly',
+      billingPeriod: effectivePeriod,
       paymentMethod,
       razorpayOrderId: razorpayResponse?.razorpay_order_id,
       razorpayPaymentId: razorpayResponse?.razorpay_payment_id,
@@ -246,10 +275,12 @@ export default function PricingPage() {
     }
 
     if (activeMembership) {
-      const currentBilling = (activeMembership.preferredTimeSlot || '').toLowerCase().includes('daily') ? 'daily' : 'monthly';
-      const currentTotal = computePlanTotalWithBilling(activeMembership.pricingPlan, currentBilling as 'daily' | 'monthly');
-      const requestedBilling = billingMode === 'daily' ? 'daily' : 'monthly';
-      const requestedTotal = computePlanTotalWithBilling(plan, requestedBilling as 'daily' | 'monthly');
+      const slot = (activeMembership.preferredTimeSlot || '').toLowerCase();
+      const currentBilling = slot.includes('daily') ? 'daily' : slot.includes('annual') ? 'annual' : 'monthly';
+      const currentTotal = computePlanTotalWithBilling(activeMembership.pricingPlan, currentBilling as any);
+      const isAnnualPlan = plan.billingPeriod === 'Annual' || plan.billingPeriod === 'Annual Only';
+      const requestedBilling = isAnnualPlan ? 'annual' : billingMode;
+      const requestedTotal = computePlanTotalWithBilling(plan, requestedBilling as any);
 
       if (requestedTotal < currentTotal - 0.01) {
         alert(`Downgrades are not allowed. Your current membership (${activeMembership.pricingPlan?.name}) is active until ${getMembershipEndDate(activeMembership).toLocaleDateString()}.`);
@@ -342,7 +373,7 @@ export default function PricingPage() {
             Flexible Plans Built For Teams & Creators
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            Start free, or unlock desk credits and meeting room credits with monthly and daily membership tiers.
+            Start free, or unlock desk credits and meeting room credits with monthly, annual, and daily membership tiers.
           </p>
         </div>
 
@@ -371,18 +402,32 @@ export default function PricingPage() {
                 <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900">Membership Tiers</h2>
                 <p className="text-xs text-slate-500">Free users can book as-you-go. Membership tiers include bonus credits.</p>
               </div>
-              <div className="flex items-center gap-1.5 bg-white p-1 rounded-full border border-slate-200 shadow-xs text-xs">
+              <div className="flex items-center gap-1 bg-white p-1 rounded-full border border-slate-200 shadow-xs text-xs">
                 <button
                   type="button"
                   onClick={() => setBillingMode('monthly')}
-                  className={`px-3 py-1 rounded-full font-bold transition-all cursor-pointer ${billingMode === 'monthly' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                  className={`px-3 py-1 rounded-full font-bold transition-all cursor-pointer ${
+                    billingMode === 'monthly' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
                   Monthly
                 </button>
                 <button
                   type="button"
+                  onClick={() => setBillingMode('annual')}
+                  className={`px-3 py-1 rounded-full font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    billingMode === 'annual' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Annual</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 font-black">Save</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setBillingMode('daily')}
-                  className={`px-3 py-1 rounded-full font-bold transition-all cursor-pointer ${billingMode === 'daily' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                  className={`px-3 py-1 rounded-full font-bold transition-all cursor-pointer ${
+                    billingMode === 'daily' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
                   Daily
                 </button>
@@ -465,22 +510,26 @@ export default function PricingPage() {
 
               {/* Paid Plans */}
               {visiblePlans.map((plan) => {
-                const displayPrice = billingMode === 'daily' ? Number(plan.priceDaily || plan.priceMonthly) : Number(plan.priceMonthly || plan.priceDaily);
+                const isAnnualPlan = plan.billingPeriod === 'Annual' || plan.billingPeriod === 'Annual Only';
+                const effectiveMode = isAnnualPlan ? 'annual' : billingMode;
+                const displayPrice = computePlanSubtotal(plan, effectiveMode);
+                const displayUnit = (isAnnualPlan || billingMode === 'annual') ? '/ year' : billingMode === 'daily' ? '/ day' : '/ month';
+
                 const isCurrentPlan = activeMembership?.pricingPlanId === plan.id;
-                const requestedBilling = billingMode === 'daily' ? 'daily' : 'monthly';
-                const requestedTotal = computePlanTotalWithBilling(plan, requestedBilling as 'daily' | 'monthly');
+                const requestedTotal = computePlanTotalWithBilling(plan, effectiveMode);
                 let isUpgradeEligible = true;
                 let currentTotal = 0;
                 if (activeMembership) {
-                  const currentBilling = (activeMembership.preferredTimeSlot || '').toLowerCase().includes('daily') ? 'daily' : 'monthly';
-                  currentTotal = computePlanTotalWithBilling(activeMembership.pricingPlan, currentBilling as 'daily' | 'monthly');
+                  const slot = (activeMembership.preferredTimeSlot || '').toLowerCase();
+                  const currentBilling = slot.includes('daily') ? 'daily' : slot.includes('annual') ? 'annual' : 'monthly';
+                  currentTotal = computePlanTotalWithBilling(activeMembership.pricingPlan, currentBilling as any);
                   isUpgradeEligible = requestedTotal > currentTotal + 0.009;
                 }
                 return (
                   <div
                     key={plan.id}
                     className={`bg-white p-6 rounded-2xl space-y-6 flex flex-col justify-between border relative transition-all duration-300 shadow-xs ${
-                      plan.isPopular
+                      plan.isPopular || isAnnualPlan
                         ? 'border-2 border-indigo-600 shadow-md ring-1 ring-indigo-500/30'
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
@@ -491,15 +540,35 @@ export default function PricingPage() {
                       </div>
                     )}
 
+                    {isAnnualPlan && !plan.isPopular && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-500 text-[10px] font-extrabold uppercase tracking-wider text-slate-950 shadow-sm">
+                        Annual Only Plan
+                      </div>
+                    )}
+
                     <div className="space-y-4">
                       <div>
-                        <h3 className="text-xl font-extrabold text-slate-900">{plan.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xl font-extrabold text-slate-900">{plan.name}</h3>
+                          {isAnnualPlan && (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+                              Annual Only
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-slate-500 mt-1 leading-relaxed">{plan.tagline || 'Flexible coworking membership tier.'}</p>
                       </div>
 
-                      <div className="pt-2 flex items-baseline space-x-1">
-                        <span className="text-4xl font-extrabold text-slate-900">₹{displayPrice}</span>
-                        <span className="text-xs text-slate-500">{billingMode === 'daily' ? '/ day' : '/ month'}</span>
+                      <div className="pt-2">
+                        <div className="flex items-baseline space-x-1">
+                          <span className="text-4xl font-extrabold text-slate-900">₹{displayPrice}</span>
+                          <span className="text-xs text-slate-500">{displayUnit}</span>
+                        </div>
+                        {(isAnnualPlan || billingMode === 'annual') && displayPrice > 0 && (
+                          <p className="text-[11px] text-indigo-600 font-semibold mt-0.5">
+                            ~₹{Math.round(displayPrice / 12)} / month (billed annually)
+                          </p>
+                        )}
                       </div>
 
                       <div className="text-xs text-slate-600 space-y-1 font-medium">
@@ -524,7 +593,7 @@ export default function PricingPage() {
                         onClick={() => handleSubscribe(plan)}
                         disabled={subscribingPlanId === plan.id || (!isUpgradeEligible && Boolean(activeMembership))}
                         className={`w-full py-3 rounded-full text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
-                          plan.isPopular
+                          plan.isPopular || isAnnualPlan
                             ? 'text-white bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 shadow-md shadow-pink-500/20 hover:opacity-95'
                             : 'bg-slate-900 text-white hover:bg-slate-800'
                         } disabled:opacity-50`}

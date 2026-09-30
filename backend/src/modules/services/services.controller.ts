@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ServicesService } from './services.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -42,7 +53,9 @@ export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}
 
   @Get('inquiries/:id/messages')
-  @ApiOperation({ summary: 'Get live chat message history for a service inquiry' })
+  @ApiOperation({
+    summary: 'Get live chat message history for a service inquiry',
+  })
   async getInquiryMessages(@Param('id', ParseIntPipe) id: number) {
     return this.servicesService.getInquiryMessages(id);
   }
@@ -63,7 +76,10 @@ export class ServicesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get workspace and professional services catalog filterable by branch and category' })
+  @ApiOperation({
+    summary:
+      'Get workspace and professional services catalog filterable by branch and category',
+  })
   async findAll(
     @Query('all') all?: string,
     @Query('branchId') branchId?: string,
@@ -74,7 +90,10 @@ export class ServicesController {
   }
 
   @Post('inquiry')
-  @ApiOperation({ summary: 'Submit a workspace solution or professional advisory service inquiry' })
+  @ApiOperation({
+    summary:
+      'Submit a workspace solution or professional advisory service inquiry',
+  })
   async createServiceInquiry(@Body() body: any) {
     return this.servicesService.createServiceInquiry(body);
   }
@@ -83,7 +102,10 @@ export class ServicesController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin: Get all service solution inquiries filterable by branch and category' })
+  @ApiOperation({
+    summary:
+      'Admin: Get all service solution inquiries filterable by branch and category',
+  })
   async findAllInquiries(
     @Query('branchId') branchId?: string,
     @Query('category') category?: string,
@@ -96,9 +118,19 @@ export class ServicesController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin: Update service inquiry status or total quote amount' })
-  async updateInquiryStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateInquiryDto) {
-    return this.servicesService.updateInquiryStatus(id, dto.status as any, dto.totalAmount, dto.paymentStatus as any);
+  @ApiOperation({
+    summary: 'Admin: Update service inquiry status or total quote amount',
+  })
+  async updateInquiryStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateInquiryDto,
+  ) {
+    return this.servicesService.updateInquiryStatus(
+      id,
+      dto.status as any,
+      dto.totalAmount,
+      dto.paymentStatus as any,
+    );
   }
 
   @Delete('admin/inquiries/:id')
@@ -129,8 +161,13 @@ export class ServicesController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin: Update workspace solution details and active status' })
-  async updateService(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+  @ApiOperation({
+    summary: 'Admin: Update workspace solution details and active status',
+  })
+  async updateService(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+  ) {
     return this.servicesService.updateService(id, body);
   }
 

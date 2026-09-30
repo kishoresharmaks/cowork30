@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, Optional, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Optional,
+  Logger,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
@@ -15,7 +21,10 @@ export class BookingsService {
     @Optional() private notificationsService?: NotificationsService,
   ) {}
 
-  private getBookingTimeWindow(preferredDate: Date | string, preferredTimeSlot?: string | null): { startTime: Date; endTime: Date } {
+  private getBookingTimeWindow(
+    preferredDate: Date | string,
+    preferredTimeSlot?: string | null,
+  ): { startTime: Date; endTime: Date } {
     let dateStr: string;
     if (preferredDate instanceof Date) {
       dateStr = preferredDate.toISOString().split('T')[0];
@@ -82,12 +91,16 @@ export class BookingsService {
       if (ampm === 'AM' && startHours === 12) startHours = 0;
 
       // Half-day (morning/afternoon) = 4h, Day pass default = 8h
-      const durationHours = (slotLower.includes('morning') || slotLower.includes('afternoon')) ? 4 : 8;
+      const durationHours =
+        slotLower.includes('morning') || slotLower.includes('afternoon')
+          ? 4
+          : 8;
       const endHours = startHours + durationHours;
       const finalEHours = endHours % 24;
 
       const startTotalMins = startHours * 60 + startMins;
-      const isOvernight = endHours >= 24 || (finalEHours * 60 + startMins) <= startTotalMins;
+      const isOvernight =
+        endHours >= 24 || finalEHours * 60 + startMins <= startTotalMins;
       const finalEndDateStr = isOvernight ? nextDateStr : dateStr;
 
       const sHStr = startHours.toString().padStart(2, '0');
@@ -114,10 +127,20 @@ export class BookingsService {
     const activeMeetings = await this.prisma.meetingBooking.findMany({
       where: {
         status: {
-          in: [BookingStatus.confirmed, BookingStatus.pending, BookingStatus.unpaid],
+          in: [
+            BookingStatus.confirmed,
+            BookingStatus.pending,
+            BookingStatus.unpaid,
+          ],
         },
       },
-      select: { id: true, startTime: true, endTime: true, status: true, paymentStatus: true },
+      select: {
+        id: true,
+        startTime: true,
+        endTime: true,
+        status: true,
+        paymentStatus: true,
+      },
     });
 
     const meetingIdsToComplete: number[] = [];
@@ -160,21 +183,34 @@ export class BookingsService {
     const activeDeskBookings = await this.prisma.booking.findMany({
       where: {
         status: {
-          in: [BookingStatus.confirmed, BookingStatus.pending, BookingStatus.unpaid],
+          in: [
+            BookingStatus.confirmed,
+            BookingStatus.pending,
+            BookingStatus.unpaid,
+          ],
         },
         NOT: [
           { bookingCode: { startsWith: 'SRV-' } },
           { notes: { contains: 'Solution:' } },
         ],
       },
-      select: { id: true, preferredDate: true, preferredTimeSlot: true, status: true, paymentStatus: true },
+      select: {
+        id: true,
+        preferredDate: true,
+        preferredTimeSlot: true,
+        status: true,
+        paymentStatus: true,
+      },
     });
 
     const deskIdsToComplete: number[] = [];
     const deskIdsNotCheckedIn: number[] = [];
 
     for (const db of activeDeskBookings) {
-      const { endTime } = this.getBookingTimeWindow(db.preferredDate, db.preferredTimeSlot);
+      const { endTime } = this.getBookingTimeWindow(
+        db.preferredDate,
+        db.preferredTimeSlot,
+      );
       if (endTime.getTime() <= nowTime) {
         // ONLY if customer actually checked in (status === BookingStatus.confirmed)
         if (db.status === BookingStatus.confirmed) {
@@ -217,7 +253,11 @@ export class BookingsService {
     };
   }
 
-  async findAll(query: { status?: BookingStatus; search?: string; type?: string }) {
+  async findAll(query: {
+    status?: BookingStatus;
+    search?: string;
+    type?: string;
+  }) {
     const where: any = {
       NOT: [
         { bookingCode: { startsWith: 'SRV-' } },
@@ -261,7 +301,10 @@ export class BookingsService {
     };
   }
 
-  async findMeetingBookings(query: { status?: BookingStatus; search?: string }) {
+  async findMeetingBookings(query: {
+    status?: BookingStatus;
+    search?: string;
+  }) {
     const where: any = {};
 
     if (query.status) {
@@ -296,7 +339,11 @@ export class BookingsService {
     };
   }
 
-  async updateStatus(id: number, status: BookingStatus, paymentStatus?: PaymentStatus) {
+  async updateStatus(
+    id: number,
+    status: BookingStatus,
+    paymentStatus?: PaymentStatus,
+  ) {
     if (!Object.values(BookingStatus).includes(status)) {
       throw new BadRequestException('Invalid status value');
     }
@@ -312,17 +359,18 @@ export class BookingsService {
       booking.status === BookingStatus.not_checked_in
     ) {
       throw new BadRequestException(
-        `Status Locked: Booking #${booking.bookingCode} is already in terminal '${booking.status}' status and cannot be modified.`
+        `Status Locked: Booking #${booking.bookingCode} is already in terminal '${booking.status}' status and cannot be modified.`,
       );
     }
 
     if (status === BookingStatus.confirmed) {
       throw new BadRequestException(
-        `Direct status transition to 'confirmed' via admin update is disallowed. Guest check-in must be processed via reception check-in terminal or QR verification (/api/v1/bookings/check-in).`
+        `Direct status transition to 'confirmed' via admin update is disallowed. Guest check-in must be processed via reception check-in terminal or QR verification (/api/v1/bookings/check-in).`,
       );
     }
 
-    const nextPaymentStatus = paymentStatus !== undefined ? paymentStatus : booking.paymentStatus;
+    const nextPaymentStatus =
+      paymentStatus !== undefined ? paymentStatus : booking.paymentStatus;
 
     const updated = await this.prisma.booking.update({
       where: { id },
@@ -342,12 +390,18 @@ export class BookingsService {
     };
   }
 
-  async updateMeetingStatus(id: number, status: BookingStatus, paymentStatus?: PaymentStatus) {
+  async updateMeetingStatus(
+    id: number,
+    status: BookingStatus,
+    paymentStatus?: PaymentStatus,
+  ) {
     if (!Object.values(BookingStatus).includes(status)) {
       throw new BadRequestException('Invalid status value');
     }
 
-    const booking = await this.prisma.meetingBooking.findUnique({ where: { id } });
+    const booking = await this.prisma.meetingBooking.findUnique({
+      where: { id },
+    });
     if (!booking) {
       throw new NotFoundException('Meeting room booking not found');
     }
@@ -358,17 +412,18 @@ export class BookingsService {
       booking.status === BookingStatus.not_checked_in
     ) {
       throw new BadRequestException(
-        `Status Locked: Meeting reservation #${booking.bookingCode} is already in terminal '${booking.status}' status and cannot be modified.`
+        `Status Locked: Meeting reservation #${booking.bookingCode} is already in terminal '${booking.status}' status and cannot be modified.`,
       );
     }
 
     if (status === BookingStatus.confirmed) {
       throw new BadRequestException(
-        `Direct status transition to 'confirmed' via admin update is disallowed. Guest check-in must be processed via reception check-in terminal or QR verification (/api/v1/bookings/check-in).`
+        `Direct status transition to 'confirmed' via admin update is disallowed. Guest check-in must be processed via reception check-in terminal or QR verification (/api/v1/bookings/check-in).`,
       );
     }
 
-    const nextPaymentStatus = paymentStatus !== undefined ? paymentStatus : booking.paymentStatus;
+    const nextPaymentStatus =
+      paymentStatus !== undefined ? paymentStatus : booking.paymentStatus;
 
     const updated = await this.prisma.meetingBooking.update({
       where: { id },
@@ -389,7 +444,9 @@ export class BookingsService {
   }
 
   async addNote(bookingId: number, adminUserId: number, noteText: string) {
-    const booking = await this.prisma.booking.findUnique({ where: { id: bookingId } });
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
     if (!booking) {
       throw new NotFoundException('Booking not found');
     }
@@ -418,7 +475,12 @@ export class BookingsService {
     if (/^[=+\-@\t\r]/.test(str)) {
       str = `'${str}`;
     }
-    if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) {
+    if (
+      str.includes('"') ||
+      str.includes(',') ||
+      str.includes('\n') ||
+      str.includes('\r')
+    ) {
       return `"${str.replace(/"/g, '""')}"`;
     }
     return str;
@@ -447,7 +509,9 @@ export class BookingsService {
 
     const monthlyRevenue = Number(paidRevenue._sum.amount || 0);
 
-    const totalRooms = await this.prisma.meetingRoom.count({ where: { isActive: true } });
+    const totalRooms = await this.prisma.meetingRoom.count({
+      where: { isActive: true },
+    });
     const activeRoomsGroup = await this.prisma.meetingBooking.groupBy({
       by: ['meetingRoomId'],
       where: {
@@ -457,7 +521,10 @@ export class BookingsService {
       },
     });
     const occupiedRoomsCount = activeRoomsGroup.length;
-    const roomOccupancyRate = totalRooms > 0 ? Math.min(100, Math.round((occupiedRoomsCount / totalRooms) * 100)) : 0;
+    const roomOccupancyRate =
+      totalRooms > 0
+        ? Math.min(100, Math.round((occupiedRoomsCount / totalRooms) * 100))
+        : 0;
 
     const recentRegular = await this.prisma.booking.findMany({
       take: 3,
@@ -486,7 +553,9 @@ export class BookingsService {
         status: m.status,
         date: m.createdAt,
       })),
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+    ]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
 
     return {
       success: true,
@@ -536,7 +605,8 @@ export class BookingsService {
       orderBy: { createdAt: 'desc' },
     });
 
-    const header = 'Booking Code,Customer Name,Email,Phone,Company,GSTIN,Plan Name,Preferred Date,Time Slot,Booking Type,Status,Payment Status,Created At\n';
+    const header =
+      'Booking Code,Customer Name,Email,Phone,Company,GSTIN,Plan Name,Preferred Date,Time Slot,Booking Type,Status,Payment Status,Created At\n';
     const rows = bookings
       .map(
         (b) =>
@@ -558,15 +628,26 @@ export class BookingsService {
 
     // Input validation and sanitization
     const customerName = String(data.customerName || '').trim();
-    const customerEmail = String(data.customerEmail || '').trim().toLowerCase();
-    const customerPhone = data.customerPhone ? String(data.customerPhone).trim() : null;
-    const companyName = data.companyName ? String(data.companyName).trim() : null;
+    const customerEmail = String(data.customerEmail || '')
+      .trim()
+      .toLowerCase();
+    const customerPhone = data.customerPhone
+      ? String(data.customerPhone).trim()
+      : null;
+    const companyName = data.companyName
+      ? String(data.companyName).trim()
+      : null;
     const gstin = data.gstin ? String(data.gstin).trim() : null;
-    const preferredDate = data.preferredDate ? new Date(data.preferredDate) : new Date();
+    const preferredDate = data.preferredDate
+      ? new Date(data.preferredDate)
+      : new Date();
 
-    let totalAmount = data.totalAmount !== undefined && data.totalAmount !== null && data.totalAmount !== ''
-      ? Number(data.totalAmount)
-      : 150;
+    let totalAmount =
+      data.totalAmount !== undefined &&
+      data.totalAmount !== null &&
+      data.totalAmount !== ''
+        ? Number(data.totalAmount)
+        : 150;
 
     let pricingPlanId: number | undefined = undefined;
     if (data.pricingPlanId) {
@@ -580,7 +661,10 @@ export class BookingsService {
       if (!plan) {
         throw new BadRequestException('Referenced pricing plan does not exist');
       }
-      totalAmount = Number(plan.priceDaily) > 0 ? Number(plan.priceDaily) : Number(plan.priceMonthly);
+      totalAmount =
+        Number(plan.priceDaily) > 0
+          ? Number(plan.priceDaily)
+          : Number(plan.priceMonthly);
     }
 
     // Validate email format
@@ -591,7 +675,9 @@ export class BookingsService {
 
     // Validate amount
     if (isNaN(totalAmount) || totalAmount < 0) {
-      throw new BadRequestException('Total amount must be a non-negative number');
+      throw new BadRequestException(
+        'Total amount must be a non-negative number',
+      );
     }
 
     // Validate date
@@ -599,7 +685,10 @@ export class BookingsService {
       throw new BadRequestException('Invalid preferred date');
     }
 
-    const isPaid = data.paymentStatus === PaymentStatus.paid || data.paymentStatus === 'paid' || data.isPaid === true;
+    const isPaid =
+      data.paymentStatus === PaymentStatus.paid ||
+      data.paymentStatus === 'paid' ||
+      data.isPaid === true;
 
     const payload: any = {
       bookingCode,
@@ -610,7 +699,9 @@ export class BookingsService {
       companyName,
       gstin,
       preferredDate,
-      preferredTimeSlot: String(data.preferredTimeSlot || '10:00 AM').trim().slice(0, 50),
+      preferredTimeSlot: String(data.preferredTimeSlot || '10:00 AM')
+        .trim()
+        .slice(0, 50),
       status: isPaid ? BookingStatus.pending : BookingStatus.unpaid,
       paymentStatus: isPaid ? PaymentStatus.paid : PaymentStatus.unpaid,
       totalAmount,
@@ -632,17 +723,27 @@ export class BookingsService {
     });
 
     if (isPaid) {
-      await this.prisma.payment.create({
-        data: {
-          bookingId: booking.id,
-          userId: booking.userId || null,
-          amount: totalAmount,
-          paymentMethod: data.paymentMethod === 'wallet' ? 'wallet' : data.paymentMethod === 'credits' ? 'credits' : 'cash',
-          status: PaymentStatus.paid,
-        },
-      }).catch((err) => {
-        this.logger.error(`Failed to create audit payment record for admin booking #${booking.id}: ${err.message}`, err.stack);
-      });
+      await this.prisma.payment
+        .create({
+          data: {
+            bookingId: booking.id,
+            userId: booking.userId || null,
+            amount: totalAmount,
+            paymentMethod:
+              data.paymentMethod === 'wallet'
+                ? 'wallet'
+                : data.paymentMethod === 'credits'
+                  ? 'credits'
+                  : 'cash',
+            status: PaymentStatus.paid,
+          },
+        })
+        .catch((err) => {
+          this.logger.error(
+            `Failed to create audit payment record for admin booking #${booking.id}: ${err.message}`,
+            err.stack,
+          );
+        });
     }
 
     return {
@@ -659,10 +760,7 @@ export class BookingsService {
 
     const meetingBooking = await this.prisma.meetingBooking.findFirst({
       where: {
-        OR: [
-          { qrAccessCode: cleanCode },
-          { bookingCode: cleanCode },
-        ],
+        OR: [{ qrAccessCode: cleanCode }, { bookingCode: cleanCode }],
       },
       include: { meetingRoom: true },
     });
@@ -744,7 +842,9 @@ export class BookingsService {
       });
 
       if (updateResult.count === 0) {
-        throw new BadRequestException(`Check-In Failed: Reservation #${meetingBooking.bookingCode} status has been updated by another process.`);
+        throw new BadRequestException(
+          `Check-In Failed: Reservation #${meetingBooking.bookingCode} status has been updated by another process.`,
+        );
       }
 
       const updated = await this.prisma.meetingBooking.findUnique({
@@ -753,14 +853,18 @@ export class BookingsService {
       });
 
       if (this.notificationsService && updated) {
-        await this.notificationsService.createNotification(
-          updated.userId || null,
-          'Check-In Verified',
-          `Member verified and checked in for ${updated.meetingRoom?.name || 'Meeting Room'}!`,
-          'meeting',
-        ).catch((err) => {
-          this.logger.error(`Failed to send check-in notification: ${err?.message}`);
-        });
+        await this.notificationsService
+          .createNotification(
+            updated.userId || null,
+            'Check-In Verified',
+            `Member verified and checked in for ${updated.meetingRoom?.name || 'Meeting Room'}!`,
+            'meeting',
+          )
+          .catch((err) => {
+            this.logger.error(
+              `Failed to send check-in notification: ${err?.message}`,
+            );
+          });
       }
 
       return {
@@ -812,7 +916,10 @@ export class BookingsService {
 
       // 4. Time Window Check
       const nowTime = Date.now();
-      const { startTime, endTime } = this.getBookingTimeWindow(regularBooking.preferredDate, regularBooking.preferredTimeSlot);
+      const { startTime, endTime } = this.getBookingTimeWindow(
+        regularBooking.preferredDate,
+        regularBooking.preferredTimeSlot,
+      );
       const endTimeMs = endTime.getTime();
 
       if (endTimeMs <= nowTime) {
@@ -823,8 +930,15 @@ export class BookingsService {
 
       const earlyCheckInWindowMs = startTime.getTime() - 30 * 60 * 1000;
       if (nowTime < earlyCheckInWindowMs) {
-        const startTimeStr = startTime.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
-        const dateStr = regularBooking.preferredDate instanceof Date ? regularBooking.preferredDate.toISOString().split('T')[0] : String(regularBooking.preferredDate).split('T')[0];
+        const startTimeStr = startTime.toLocaleTimeString('en-US', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        const dateStr =
+          regularBooking.preferredDate instanceof Date
+            ? regularBooking.preferredDate.toISOString().split('T')[0]
+            : String(regularBooking.preferredDate).split('T')[0];
         throw new BadRequestException(
           `Access Denied: Early check-in is not open yet for #${regularBooking.bookingCode} (${dateStr}). Check-in opens 30 minutes prior to pass start time (${startTimeStr}).`,
         );
@@ -855,7 +969,9 @@ export class BookingsService {
       });
 
       if (updateResult.count === 0) {
-        throw new BadRequestException(`Check-In Failed: Pass #${regularBooking.bookingCode} status has been updated by another process.`);
+        throw new BadRequestException(
+          `Check-In Failed: Pass #${regularBooking.bookingCode} status has been updated by another process.`,
+        );
       }
 
       const updated = await this.prisma.booking.findUnique({
@@ -864,14 +980,18 @@ export class BookingsService {
       });
 
       if (this.notificationsService && updated) {
-        await this.notificationsService.createNotification(
-          updated.userId || null,
-          'Check-In Verified',
-          `Member verified and checked in for ${updated.pricingPlan?.name || 'Workspace Pass'}!`,
-          'booking',
-        ).catch((err) => {
-          this.logger.error(`Failed to send check-in notification: ${err?.message}`);
-        });
+        await this.notificationsService
+          .createNotification(
+            updated.userId || null,
+            'Check-In Verified',
+            `Member verified and checked in for ${updated.pricingPlan?.name || 'Workspace Pass'}!`,
+            'booking',
+          )
+          .catch((err) => {
+            this.logger.error(
+              `Failed to send check-in notification: ${err?.message}`,
+            );
+          });
       }
 
       return {
@@ -884,7 +1004,8 @@ export class BookingsService {
       };
     }
 
-    throw new NotFoundException('Invalid access QR code or reservation reference');
+    throw new NotFoundException(
+      'Invalid access QR code or reservation reference',
+    );
   }
 }
-

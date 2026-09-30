@@ -1,7 +1,23 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { MeetingRoomsService } from './meeting-rooms.service';
-import { AvailabilityCheckDto, CreateMeetingBookingDto, CreateMeetingRoomDto, UpdateMeetingRoomDto } from './dto/meeting-room.dto';
+import {
+  AvailabilityCheckDto,
+  CreateMeetingBookingDto,
+  CreateMeetingRoomDto,
+  UpdateMeetingRoomDto,
+} from './dto/meeting-room.dto';
 import * as jwt from 'jsonwebtoken';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -13,21 +29,30 @@ export class MeetingRoomsController {
   constructor(private readonly meetingRoomsService: MeetingRoomsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get meeting room catalog filterable by category and branch' })
+  @ApiOperation({
+    summary: 'Get meeting room catalog filterable by category and branch',
+  })
   async findAll(
     @Query('all') all?: string,
     @Query('category') category?: string,
     @Query('branchId') branchId?: string,
   ) {
     const branchIdNum = branchId ? parseInt(branchId, 10) : undefined;
-    return this.meetingRoomsService.findAll(all === 'true', category, branchIdNum);
+    return this.meetingRoomsService.findAll(
+      all === 'true',
+      category,
+      branchIdNum,
+    );
   }
 
   @Get('receipt/:token')
-  @ApiOperation({ summary: 'Get tokenized digital receipt details by view token' })
+  @ApiOperation({
+    summary: 'Get tokenized digital receipt details by view token',
+  })
   async getReceiptByToken(@Param('token') token: string, @Req() req: any) {
     let requestingUser = null;
-    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+    const authHeader =
+      req.headers['authorization'] || req.headers['Authorization'];
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const jwtToken = authHeader.split(' ')[1];
@@ -38,7 +63,11 @@ export class MeetingRoomsController {
         }
         const decoded: any = jwt.verify(jwtToken, secret);
         if (decoded) {
-          requestingUser = { id: decoded.sub, email: decoded.email, role: decoded.role };
+          requestingUser = {
+            id: decoded.sub,
+            email: decoded.email,
+            role: decoded.role,
+          };
         }
       } catch (e) {}
     }
@@ -52,13 +81,17 @@ export class MeetingRoomsController {
   }
 
   @Post('bookings')
-  @ApiOperation({ summary: 'Create a meeting room booking reservation (plural alias)' })
+  @ApiOperation({
+    summary: 'Create a meeting room booking reservation (plural alias)',
+  })
   async createBookingPluralAlias(@Body() dto: CreateMeetingBookingDto) {
     return this.meetingRoomsService.createBooking(dto);
   }
 
   @Post('book')
-  @ApiOperation({ summary: 'Create a meeting room booking reservation (alias)' })
+  @ApiOperation({
+    summary: 'Create a meeting room booking reservation (alias)',
+  })
   async createBookingAlias(@Body() dto: CreateMeetingBookingDto) {
     return this.meetingRoomsService.createBooking(dto);
   }
@@ -70,8 +103,13 @@ export class MeetingRoomsController {
   }
 
   @Post(':slug/availability')
-  @ApiOperation({ summary: 'Check real-time hourly slot availability for a date' })
-  async checkAvailability(@Param('slug') slug: string, @Body() dto: AvailabilityCheckDto) {
+  @ApiOperation({
+    summary: 'Check real-time hourly slot availability for a date',
+  })
+  async checkAvailability(
+    @Param('slug') slug: string,
+    @Body() dto: AvailabilityCheckDto,
+  ) {
     return this.meetingRoomsService.checkAvailability(slug, dto);
   }
 
@@ -88,8 +126,13 @@ export class MeetingRoomsController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin: Update meeting room details, rate, or capacity' })
-  async updateRoom(@Param('id') id: string, @Body() body: UpdateMeetingRoomDto) {
+  @ApiOperation({
+    summary: 'Admin: Update meeting room details, rate, or capacity',
+  })
+  async updateRoom(
+    @Param('id') id: string,
+    @Body() body: UpdateMeetingRoomDto,
+  ) {
     return this.meetingRoomsService.updateRoom(Number(id), body);
   }
 

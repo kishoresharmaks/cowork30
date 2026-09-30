@@ -104,11 +104,21 @@ export class BranchesService {
         ...(data.zip !== undefined ? { zip: data.zip } : {}),
         ...(data.phone !== undefined ? { phone: data.phone } : {}),
         ...(data.email !== undefined ? { email: data.email } : {}),
-        ...(data.openingTime !== undefined ? { openingTime: data.openingTime } : {}),
-        ...(data.closingTime !== undefined ? { closingTime: data.closingTime } : {}),
-        ...(data.latitude !== undefined ? { latitude: data.latitude ? parseFloat(data.latitude) : null } : {}),
-        ...(data.longitude !== undefined ? { longitude: data.longitude ? parseFloat(data.longitude) : null } : {}),
-        ...(data.isActive !== undefined ? { isActive: Boolean(data.isActive) } : {}),
+        ...(data.openingTime !== undefined
+          ? { openingTime: data.openingTime }
+          : {}),
+        ...(data.closingTime !== undefined
+          ? { closingTime: data.closingTime }
+          : {}),
+        ...(data.latitude !== undefined
+          ? { latitude: data.latitude ? parseFloat(data.latitude) : null }
+          : {}),
+        ...(data.longitude !== undefined
+          ? { longitude: data.longitude ? parseFloat(data.longitude) : null }
+          : {}),
+        ...(data.isActive !== undefined
+          ? { isActive: Boolean(data.isActive) }
+          : {}),
       },
     });
 

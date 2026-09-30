@@ -1,4 +1,8 @@
-import { Injectable, NestMiddleware, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NestMiddleware,
+  BadRequestException,
+} from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 
 interface Attempt {
@@ -14,10 +18,12 @@ const WINDOW_MS = 15 * 60 * 1000;
 const BLOCK_DURATION_MS = 15 * 60 * 1000;
 
 function getClientIp(req: Request): string {
-  return (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-         req.connection?.remoteAddress ||
-         req.socket?.remoteAddress ||
-         'unknown';
+  return (
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+    req.connection?.remoteAddress ||
+    req.socket?.remoteAddress ||
+    'unknown'
+  );
 }
 
 function cleanup() {
@@ -51,7 +57,7 @@ export class RateLimitMiddleware implements NestMiddleware {
         const retryAfter = Math.ceil((attempt.blockedUntil - now) / 1000);
         res.set('Retry-After', String(retryAfter));
         throw new BadRequestException(
-          `Too many requests. Please try again in ${retryAfter} seconds.`
+          `Too many requests. Please try again in ${retryAfter} seconds.`,
         );
       }
 
@@ -64,7 +70,7 @@ export class RateLimitMiddleware implements NestMiddleware {
         const retryAfter = Math.ceil(BLOCK_DURATION_MS / 1000);
         res.set('Retry-After', String(retryAfter));
         throw new BadRequestException(
-          `Too many requests. Please try again in ${retryAfter} seconds.`
+          `Too many requests. Please try again in ${retryAfter} seconds.`,
         );
       } else {
         attempt.count++;

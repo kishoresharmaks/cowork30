@@ -74,14 +74,19 @@ describe('BookingsService', () => {
         },
       ]);
       mockPrismaService.booking.findMany.mockResolvedValue([]);
-      mockPrismaService.meetingBooking.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaService.meetingBooking.updateMany.mockResolvedValue({
+        count: 1,
+      });
 
       const result = await service.autoCompleteExpiredBookings();
 
       expect(result.processed.meetingsNotCheckedIn).toBe(1);
       expect(result.processed.meetingsCompleted).toBe(0);
       expect(mockPrismaService.meetingBooking.updateMany).toHaveBeenCalledWith({
-        where: { id: { in: [101] }, status: { in: [BookingStatus.pending, BookingStatus.unpaid] } },
+        where: {
+          id: { in: [101] },
+          status: { in: [BookingStatus.pending, BookingStatus.unpaid] },
+        },
         data: { status: BookingStatus.not_checked_in },
       });
     });
@@ -98,7 +103,9 @@ describe('BookingsService', () => {
         },
       ]);
       mockPrismaService.booking.findMany.mockResolvedValue([]);
-      mockPrismaService.meetingBooking.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaService.meetingBooking.updateMany.mockResolvedValue({
+        count: 1,
+      });
 
       const result = await service.autoCompleteExpiredBookings();
 
@@ -129,7 +136,10 @@ describe('BookingsService', () => {
       expect(result.processed.deskNotCheckedIn).toBe(1);
       expect(result.processed.deskCompleted).toBe(0);
       expect(mockPrismaService.booking.updateMany).toHaveBeenCalledWith({
-        where: { id: { in: [201] }, status: { in: [BookingStatus.pending, BookingStatus.unpaid] } },
+        where: {
+          id: { in: [201] },
+          status: { in: [BookingStatus.pending, BookingStatus.unpaid] },
+        },
         data: { status: BookingStatus.not_checked_in },
       });
     });
@@ -144,7 +154,9 @@ describe('BookingsService', () => {
         paymentStatus: PaymentStatus.paid,
       });
 
-      await expect(service.updateStatus(1, BookingStatus.confirmed)).rejects.toThrow(
+      await expect(
+        service.updateStatus(1, BookingStatus.confirmed),
+      ).rejects.toThrow(
         "Direct status transition to 'confirmed' via admin update is disallowed",
       );
     });
@@ -163,7 +175,11 @@ describe('BookingsService', () => {
         paymentStatus: PaymentStatus.paid,
       });
 
-      const res = await service.updateStatus(1, BookingStatus.pending, PaymentStatus.paid);
+      const res = await service.updateStatus(
+        1,
+        BookingStatus.pending,
+        PaymentStatus.paid,
+      );
 
       expect(mockPrismaService.booking.update).toHaveBeenCalledWith({
         where: { id: 1 },
@@ -185,9 +201,9 @@ describe('BookingsService', () => {
         paymentStatus: PaymentStatus.paid,
       });
 
-      await expect(service.updateStatus(1, BookingStatus.cancelled)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.updateStatus(1, BookingStatus.cancelled),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -295,7 +311,9 @@ describe('BookingsService', () => {
         startTime: new Date(now + 600000), // starts in 10 mins (within 30m window)
         endTime: new Date(now + 4200000),
       });
-      mockPrismaService.meetingBooking.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaService.meetingBooking.updateMany.mockResolvedValue({
+        count: 1,
+      });
       mockPrismaService.meetingBooking.findUnique.mockResolvedValue({
         id: 1,
         bookingCode: 'MB-VALID',
@@ -307,7 +325,11 @@ describe('BookingsService', () => {
 
       expect(res.success).toBe(true);
       expect(mockPrismaService.meetingBooking.updateMany).toHaveBeenCalledWith({
-        where: { id: 1, status: { in: [BookingStatus.pending, BookingStatus.unpaid] }, paymentStatus: PaymentStatus.paid },
+        where: {
+          id: 1,
+          status: { in: [BookingStatus.pending, BookingStatus.unpaid] },
+          paymentStatus: PaymentStatus.paid,
+        },
         data: { status: BookingStatus.confirmed },
       });
     });
@@ -315,7 +337,9 @@ describe('BookingsService', () => {
 
   describe('createAdminBooking & Financial Integrity', () => {
     it('SHOULD preserve 0 totalAmount when totalAmount is explicitly set to 0', async () => {
-      mockPrismaService.booking.create.mockImplementation(({ data }) => Promise.resolve({ id: 99, ...data }));
+      mockPrismaService.booking.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 99, ...data }),
+      );
       mockPrismaService.payment.create.mockResolvedValue({ id: 1 });
 
       const res = await service.createAdminBooking({
@@ -346,7 +370,9 @@ describe('BookingsService', () => {
     });
 
     it('SHOULD create unpaid booking when isPaid is false', async () => {
-      mockPrismaService.booking.create.mockImplementation(({ data }) => Promise.resolve({ id: 100, ...data }));
+      mockPrismaService.booking.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 100, ...data }),
+      );
 
       const res = await service.createAdminBooking({
         customerName: 'Unpaid Pass',
@@ -362,8 +388,14 @@ describe('BookingsService', () => {
     });
 
     it('SHOULD override totalAmount with pricingPlan price when pricingPlanId is provided', async () => {
-      mockPrismaService.pricingPlan.findUnique.mockResolvedValue({ id: 5, priceDaily: 999, priceMonthly: 1500 });
-      mockPrismaService.booking.create.mockImplementation(({ data }) => Promise.resolve({ id: 101, ...data }));
+      mockPrismaService.pricingPlan.findUnique.mockResolvedValue({
+        id: 5,
+        priceDaily: 999,
+        priceMonthly: 1500,
+      });
+      mockPrismaService.booking.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 101, ...data }),
+      );
 
       const res = await service.createAdminBooking({
         customerName: 'Plan Pass',
@@ -375,7 +407,9 @@ describe('BookingsService', () => {
 
       expect(res.success).toBe(true);
       expect(res.booking.totalAmount).toBe(999);
-      expect(mockPrismaService.pricingPlan.findUnique).toHaveBeenCalledWith({ where: { id: 5 } });
+      expect(mockPrismaService.pricingPlan.findUnique).toHaveBeenCalledWith({
+        where: { id: 5 },
+      });
     });
 
     it('SHOULD throw BadRequestException if pricingPlanId does not exist', async () => {
@@ -393,11 +427,15 @@ describe('BookingsService', () => {
 
   describe('Validation & Security Enhancements', () => {
     it('SHOULD throw BadRequestException if updateStatus receives an invalid BookingStatus value', async () => {
-      await expect(service.updateStatus(1, 'INVALID_STATUS' as any)).rejects.toThrow('Invalid status value');
+      await expect(
+        service.updateStatus(1, 'INVALID_STATUS' as any),
+      ).rejects.toThrow('Invalid status value');
     });
 
     it('SHOULD throw BadRequestException if updateMeetingStatus receives an invalid BookingStatus value', async () => {
-      await expect(service.updateMeetingStatus(1, 'INVALID_STATUS' as any)).rejects.toThrow('Invalid status value');
+      await expect(
+        service.updateMeetingStatus(1, 'INVALID_STATUS' as any),
+      ).rejects.toThrow('Invalid status value');
     });
 
     it('SHOULD neutralize CSV formula injection in exportCsv', async () => {

@@ -75,7 +75,10 @@ async function bootstrap() {
     .addTag('Meeting Rooms', 'Hourly/Daily meeting room booking engine')
     .addTag('Floor Map', 'Interactive 2D Desk Picker & WebSocket updates')
     .addTag('Bookings', 'Tour & Desk reservation manager')
-    .addTag('Wallet & Billing', 'Credit Wallet, Razorpay Checkout & GST Invoices')
+    .addTag(
+      'Wallet & Billing',
+      'Credit Wallet, Razorpay Checkout & GST Invoices',
+    )
     .addTag('CMS & Settings', 'Site branding, hero sliders, pages & gallery')
     .build();
 
@@ -84,8 +87,12 @@ async function bootstrap() {
 
   const port = process.env.BACKEND_PORT || 4000;
   await app.listen(port, '0.0.0.0');
-  logger.log(`🚀 Server running on http://0.0.0.0:${port}/api/v1 (accessible locally & via local network IP)`);
-  logger.log(`📚 Interactive Swagger API Docs available at http://localhost:${port}/api/docs`);
+  logger.log(
+    `🚀 Server running on http://0.0.0.0:${port}/api/v1 (accessible locally & via local network IP)`,
+  );
+  logger.log(
+    `📚 Interactive Swagger API Docs available at http://localhost:${port}/api/docs`,
+  );
 }
 
 bootstrap();

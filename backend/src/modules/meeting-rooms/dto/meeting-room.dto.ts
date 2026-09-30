@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEmail,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class AvailabilityCheckDto {
   @ApiProperty({ example: '2026-03-01' })
@@ -69,12 +77,20 @@ export class CreateMeetingRoomDto {
   @IsNumber()
   dailyRate?: number;
 
-  @ApiProperty({ example: '09:30', required: false, description: 'Operational start time in HH:mm format' })
+  @ApiProperty({
+    example: '09:30',
+    required: false,
+    description: 'Operational start time in HH:mm format',
+  })
   @IsOptional()
   @IsString()
   startTime?: string;
 
-  @ApiProperty({ example: '17:30', required: false, description: 'Operational end time in HH:mm format' })
+  @ApiProperty({
+    example: '17:30',
+    required: false,
+    description: 'Operational end time in HH:mm format',
+  })
   @IsOptional()
   @IsString()
   endTime?: string;
@@ -109,7 +125,10 @@ export class CreateMeetingRoomDto {
   @IsString()
   featuredImage?: string;
 
-  @ApiProperty({ example: ['https://images.unsplash.com/...'], required: false })
+  @ApiProperty({
+    example: ['https://images.unsplash.com/...'],
+    required: false,
+  })
   @IsOptional()
   @IsArray()
   images?: any[];
@@ -196,12 +215,20 @@ export class UpdateMeetingRoomDto {
   @IsNumber()
   dailyRate?: number;
 
-  @ApiProperty({ example: '09:30', required: false, description: 'Operational start time in HH:mm format' })
+  @ApiProperty({
+    example: '09:30',
+    required: false,
+    description: 'Operational start time in HH:mm format',
+  })
   @IsOptional()
   @IsString()
   startTime?: string;
 
-  @ApiProperty({ example: '17:30', required: false, description: 'Operational end time in HH:mm format' })
+  @ApiProperty({
+    example: '17:30',
+    required: false,
+    description: 'Operational end time in HH:mm format',
+  })
   @IsOptional()
   @IsString()
   endTime?: string;
@@ -236,7 +263,10 @@ export class UpdateMeetingRoomDto {
   @IsString()
   featuredImage?: string;
 
-  @ApiProperty({ example: ['https://images.unsplash.com/...'], required: false })
+  @ApiProperty({
+    example: ['https://images.unsplash.com/...'],
+    required: false,
+  })
   @IsOptional()
   @IsArray()
   images?: any[];

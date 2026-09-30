@@ -1,5 +1,27 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe, UseInterceptors, UploadedFile, BadRequestException, NotFoundException, UseGuards, Req, Res } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  NotFoundException,
+  UseGuards,
+  Req,
+  Res,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiConsumes,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CmsService } from './cms.service';
 import { diskStorage } from 'multer';
@@ -31,13 +53,19 @@ export class CmsController {
   }
 
   @Get('homepage')
-  @ApiOperation({ summary: 'Get home page dynamic data (slides, featured services, plans, logos)' })
+  @ApiOperation({
+    summary:
+      'Get home page dynamic data (slides, featured services, plans, logos)',
+  })
   async getHomepageData() {
     return this.cmsService.getHomepageData();
   }
 
   @Get('settings')
-  @ApiOperation({ summary: 'Get platform site settings including dynamic welcome bonus amount' })
+  @ApiOperation({
+    summary:
+      'Get platform site settings including dynamic welcome bonus amount',
+  })
   async getSettings() {
     return this.cmsService.getSettings();
   }
@@ -46,7 +74,10 @@ export class CmsController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin: Update platform settings (Welcome bonus, branding, contact info)' })
+  @ApiOperation({
+    summary:
+      'Admin: Update platform settings (Welcome bonus, branding, contact info)',
+  })
   async updateSettings(@Body() body: any) {
     return this.cmsService.updateSettings(body);
   }
@@ -61,16 +92,29 @@ export class CmsController {
     FileInterceptor('file', {
       storage: diskStorage({
         destination: uploadsDir,
-        filename: (req: any, file: any, callback: (error: Error | null, filename: string) => void) => {
+        filename: (
+          req: any,
+          file: any,
+          callback: (error: Error | null, filename: string) => void,
+        ) => {
           const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
           const ext = extname(file.originalname);
           callback(null, `img-${uniqueSuffix}${ext.toLowerCase()}`);
         },
       }),
       limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
-      fileFilter: (req: any, file: any, callback: (error: Error | null, acceptFile: boolean) => void) => {
+      fileFilter: (
+        req: any,
+        file: any,
+        callback: (error: Error | null, acceptFile: boolean) => void,
+      ) => {
         if (!file.mimetype.match(/\/(jpg|jpeg|png|gif|webp|avif)$/)) {
-          return callback(new BadRequestException('Only image files (JPG, PNG, WEBP, GIF, AVIF) are allowed!'), false);
+          return callback(
+            new BadRequestException(
+              'Only image files (JPG, PNG, WEBP, GIF, AVIF) are allowed!',
+            ),
+            false,
+          );
         }
         callback(null, true);
       },
@@ -81,10 +125,15 @@ export class CmsController {
       throw new BadRequestException('Image file is required');
     }
 
-    const reqProtocol = req?.headers?.['x-forwarded-proto'] || req?.protocol || 'http';
-    const reqHost = req?.headers?.['x-forwarded-host'] || req?.get?.('host') || 'localhost:4000';
+    const reqProtocol =
+      req?.headers?.['x-forwarded-proto'] || req?.protocol || 'http';
+    const reqHost =
+      req?.headers?.['x-forwarded-host'] ||
+      req?.get?.('host') ||
+      'localhost:4000';
     const dynamicBase = `${reqProtocol}://${reqHost}`;
-    const backendUrl = process.env.BACKEND_URL || process.env.APP_URL || dynamicBase;
+    const backendUrl =
+      process.env.BACKEND_URL || process.env.APP_URL || dynamicBase;
 
     const relativeUrl = `/api/v1/cms/uploads/${file.filename}`;
     const fullUrl = `${backendUrl.replace(/\/+$/, '')}${relativeUrl}`;
@@ -107,7 +156,9 @@ export class CmsController {
   }
 
   @Get('navigation')
-  @ApiOperation({ summary: 'Get active header and footer navigation menu items' })
+  @ApiOperation({
+    summary: 'Get active header and footer navigation menu items',
+  })
   async getNavigationItems() {
     return this.cmsService.getNavigationItems();
   }
@@ -121,7 +172,16 @@ export class CmsController {
   @Post('contact')
   @ApiOperation({ summary: 'Submit a contact form message (public)' })
   @ApiConsumes('application/json')
-  async submitContact(@Body() body: { name: string; email: string; phone?: string; subject?: string; message: string }) {
+  async submitContact(
+    @Body()
+    body: {
+      name: string;
+      email: string;
+      phone?: string;
+      subject?: string;
+      message: string;
+    },
+  ) {
     return this.cmsService.submitContact(body);
   }
 

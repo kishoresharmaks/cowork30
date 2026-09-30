@@ -57,6 +57,10 @@ export class ServicesChatGateway {
       updateType,
       inquiry: inquiryData,
     });
-    this.server.emit('global_inquiry_update', { inquiryId, updateType, inquiry: inquiryData });
+    this.server.emit('global_inquiry_update', {
+      inquiryId,
+      updateType,
+      inquiry: inquiryData,
+    });
   }
 }

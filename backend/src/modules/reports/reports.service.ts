@@ -17,7 +17,10 @@ export class ReportsService {
     const memberUsers = users.filter((u) => u.role === 'member').length;
     const staffUsers = users.filter((u) => u.role === 'staff').length;
     const adminUsers = users.filter((u) => u.role === 'admin').length;
-    const totalWalletBalance = users.reduce((sum, u) => sum + Number(u.walletBalance || 0), 0);
+    const totalWalletBalance = users.reduce(
+      (sum, u) => sum + Number(u.walletBalance || 0),
+      0,
+    );
 
     // Bookings breakdown
     const deskBookings = await this.prisma.booking.findMany({
@@ -38,17 +41,31 @@ export class ReportsService {
       return sum + price;
     }, 0);
 
-    const pricingPlanRevenueMap = new Map<string, { planName: string; bookings: number; revenue: number }>();
+    const pricingPlanRevenueMap = new Map<
+      string,
+      { planName: string; bookings: number; revenue: number }
+    >();
     for (const booking of deskBookings) {
       const planName = booking.pricingPlan?.name || 'Unassigned Plan';
-      const bookingRevenue = Number(booking.totalAmount || booking.pricingPlan?.priceMonthly || booking.pricingPlan?.priceDaily || 0);
-      const current = pricingPlanRevenueMap.get(planName) || { planName, bookings: 0, revenue: 0 };
+      const bookingRevenue = Number(
+        booking.totalAmount ||
+          booking.pricingPlan?.priceMonthly ||
+          booking.pricingPlan?.priceDaily ||
+          0,
+      );
+      const current = pricingPlanRevenueMap.get(planName) || {
+        planName,
+        bookings: 0,
+        revenue: 0,
+      };
       current.bookings += 1;
       current.revenue += bookingRevenue;
       pricingPlanRevenueMap.set(planName, current);
     }
 
-    const pricingPlanRevenue = Array.from(pricingPlanRevenueMap.values()).sort((a, b) => b.revenue - a.revenue);
+    const pricingPlanRevenue = Array.from(pricingPlanRevenueMap.values()).sort(
+      (a, b) => b.revenue - a.revenue,
+    );
 
     const meetingRevenue = meetingBookings.reduce(
       (sum, mb) => sum + Number(mb.totalAmount || 0),
@@ -60,12 +77,21 @@ export class ReportsService {
     // Payments & Invoices summary
     const payments = await this.prisma.payment.findMany();
     const paidPayments = payments.filter((p) => p.status === 'paid');
-    const totalPaymentsValue = paidPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const totalPaymentsValue = paidPayments.reduce(
+      (sum, p) => sum + Number(p.amount),
+      0,
+    );
 
     // Manual Top-Up Requests summary
-    const topupRequests = await (this.prisma as any).walletTopupRequest.findMany();
-    const pendingTopups = topupRequests.filter((r: any) => r.status === 'pending').length;
-    const approvedTopups = topupRequests.filter((r: any) => r.status === 'approved').length;
+    const topupRequests = await (
+      this.prisma as any
+    ).walletTopupRequest.findMany();
+    const pendingTopups = topupRequests.filter(
+      (r: any) => r.status === 'pending',
+    ).length;
+    const approvedTopups = topupRequests.filter(
+      (r: any) => r.status === 'approved',
+    ).length;
 
     // Recent 10 Transactions
     const recentTransactions = await this.prisma.walletTransaction.findMany({
@@ -103,7 +129,8 @@ export class ReportsService {
         orderBy: { createdAt: 'desc' },
       });
 
-      const header = 'ID,User Name,Email,Amount,Tax Amount,Payment Method,Status,Created At\n';
+      const header =
+        'ID,User Name,Email,Amount,Tax Amount,Payment Method,Status,Created At\n';
       const rows = payments
         .map(
           (p) =>
@@ -120,7 +147,8 @@ export class ReportsService {
         orderBy: { createdAt: 'desc' },
       });
 
-      const header = 'ID,User Name,Email,Type,Amount,Balance After,Description,Reference ID,Created At\n';
+      const header =
+        'ID,User Name,Email,Type,Amount,Balance After,Description,Reference ID,Created At\n';
       const rows = transactions
         .map(
           (tx) =>
@@ -137,7 +165,8 @@ export class ReportsService {
       orderBy: { createdAt: 'desc' },
     });
 
-    const header = 'Booking Code,User Name,Email,Room Name,Date,Seats,Total Amount,Status,Created At\n';
+    const header =
+      'Booking Code,User Name,Email,Room Name,Date,Seats,Total Amount,Status,Created At\n';
     const rows = meetingBookings
       .map(
         (mb) =>

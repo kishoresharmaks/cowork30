@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { FloorMapService } from './floor-map.service';
 
@@ -22,7 +32,16 @@ export class FloorMapController {
 
   @Post('floor')
   @ApiOperation({ summary: 'Admin: Create a new floor map' })
-  async createFloor(@Body() body: { branchId?: number; floorName: string; floorLevel: number; width?: number; height?: number }) {
+  async createFloor(
+    @Body()
+    body: {
+      branchId?: number;
+      floorName: string;
+      floorLevel: number;
+      width?: number;
+      height?: number;
+    },
+  ) {
     return this.floorMapService.createFloor(body);
   }
 
@@ -33,7 +52,9 @@ export class FloorMapController {
   }
 
   @Get(':branchId')
-  @ApiOperation({ summary: 'Get 2D interactive floor map & desk status layout for a branch' })
+  @ApiOperation({
+    summary: 'Get 2D interactive floor map & desk status layout for a branch',
+  })
   async getFloorMap(
     @Param('branchId', ParseIntPipe) branchId: number,
     @Query('floorId') floorId?: string,
@@ -49,7 +70,9 @@ export class FloorMapController {
   }
 
   @Put('desk/:id')
-  @ApiOperation({ summary: 'Admin: Update desk specifications, rates (₹), or map coordinates' })
+  @ApiOperation({
+    summary: 'Admin: Update desk specifications, rates (₹), or map coordinates',
+  })
   async updateDesk(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
     return this.floorMapService.updateDesk(id, body);
   }
@@ -62,15 +85,22 @@ export class FloorMapController {
 
   @Put('desk/:id/status')
   @ApiOperation({ summary: 'Admin: Change live desk availability status' })
-  async updateDeskStatus(@Param('id', ParseIntPipe) id: number, @Body() body: { status: string }) {
+  async updateDeskStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { status: string },
+  ) {
     return this.floorMapService.updateDeskStatus(id, body.status);
   }
 
   @Put(':id')
-  @ApiOperation({ summary: 'Admin: Update floor plan details (Floor Name, Level, Branch Name)' })
+  @ApiOperation({
+    summary:
+      'Admin: Update floor plan details (Floor Name, Level, Branch Name)',
+  })
   async updateFloorDetails(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { floorName?: string; floorLevel?: number; branchName?: string },
+    @Body()
+    body: { floorName?: string; floorLevel?: number; branchName?: string },
   ) {
     return this.floorMapService.updateFloorDetails(id, body);
   }

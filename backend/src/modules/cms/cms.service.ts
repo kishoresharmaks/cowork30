@@ -1,11 +1,36 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { ContactStatus } from '@prisma/client';
 
 const DEFAULT_TOPUP_PACKAGES = [
-  { id: '1', amount: 1000, bonus: 0, title: 'Starter Credit Pack', badge: 'Basic', isPopular: false },
-  { id: '2', amount: 2500, bonus: 250, title: 'Most Popular Value Pack', badge: 'Best Value', isPopular: true },
-  { id: '3', amount: 5000, bonus: 750, title: 'Pro Team Pack', badge: 'Max Savings', isPopular: false },
+  {
+    id: '1',
+    amount: 1000,
+    bonus: 0,
+    title: 'Starter Credit Pack',
+    badge: 'Basic',
+    isPopular: false,
+  },
+  {
+    id: '2',
+    amount: 2500,
+    bonus: 250,
+    title: 'Most Popular Value Pack',
+    badge: 'Best Value',
+    isPopular: true,
+  },
+  {
+    id: '3',
+    amount: 5000,
+    bonus: 750,
+    title: 'Pro Team Pack',
+    badge: 'Max Savings',
+    isPopular: false,
+  },
 ];
 
 @Injectable()
@@ -73,12 +98,20 @@ export class CmsService {
       } catch (e) {}
     }
 
-    const taxRateSetting = await this.prisma.siteSetting.findUnique({ where: { key: 'tax_rate' } });
-    const taxRate = taxRateSetting && !isNaN(Number(taxRateSetting.value)) ? Number(taxRateSetting.value) : 0.18;
+    const taxRateSetting = await this.prisma.siteSetting.findUnique({
+      where: { key: 'tax_rate' },
+    });
+    const taxRate =
+      taxRateSetting && !isNaN(Number(taxRateSetting.value))
+        ? Number(taxRateSetting.value)
+        : 0.18;
 
     return {
       success: true,
-      welcomeBonusAmount: welcomeBonus && !isNaN(Number(welcomeBonus.value)) ? Number(welcomeBonus.value) : 500.00,
+      welcomeBonusAmount:
+        welcomeBonus && !isNaN(Number(welcomeBonus.value))
+          ? Number(welcomeBonus.value)
+          : 500.0,
       siteInfo: siteInfo ? JSON.parse(siteInfo.value) : {},
       topupPackages,
       taxRate,
@@ -107,7 +140,10 @@ export class CmsService {
       await this.prisma.siteSetting.upsert({
         where: { key: 'wallet_topup_packages' },
         update: { value: JSON.stringify(body.topupPackages) },
-        create: { key: 'wallet_topup_packages', value: JSON.stringify(body.topupPackages) },
+        create: {
+          key: 'wallet_topup_packages',
+          value: JSON.stringify(body.topupPackages),
+        },
       });
     }
 
@@ -178,9 +214,17 @@ export class CmsService {
     };
   }
 
-  async submitContact(data: { name: string; email: string; phone?: string; subject?: string; message: string }) {
+  async submitContact(data: {
+    name: string;
+    email: string;
+    phone?: string;
+    subject?: string;
+    message: string;
+  }) {
     if (!data.name || !data.email || !data.message) {
-      throw new BadRequestException('Name, email, and message are required fields.');
+      throw new BadRequestException(
+        'Name, email, and message are required fields.',
+      );
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -197,7 +241,9 @@ export class CmsService {
         name: String(data.name).trim().slice(0, 100),
         email: String(data.email).trim().toLowerCase().slice(0, 100),
         phone: data.phone ? String(data.phone).trim().slice(0, 20) : null,
-        subject: data.subject ? String(data.subject).trim().slice(0, 200) : null,
+        subject: data.subject
+          ? String(data.subject).trim().slice(0, 200)
+          : null,
         message: String(data.message).trim().slice(0, 5000),
         status: ContactStatus.unread,
       },
@@ -205,7 +251,8 @@ export class CmsService {
 
     return {
       success: true,
-      message: 'Your message has been received. We will get back to you within 24 hours.',
+      message:
+        'Your message has been received. We will get back to you within 24 hours.',
       contactId: contact.id,
     };
   }

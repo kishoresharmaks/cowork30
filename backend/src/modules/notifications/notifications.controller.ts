@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Put, Patch, Body, Param, Query, ParseIntPipe, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Patch,
+  Body,
+  Param,
+  Query,
+  ParseIntPipe,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -26,7 +38,9 @@ export class NotificationsController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update dynamic SMTP credentials & sender identity (Admin Only)' })
+  @ApiOperation({
+    summary: 'Update dynamic SMTP credentials & sender identity (Admin Only)',
+  })
   async updateSmtpSettings(@Body() body: any) {
     return this.notificationsService.updateSmtpSettings(body);
   }
@@ -35,7 +49,10 @@ export class NotificationsController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Send instant test email to verify SMTP configuration (Admin Only)' })
+  @ApiOperation({
+    summary:
+      'Send instant test email to verify SMTP configuration (Admin Only)',
+  })
   async sendTestEmail(@Body() body: { toEmail?: string; to?: string }) {
     const recipient = body.toEmail || body.to;
     return this.notificationsService.sendTestEmail(recipient || '');
@@ -47,7 +64,9 @@ export class NotificationsController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get customizable HTML email templates (Admin Only)' })
+  @ApiOperation({
+    summary: 'Get customizable HTML email templates (Admin Only)',
+  })
   async getTemplates() {
     return this.notificationsService.getTemplates();
   }
@@ -56,8 +75,13 @@ export class NotificationsController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update email template HTML body and subject line (Admin Only)' })
-  async updateTemplate(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+  @ApiOperation({
+    summary: 'Update email template HTML body and subject line (Admin Only)',
+  })
+  async updateTemplate(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+  ) {
     return this.notificationsService.updateTemplate(id, body);
   }
 
@@ -67,7 +91,10 @@ export class NotificationsController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get outbound email delivery audit logs with filters & search (Admin Only)' })
+  @ApiOperation({
+    summary:
+      'Get outbound email delivery audit logs with filters & search (Admin Only)',
+  })
   async getEmailLogs(
     @Query('search') search?: string,
     @Query('status') status?: string,
@@ -96,7 +123,9 @@ export class NotificationsController {
   @Get('in-app')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get in-app notifications & unread badge count for logged-in user' })
+  @ApiOperation({
+    summary: 'Get in-app notifications & unread badge count for logged-in user',
+  })
   async getMemberNotificationsInApp(@Request() req: any) {
     return this.notificationsService.getMemberNotifications(req.user.id);
   }
@@ -104,7 +133,9 @@ export class NotificationsController {
   @Get()
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get in-app notifications & unread badge count (Root)' })
+  @ApiOperation({
+    summary: 'Get in-app notifications & unread badge count (Root)',
+  })
   async getMemberNotificationsRoot(@Request() req: any) {
     return this.notificationsService.getMemberNotifications(req.user.id);
   }

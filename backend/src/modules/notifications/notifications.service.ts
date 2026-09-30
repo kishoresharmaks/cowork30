@@ -1,4 +1,10 @@
-import { Injectable, OnModuleInit, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import * as nodemailer from 'nodemailer';
@@ -54,12 +60,20 @@ export class NotificationsService implements OnModuleInit {
         port: Number(kv.smtp_port || process.env.SMTP_PORT || 587),
         user: kv.smtp_user || process.env.SMTP_USER || '',
         pass: kv.smtp_pass || process.env.SMTP_PASS || '',
-        fromEmail: kv.smtp_from_email || process.env.MAIL_FROM_ADDRESS || 'no-reply@cowork30.com',
-        fromName: kv.smtp_from_name || process.env.MAIL_FROM_NAME || 'Cowork30 Platform',
+        fromEmail:
+          kv.smtp_from_email ||
+          process.env.MAIL_FROM_ADDRESS ||
+          'no-reply@cowork30.com',
+        fromName:
+          kv.smtp_from_name ||
+          process.env.MAIL_FROM_NAME ||
+          'Cowork30 Platform',
         secure: kv.smtp_secure === 'true',
       };
     } catch (err: any) {
-      this.logger.warn(`Could not read SMTP settings from DB, using env fallback: ${err.message}`);
+      this.logger.warn(
+        `Could not read SMTP settings from DB, using env fallback: ${err.message}`,
+      );
       return {
         host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
         port: Number(process.env.SMTP_PORT || 587),
@@ -136,7 +150,9 @@ export class NotificationsService implements OnModuleInit {
 
     const data: any = await res.json();
     if (!res.ok) {
-      throw new Error(data.message || `Brevo HTTP ${res.status}: ${JSON.stringify(data)}`);
+      throw new Error(
+        data.message || `Brevo HTTP ${res.status}: ${JSON.stringify(data)}`,
+      );
     }
 
     return data.messageId || 'brevo-api-success';
@@ -145,7 +161,8 @@ export class NotificationsService implements OnModuleInit {
   private async createTransporter() {
     const smtp = await this.getSmtpSettings();
     // Port 2525 fallback for Brevo on cloud hosts (Render/AWS) where Port 587 is blocked
-    const port = (smtp.host.includes('brevo') && smtp.port === 587) ? 2525 : smtp.port;
+    const port =
+      smtp.host.includes('brevo') && smtp.port === 587 ? 2525 : smtp.port;
     return nodemailer.createTransport({
       host: smtp.host,
       port,
@@ -167,11 +184,17 @@ export class NotificationsService implements OnModuleInit {
 
   // --- TEMPLATE COMPILER & SEEDER ---
 
-  private compileTemplate(html: string, variables: Record<string, any> = {}): string {
+  private compileTemplate(
+    html: string,
+    variables: Record<string, any> = {},
+  ): string {
     let result = html;
     for (const [key, val] of Object.entries(variables)) {
       const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
-      result = result.replace(regex, val !== undefined && val !== null ? String(val) : '');
+      result = result.replace(
+        regex,
+        val !== undefined && val !== null ? String(val) : '',
+      );
     }
     return result;
   }
@@ -182,7 +205,14 @@ export class NotificationsService implements OnModuleInit {
         key: 'booking_confirmation',
         name: 'Desk & Tour Reservation Confirmation',
         subject: 'Reservation Confirmed - Cowork30 {{bookingCode}}',
-        variablesJson: ['name', 'bookingCode', 'bookingType', 'date', 'branchName', 'amount'],
+        variablesJson: [
+          'name',
+          'bookingCode',
+          'bookingType',
+          'date',
+          'branchName',
+          'amount',
+        ],
         htmlBody: `
 <div style="font-family: Arial, sans-serif; background-color: #0f172a; padding: 30px; color: #f8fafc;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; padding: 30px; border: 1px solid #334155;">
@@ -213,7 +243,16 @@ export class NotificationsService implements OnModuleInit {
         key: 'meeting_confirmation',
         name: 'Meeting Suite Reservation Confirmation',
         subject: 'Meeting Suite Reserved - {{roomName}} ({{bookingCode}})',
-        variablesJson: ['name', 'bookingCode', 'roomName', 'date', 'timeSlot', 'seatsBooked', 'amount', 'viewToken'],
+        variablesJson: [
+          'name',
+          'bookingCode',
+          'roomName',
+          'date',
+          'timeSlot',
+          'seatsBooked',
+          'amount',
+          'viewToken',
+        ],
         htmlBody: `
 <div style="font-family: Arial, sans-serif; background-color: #0f172a; padding: 30px; color: #f8fafc;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; padding: 30px; border: 1px solid #334155;">
@@ -365,7 +404,9 @@ export class NotificationsService implements OnModuleInit {
 
       if (isBrevoApiKey) {
         try {
-          this.logger.log(`Attempting email dispatch to ${to} via Brevo HTTPS REST API...`);
+          this.logger.log(
+            `Attempting email dispatch to ${to} via Brevo HTTPS REST API...`,
+          );
           messageId = await this.sendBrevoRestApi(
             smtp.pass,
             smtp.fromEmail,
@@ -375,7 +416,9 @@ export class NotificationsService implements OnModuleInit {
             html,
           );
         } catch (apiErr: any) {
-          this.logger.warn(`Brevo HTTPS REST API failed (${apiErr.message}), falling back to SMTP Transporter...`);
+          this.logger.warn(
+            `Brevo HTTPS REST API failed (${apiErr.message}), falling back to SMTP Transporter...`,
+          );
         }
       }
 
@@ -391,16 +434,20 @@ export class NotificationsService implements OnModuleInit {
       }
 
       if (logId) {
-        await this.prisma.emailLog.update({
-          where: { id: logId },
-          data: {
-            status: 'sent',
-            sentAt: new Date(),
-          },
-        }).catch(() => {});
+        await this.prisma.emailLog
+          .update({
+            where: { id: logId },
+            data: {
+              status: 'sent',
+              sentAt: new Date(),
+            },
+          })
+          .catch(() => {});
       }
 
-      this.logger.log(`Email dispatched successfully to ${to} [Log ID: ${logId || 'N/A'}]`);
+      this.logger.log(
+        `Email dispatched successfully to ${to} [Log ID: ${logId || 'N/A'}]`,
+      );
       return {
         success: true,
         logId: logId || 0,
@@ -411,13 +458,15 @@ export class NotificationsService implements OnModuleInit {
       this.logger.error(`Email dispatch failed to ${to}: ${errMsg}`);
 
       if (logId) {
-        await this.prisma.emailLog.update({
-          where: { id: logId },
-          data: {
-            status: 'failed',
-            errorMessage: errMsg,
-          },
-        }).catch(() => {});
+        await this.prisma.emailLog
+          .update({
+            where: { id: logId },
+            data: {
+              status: 'failed',
+              errorMessage: errMsg,
+            },
+          })
+          .catch(() => {});
       }
 
       return {
@@ -432,7 +481,9 @@ export class NotificationsService implements OnModuleInit {
 
   async sendTestEmail(toEmail: string) {
     if (!toEmail || !toEmail.includes('@')) {
-      throw new BadRequestException('A valid recipient email address is required for test dispatch.');
+      throw new BadRequestException(
+        'A valid recipient email address is required for test dispatch.',
+      );
     }
 
     const res = await this.sendMail({
@@ -472,7 +523,15 @@ export class NotificationsService implements OnModuleInit {
     };
   }
 
-  async updateTemplate(id: number, body: { name?: string; subject?: string; htmlBody?: string; isActive?: boolean }) {
+  async updateTemplate(
+    id: number,
+    body: {
+      name?: string;
+      subject?: string;
+      htmlBody?: string;
+      isActive?: boolean;
+    },
+  ) {
     const tmpl = await this.prisma.emailTemplate.findUnique({ where: { id } });
     if (!tmpl) {
       throw new NotFoundException('Email template not found');
@@ -497,7 +556,12 @@ export class NotificationsService implements OnModuleInit {
 
   // --- ADMIN EMAIL LOGS CONTROLLER ---
 
-  async getEmailLogs(params: { search?: string; status?: string; page?: number; limit?: number }) {
+  async getEmailLogs(params: {
+    search?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const { search, status, page = 1, limit = 50 } = params;
     const where: any = {};
 
@@ -526,8 +590,12 @@ export class NotificationsService implements OnModuleInit {
       this.prisma.emailLog.count({ where }),
     ]);
 
-    const sentCount = await this.prisma.emailLog.count({ where: { status: 'sent' } });
-    const failedCount = await this.prisma.emailLog.count({ where: { status: 'failed' } });
+    const sentCount = await this.prisma.emailLog.count({
+      where: { status: 'sent' },
+    });
+    const failedCount = await this.prisma.emailLog.count({
+      where: { status: 'failed' },
+    });
 
     return {
       success: true,
@@ -562,7 +630,13 @@ export class NotificationsService implements OnModuleInit {
 
   // --- MEMBER IN-APP NOTIFICATION FEED ---
 
-  async createNotification(userId: number | null, title: string, message: string, type = 'info', link?: string) {
+  async createNotification(
+    userId: number | null,
+    title: string,
+    message: string,
+    type = 'info',
+    link?: string,
+  ) {
     return this.prisma.notification.create({
       data: {
         userId,
@@ -675,8 +749,19 @@ export class NotificationsService implements OnModuleInit {
       }
 
       // 2. Check Desk / Workspace Bookings scheduled for today
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      const startOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
+      const endOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        23,
+        59,
+        59,
+      );
 
       const upcomingDeskBookings = await this.prisma.booking.findMany({
         where: {
@@ -709,7 +794,7 @@ export class NotificationsService implements OnModuleInit {
 
         await this.createNotification(
           db.userId || null,
-          'Today\'s Workspace Check-in Ready',
+          "Today's Workspace Check-in Ready",
           `Reminder: Your workspace check-in pass (Code: #${db.bookingCode}) is active for today!`,
           'booking',
           '/dashboard?tab=bookings',
@@ -724,10 +809,14 @@ export class NotificationsService implements OnModuleInit {
       }
 
       if (meetingRemindersSent > 0 || deskRemindersSent > 0) {
-        this.logger.log(`Automated Reminder Summary: Sent ${meetingRemindersSent} meeting suite reminders and ${deskRemindersSent} workspace reminders.`);
+        this.logger.log(
+          `Automated Reminder Summary: Sent ${meetingRemindersSent} meeting suite reminders and ${deskRemindersSent} workspace reminders.`,
+        );
       }
     } catch (err: any) {
-      this.logger.error(`Error executing booking reminder scheduler: ${err.message || String(err)}`);
+      this.logger.error(
+        `Error executing booking reminder scheduler: ${err.message || String(err)}`,
+      );
     }
 
     return {

@@ -6,7 +6,10 @@ export function isOriginAllowed(origin?: string): boolean {
 
   const rawFrontendUrl = process.env.FRONTEND_URL || '';
   const configuredUrls = rawFrontendUrl
-    ? rawFrontendUrl.split(',').map((u) => u.trim()).filter(Boolean)
+    ? rawFrontendUrl
+        .split(',')
+        .map((u) => u.trim())
+        .filter(Boolean)
     : [];
 
   if (configuredUrls.includes(origin)) {
