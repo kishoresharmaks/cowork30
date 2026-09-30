@@ -32,6 +32,8 @@ import {
   CreditCard,
   Check,
   Armchair,
+  Briefcase,
+  Landmark,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/context/AuthContext';
@@ -237,6 +239,48 @@ const SERVICE_CATALOG_CONFIG: Record<string, ServiceConfig> = {
     ],
     startingPrice: 1999,
   },
+  'loan-syndicate': {
+    category: 'Debt & Financing',
+    badge: 'Fast Approval',
+    badgeBg: 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white',
+    icon: Landmark,
+    defaultImage: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=800&q=80',
+    perks: [
+      'Working capital & term loans',
+      'Multi-bank syndicate liaisons',
+      'Complete DPR & financial modeling',
+      'Fast-track institutional sanctions',
+    ],
+    startingPrice: 0,
+  },
+  'land-promoters': {
+    category: 'Real Estate & Land',
+    badge: 'Verified Clearances',
+    badgeBg: 'bg-gradient-to-r from-amber-600 to-yellow-600 text-white',
+    icon: Compass,
+    defaultImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80',
+    perks: [
+      'Title due diligence & legal vetting',
+      'DTCP / CMDA approved layouts',
+      'Commercial & warehouse acquisitions',
+      'Joint-venture developer structuring',
+    ],
+    startingPrice: 2500,
+  },
+  'tax-experts': {
+    category: 'Tax, CA & Audit',
+    badge: 'Certified CA',
+    badgeBg: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white',
+    icon: ShieldCheck,
+    defaultImage: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=800&q=80',
+    perks: [
+      'Company & LLP incorporation',
+      'Monthly GST & TDS compliance returns',
+      'Statutory & internal CA audits',
+      'Startup India 80IAC tax exemption',
+    ],
+    startingPrice: 1999,
+  },
 };
 
 function getServiceConfig(service: any, idx: number): ServiceConfig {
@@ -248,9 +292,25 @@ function getServiceConfig(service: any, idx: number): ServiceConfig {
   if (name.includes('dedicat')) return SERVICE_CATALOG_CONFIG['dedicated-desk'];
   if (name.includes('cabin') || name.includes('private') || name.includes('suite')) return SERVICE_CATALOG_CONFIG['private-cabin'];
   if (name.includes('virtual') || name.includes('gst')) return SERVICE_CATALOG_CONFIG['virtual-office'];
+  if (name.includes('loan') || name.includes('finance') || name.includes('syndicate')) return SERVICE_CATALOG_CONFIG['loan-syndicate'];
+  if (name.includes('land') || name.includes('real estate') || name.includes('promoter')) return SERVICE_CATALOG_CONFIG['land-promoters'];
+  if (name.includes('tax') || name.includes('ca') || name.includes('audit')) return SERVICE_CATALOG_CONFIG['tax-experts'];
 
-  const keys = Object.keys(SERVICE_CATALOG_CONFIG);
-  return SERVICE_CATALOG_CONFIG[keys[idx % keys.length]];
+  const isProf = service.category === 'professional';
+  return {
+    category: isProf ? 'Advisory Service' : 'Workspace Solution',
+    badge: isProf ? 'Expert Advisory' : 'Flexible Terms',
+    badgeBg: isProf ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white' : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white',
+    icon: isProf ? Briefcase : Building2,
+    defaultImage: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
+    perks: [
+      'Direct partner consultation & advisory',
+      'Customized execution plan',
+      'Clear documentation & legal compliance',
+      'Access to center amenities on appointment',
+    ],
+    startingPrice: Number(service.startingPrice || 0),
+  };
 }
 
 export default function HomePage() {
@@ -704,20 +764,20 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. Tailored Workspace Offerings Section (Matching Reference 2) */}
+      {/* 2. Professional Services Section */}
       <section className="py-20 bg-slate-50/60 border-y border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-xs font-bold text-indigo-600 shadow-xs">
-              <Building2 className="w-3.5 h-3.5" />
-              <span>Professional Workspace Services</span>
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-bold text-indigo-600 shadow-xs">
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Professional Services</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
-              Tailored Workspace Services
+              Professional Services
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Explore our comprehensive range of corporate IT infrastructure, virtual office registration, private executive suites, and custom workspace services.
+              Explore our comprehensive range of corporate debt financing, real estate land promoter liaisons, CA tax compliance, and specialized business advisory services.
             </p>
           </div>
 
@@ -810,7 +870,7 @@ export default function HomePage() {
                       {/* Card Body */}
                       <div className="p-5 sm:p-6 space-y-4">
                         <div>
-                          <h3 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-purple-600 transition-colors tracking-tight line-clamp-1">
+                          <h3 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-purple-600 transition-colors tracking-tight line-clamp-2 min-h-[3rem] sm:min-h-[3.5rem] flex items-center">
                             {service.name}
                           </h3>
                           <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 mt-1.5 font-normal">
