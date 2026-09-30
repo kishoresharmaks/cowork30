@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Navbar from '@/components/layout/Navbar';
@@ -269,7 +269,7 @@ export default function HomePage() {
   // Dynamic Membership Pricing Plans state
   const [plans, setPlans] = useState<any[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'daily'>('monthly');
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual' | 'daily'>('monthly');
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -348,6 +348,33 @@ export default function HomePage() {
 
   const displayedPlans = plans.length > 0 ? plans : fallbackPlans;
 
+  const filteredHomepagePlans = useMemo(() => {
+    return displayedPlans.filter((plan: any) => {
+      const isAnnualOnly =
+        plan.billingPeriod === 'Annual' ||
+        plan.billingPeriod === 'Annual Only' ||
+        (Number(plan.priceAnnual || 0) > 0 && Number(plan.priceMonthly || 0) === 0);
+
+      const isDailyOnly =
+        plan.billingPeriod === 'Daily' ||
+        (Number(plan.priceDaily || 0) > 0 && Number(plan.priceMonthly || 0) === 0 && Number(plan.priceAnnual || 0) === 0);
+
+      if (billingPeriod === 'monthly') {
+        return !isAnnualOnly && !isDailyOnly;
+      }
+
+      if (billingPeriod === 'annual') {
+        return isAnnualOnly || Number(plan.priceAnnual || 0) > 0 || Number(plan.priceMonthly || 0) > 0;
+      }
+
+      if (billingPeriod === 'daily') {
+        return !isAnnualOnly && (isDailyOnly || Number(plan.priceDaily || 0) > 0 || Number(plan.priceMonthly || 0) > 0);
+      }
+
+      return true;
+    });
+  }, [displayedPlans, billingPeriod]);
+
   const updateScrollButtons = () => {
     if (!sliderRef.current) return;
     const { scrollLeft, scrollWidth, clientWidth } = sliderRef.current;
@@ -357,7 +384,7 @@ export default function HomePage() {
     const firstCard = sliderRef.current.querySelector('[data-plan-card]') as HTMLElement | null;
     const step = firstCard ? firstCard.offsetWidth + 24 : 360;
     const index = Math.round(scrollLeft / step);
-    const maxIdx = displayedPlans.length - 1;
+    const maxIdx = filteredHomepagePlans.length - 1;
     setActiveSlideIndex(Math.max(0, Math.min(index, maxIdx)));
   };
 
@@ -366,7 +393,7 @@ export default function HomePage() {
     const handleResize = () => updateScrollButtons();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [plans]);
+  }, [filteredHomepagePlans]);
 
   const scrollSlider = (direction: 'left' | 'right') => {
     if (!sliderRef.current) return;
@@ -847,12 +874,23 @@ export default function HomePage() {
                 }`}
               >
                 <span>Monthly</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingPeriod('annual')}
+                className={`px-4 py-1.5 rounded-full font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  billingPeriod === 'annual'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Annual</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                    billingPeriod === 'monthly' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'
+                    billingPeriod === 'annual' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'
                   }`}
                 >
-                  Save ~20%
+                  Save Yearly
                 </span>
               </button>
               <button
@@ -899,18 +937,28 @@ export default function HomePage() {
             onScroll={handleSliderScroll}
             className="flex flex-col md:flex-row gap-8 md:gap-6 md:overflow-x-auto md:snap-x md:snap-mandatory scroll-smooth md:no-scrollbar py-4 px-1"
           >
-            {displayedPlans.map((plan: any, idx: number) => {
+            {filteredHomepagePlans.map((plan: any, idx: number) => {
+              const isAnnualPlan =
+                plan.billingPeriod === 'Annual' ||
+                plan.billingPeriod === 'Annual Only' ||
+                (Number(plan.priceAnnual || 0) > 0 && Number(plan.priceMonthly || 0) === 0);
+
               const displayPrice =
-                billingPeriod === 'daily'
+                isAnnualPlan || billingPeriod === 'annual'
+                  ? Number(plan.priceAnnual || (plan.priceMonthly ? plan.priceMonthly * 12 : 0))
+                  : billingPeriod === 'daily'
                   ? Number(plan.priceDaily || plan.priceMonthly)
-                  : Number(plan.priceMonthly || plan.priceDaily);
+                  : Number(plan.priceMonthly || (plan.priceAnnual ? Math.round(plan.priceAnnual / 12) : 0));
+
+              const displayUnit =
+                isAnnualPlan || billingPeriod === 'annual' ? '/ year' : billingPeriod === 'daily' ? '/ day' : '/ month';
 
               return (
                 <div
                   key={plan.id || idx}
                   data-plan-card
                   className={`w-full max-w-lg mx-auto md:max-w-none md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] md:shrink-0 md:snap-start bg-white rounded-3xl p-6 sm:p-7 border relative transition-all duration-300 flex flex-col justify-between group shadow-xs hover:shadow-xl ${
-                    plan.isPopular
+                    plan.isPopular || isAnnualPlan
                       ? 'border-2 border-purple-500 ring-4 ring-purple-500/10 hover:border-purple-600'
                       : 'border-slate-200/90 hover:border-purple-200'
                   }`}
@@ -920,6 +968,10 @@ export default function HomePage() {
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 text-[11px] font-extrabold uppercase tracking-wider text-white shadow-md flex items-center gap-1.5 whitespace-nowrap">
                       <Sparkles className="w-3.5 h-3.5 fill-white" />
                       <span>Most Popular Choice</span>
+                    </div>
+                  ) : isAnnualPlan ? (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-amber-500 text-[11px] font-extrabold uppercase tracking-wider text-slate-950 shadow-md whitespace-nowrap">
+                      Annual Only Plan
                     </div>
                   ) : (
                     <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-600">
@@ -944,9 +996,14 @@ export default function HomePage() {
                           {displayPrice.toLocaleString('en-IN')}
                         </span>
                         <span className="text-xs font-semibold text-slate-500">
-                          {billingPeriod === 'daily' ? '/ day' : '/ month'}
+                          {displayUnit}
                         </span>
                       </div>
+                      {(isAnnualPlan || billingPeriod === 'annual') && displayPrice > 0 && (
+                        <p className="text-[11px] text-purple-600 font-semibold mt-0.5">
+                          ~₹{Math.round(displayPrice / 12).toLocaleString('en-IN')} / month (billed annually)
+                        </p>
+                      )}
                       <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         <span>Includes 18% GST invoicing & instant credits</span>
@@ -994,9 +1051,9 @@ export default function HomePage() {
                   {/* Bottom Actions */}
                   <div className="pt-6 border-t border-slate-100 space-y-2.5">
                     <Link
-                      href={`/pricing?plan=${plan.slug}&billing=${billingPeriod}`}
+                      href={`/pricing?plan=${plan.slug}&billing=${isAnnualPlan ? 'annual' : billingPeriod}`}
                       className={`w-full py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        plan.isPopular
+                        plan.isPopular || isAnnualPlan
                           ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 text-white shadow-md shadow-pink-500/20'
                           : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs'
                       }`}
@@ -1019,7 +1076,7 @@ export default function HomePage() {
 
           {/* Desktop/Tablet Slide Dots Indicator */}
           <div className="hidden md:flex items-center justify-center gap-2 pt-6">
-            {displayedPlans.map((_: any, dotIdx: number) => (
+            {filteredHomepagePlans.map((_: any, dotIdx: number) => (
               <button
                 key={dotIdx}
                 type="button"

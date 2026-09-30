@@ -180,6 +180,33 @@ export default function PricingPage() {
   }, [selectedPlan, billingMode]);
 
   const visiblePlans = useMemo(() => plans.filter((plan) => plan.isActive), [plans]);
+
+  const filteredPlans = useMemo(() => {
+    return visiblePlans.filter((plan) => {
+      const isAnnualOnly =
+        plan.billingPeriod === 'Annual' ||
+        plan.billingPeriod === 'Annual Only' ||
+        (Number(plan.priceAnnual || 0) > 0 && Number(plan.priceMonthly || 0) === 0);
+
+      const isDailyOnly =
+        plan.billingPeriod === 'Daily' ||
+        (Number(plan.priceDaily || 0) > 0 && Number(plan.priceMonthly || 0) === 0 && Number(plan.priceAnnual || 0) === 0);
+
+      if (billingMode === 'monthly') {
+        return !isAnnualOnly && !isDailyOnly;
+      }
+
+      if (billingMode === 'annual') {
+        return isAnnualOnly || Number(plan.priceAnnual || 0) > 0 || Number(plan.priceMonthly || 0) > 0;
+      }
+
+      if (billingMode === 'daily') {
+        return !isAnnualOnly && (isDailyOnly || Number(plan.priceDaily || 0) > 0 || Number(plan.priceMonthly || 0) > 0);
+      }
+
+      return true;
+    });
+  }, [visiblePlans, billingMode]);
   const featuredRooms = useMemo(() => meetingRooms.filter((room) => room.isActive), [meetingRooms]);
   const featuredServices = useMemo(() => services.slice(0, 6), [services]);
 
@@ -509,7 +536,7 @@ export default function PricingPage() {
               </div>
 
               {/* Paid Plans */}
-              {visiblePlans.map((plan) => {
+              {filteredPlans.map((plan) => {
                 const isAnnualPlan = plan.billingPeriod === 'Annual' || plan.billingPeriod === 'Annual Only';
                 const effectiveMode = isAnnualPlan ? 'annual' : billingMode;
                 const displayPrice = computePlanSubtotal(plan, effectiveMode);
