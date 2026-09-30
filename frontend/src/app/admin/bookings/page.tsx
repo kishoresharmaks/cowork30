@@ -12,6 +12,7 @@ import {
   ScanLine,
   CheckCircle2,
   AlertTriangle,
+  CreditCard,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 
@@ -114,7 +115,7 @@ function parseBookingDetails(booking: any) {
 
   return {
     type: 'plan',
-    planName: booking.pricingPlan?.name || (notes.includes('|') ? notes.split('|')[0].trim() : 'Day Pass / Flex Desk'),
+    planName: booking.pricingPlan?.name || (notes.includes('|') ? notes.split('|')[0].trim() : 'Membership Plan'),
     rawNotes: notes,
   };
 }
@@ -178,8 +179,9 @@ function getMeetingPaymentMethodDisplay(mb: any) {
 }
 
 export default function AdminBookingsPage() {
-  const [activeTab, setActiveTab] = useState<'regular' | 'meeting'>('regular');
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'desks' | 'subscriptions' | 'meeting'>('desks');
+  const [deskBookingsList, setDeskBookingsList] = useState<any[]>([]);
+  const [subscriptionsList, setSubscriptionsList] = useState<any[]>([]);
   const [meetingBookings, setMeetingBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -224,17 +226,25 @@ export default function AdminBookingsPage() {
   async function loadData() {
     setLoading(true);
     try {
-      if (activeTab === 'regular') {
+      if (activeTab === 'desks' || activeTab === 'subscriptions') {
         const query = new URLSearchParams();
         if (search) query.set('search', search);
         if (statusFilter) query.set('status', statusFilter);
         const res = await apiClient.get(`/bookings?${query.toString()}`);
         const rawList = res.data.bookings || res.data.data || [];
-        const deskOnlyList = rawList.filter((b: any) => {
+
+        const desks = rawList.filter((b: any) => {
           const isSrv = b.bookingCode?.startsWith('SRV-') || (b.notes && b.notes.includes('Solution:'));
-          return !isSrv;
+          const isSub = b.bookingType === 'membership_inquiry' || b.bookingCode?.startsWith('SUB-');
+          return !isSrv && !isSub;
         });
-        setBookings(deskOnlyList);
+
+        const subs = rawList.filter((b: any) => {
+          return b.bookingType === 'membership_inquiry' || b.bookingCode?.startsWith('SUB-');
+        });
+
+        setDeskBookingsList(desks);
+        setSubscriptionsList(subs);
       } else {
         const res = await apiClient.get('/bookings/meeting-rooms');
         setMeetingBookings(res.data.meetingBookings || res.data.data || []);
@@ -273,7 +283,7 @@ export default function AdminBookingsPage() {
 
   const handleDeskStatusChange = async (id: number, status: string) => {
     if (status === 'completed') {
-      const b = bookings.find((item) => item.id === id);
+      const b = deskBookingsList.find((item: any) => item.id === id) || subscriptionsList.find((item: any) => item.id === id);
       setPendingCompletionBooking({ id, type: 'desk', code: b?.bookingCode || `#${id}` });
       return;
     }
@@ -444,15 +454,28 @@ export default function AdminBookingsPage() {
           <div className="flex items-center space-x-2 border-b sm:border-b-0 border-[#334155] pb-2 sm:pb-0 overflow-x-auto w-full sm:w-auto">
             <button
               type="button"
-              onClick={() => setActiveTab('regular')}
+              onClick={() => setActiveTab('desks')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer ${
-                activeTab === 'regular'
+                activeTab === 'desks'
                   ? 'bg-[#6366F1] text-white shadow-xs'
                   : 'bg-[#0F172A] border border-[#334155] text-[#94A3B8] hover:text-[#F8FAFC]'
               }`}
             >
               <Calendar className="w-3.5 h-3.5" />
-              <span>Desks & Tour Requests ({bookings.length})</span>
+              <span>Desks & Tour Requests ({deskBookingsList.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('subscriptions')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer ${
+                activeTab === 'subscriptions'
+                  ? 'bg-[#6366F1] text-white shadow-xs'
+                  : 'bg-[#0F172A] border border-[#334155] text-[#94A3B8] hover:text-[#F8FAFC]'
+              }`}
+            >
+              <CreditCard className="w-3.5 h-3.5 text-amber-400" />
+              <span>Membership Subscriptions ({subscriptionsList.length})</span>
             </button>
 
             <button
@@ -497,13 +520,13 @@ export default function AdminBookingsPage() {
           </div>
         </div>
 
-        {/* Regular Bookings Table */}
-        {activeTab === 'regular' && (
+        {/* Desk & Tour Bookings Table */}
+        {activeTab === 'desks' && (
           <div className="bg-[#1E293B] rounded-2xl border border-[#334155] overflow-hidden shadow-xs">
             {loading ? (
               <div className="py-20 text-center text-xs text-[#94A3B8]">Loading desk & tour reservations...</div>
-            ) : bookings.length === 0 ? (
-              <div className="py-20 text-center text-xs text-[#94A3B8]">No bookings recorded matching your criteria.</div>
+            ) : deskBookingsList.length === 0 ? (
+              <div className="py-20 text-center text-xs text-[#94A3B8]">No desk or tour reservations found matching your criteria.</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -519,7 +542,7 @@ export default function AdminBookingsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#334155]">
-                    {bookings.map((b) => {
+                    {deskBookingsList.map((b) => {
                       const parsed = parseBookingDetails(b);
                       return (
                         <tr key={b.id} className="hover:bg-[#0F172A]/50 transition-colors">
@@ -582,6 +605,93 @@ export default function AdminBookingsPage() {
                         </tr>
                       );
                     })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Membership Subscriptions Table */}
+        {activeTab === 'subscriptions' && (
+          <div className="bg-[#1E293B] rounded-2xl border border-[#334155] overflow-hidden shadow-xs">
+            {loading ? (
+              <div className="py-20 text-center text-xs text-[#94A3B8]">Loading membership subscriptions...</div>
+            ) : subscriptionsList.length === 0 ? (
+              <div className="py-20 text-center text-xs text-[#94A3B8]">No active or past membership subscriptions found.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#0F172A] text-[#94A3B8] font-bold border-b border-[#334155] uppercase tracking-wider text-[10px]">
+                    <tr>
+                      <th className="px-6 py-4">Sub Code</th>
+                      <th className="px-6 py-4">Member Info</th>
+                      <th className="px-6 py-4">Plan Name & Type</th>
+                      <th className="px-6 py-4">Billing Cycle</th>
+                      <th className="px-6 py-4 text-right">Amount Paid</th>
+                      <th className="px-6 py-4 text-center">Status</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#334155]">
+                    {subscriptionsList.map((b) => (
+                      <tr key={b.id} className="hover:bg-[#0F172A]/50 transition-colors">
+                        <td className="px-6 py-4 font-mono font-bold text-rose-400">
+                          {b.bookingCode || `#${b.id}`}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <p className="font-extrabold text-[#F8FAFC]">{b.customerName}</p>
+                          <p className="text-[10px] text-[#94A3B8]">{b.customerEmail}</p>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-[#F8FAFC]">
+                            {b.pricingPlan?.name || 'Membership Plan'}
+                          </p>
+                          <p className="text-[10px] text-amber-400 font-semibold uppercase tracking-wider">
+                            {b.bookingType}
+                          </p>
+                        </td>
+
+                        <td className="px-6 py-4 text-[#CBD5E1]">
+                          <p className="font-bold text-[#F8FAFC]">{formatBookingDateDisplay(b.preferredDate || b.createdAt)}</p>
+                          <p className="text-[10px] text-[#94A3B8]">{b.preferredTimeSlot || 'Active Subscription'}</p>
+                        </td>
+
+                        <td className="px-6 py-4 text-right font-extrabold text-[#10B981]">
+                          ₹{Number(b.totalAmount || 0).toFixed(2)}
+                        </td>
+
+                        <td className="px-6 py-4 text-center">
+                          <select
+                            value={b.status}
+                            onChange={(e) => handleDeskStatusChange(b.id, e.target.value)}
+                            className={`text-[10px] font-extrabold uppercase rounded px-2.5 py-1 bg-[#0F172A] border focus:outline-none cursor-pointer ${getStatusBadgeClass(
+                              b.status,
+                            )}`}
+                          >
+                            <option value="unpaid">UNPAID</option>
+                            <option value="pending">PENDING (PAID)</option>
+                            <option value="confirmed">CONFIRMED (CHECKED-IN)</option>
+                            <option value="completed">COMPLETED</option>
+                            <option value="not_checked_in">NOT CHECKED-IN</option>
+                            <option value="cancelled">CANCELLED</option>
+                          </select>
+                        </td>
+
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setViewingBooking(b)}
+                            className="p-2 rounded-xl bg-[#0F172A] border border-[#334155] text-[#6366F1] hover:border-[#6366F1] transition-all cursor-pointer"
+                            title="View Full Subscription Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
