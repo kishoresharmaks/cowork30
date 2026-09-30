@@ -51,6 +51,7 @@ type ServiceItem = {
   shortDescription: string;
   startingPrice: number;
   featuredImage?: string;
+  pricingUnit?: string;
 };
 
 const tabs = [
@@ -767,8 +768,16 @@ export default function PricingPage() {
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">{service.shortDescription}</p>
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-3">
-                    <span>Starting from</span>
-                    <span className="text-indigo-600 font-extrabold">₹{service.startingPrice}/mo</span>
+                    {Number(service.startingPrice || 0) === 0 || service.pricingUnit === 'quote' ? (
+                      <span className="text-indigo-600 font-extrabold">Custom Quote</span>
+                    ) : (
+                      <>
+                        <span>Starting from</span>
+                        <span className="text-indigo-600 font-extrabold">
+                          ₹{Number(service.startingPrice).toLocaleString('en-IN')}/{service.pricingUnit === 'day' ? 'day' : service.pricingUnit === 'consultation' ? 'consultation' : 'mo'}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}

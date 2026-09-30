@@ -439,21 +439,25 @@ export default function CustomerServicesPage() {
 
                       {/* Bottom Floating Price Tag */}
                       <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-                        <div className="inline-flex items-baseline gap-1 px-3 py-1 rounded-xl bg-slate-900/85 backdrop-blur-md border border-white/10 text-white shadow-lg">
-                          {pricingUnit === 'quote' || price === 0 ? (
-                            <span className="text-xs font-bold text-white tracking-tight">Custom Quote</span>
-                          ) : (
-                            <>
+                        {pricingUnit === 'quote' || price === 0 ? (
+                          <div className="inline-flex items-center px-3 py-1 rounded-xl bg-slate-900/85 backdrop-blur-md border border-white/10 text-white shadow-lg">
+                            <span className="text-xs sm:text-sm font-extrabold text-amber-300 tracking-tight">
+                              Custom Quote
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-baseline gap-1 px-3 py-1 rounded-xl bg-slate-900/85 backdrop-blur-md border border-white/10 text-white shadow-lg">
+                            {pricingUnit === 'consultation' ? null : (
                               <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-wide">Starting</span>
-                              <span className="text-sm sm:text-base font-extrabold text-white tracking-tight">
-                                ₹{price.toLocaleString('en-IN')}
-                              </span>
-                              <span className="text-[10px] font-medium text-slate-400">
-                                {pricingUnit === 'consultation' ? '/fee' : '/mo'}
-                              </span>
-                            </>
-                          )}
-                        </div>
+                            )}
+                            <span className="text-sm sm:text-base font-extrabold text-white tracking-tight">
+                              ₹{price.toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-[10px] font-medium text-slate-400">
+                              /{pricingUnit === 'day' ? 'day' : pricingUnit === 'consultation' ? 'consultation' : 'mo'}
+                            </span>
+                          </div>
+                        )}
 
                         <span className="text-[10px] font-semibold text-white/90 bg-white/15 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/20">
                           {isProfessional ? 'Advisory Hub' : 'Flexible Terms'}

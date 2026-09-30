@@ -701,13 +701,13 @@ export default function HomePage() {
           <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-xs font-bold text-indigo-600 shadow-xs">
               <Building2 className="w-3.5 h-3.5" />
-              <span>Flexible Workspace Solutions</span>
+              <span>Professional Workspace Services</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
-              Tailored Workspace Offerings
+              Tailored Workspace Services
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              From flexible day passes to enterprise private office suites, discover workspace solutions built for speed, privacy, and team collaboration.
+              Explore our comprehensive range of corporate IT infrastructure, virtual office registration, private executive suites, and custom workspace services.
             </p>
           </div>
 
@@ -771,13 +771,25 @@ export default function HomePage() {
 
                         {/* Bottom Floating Price Tag */}
                         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-                          <div className="inline-flex items-baseline gap-1 px-3 py-1 rounded-xl bg-slate-900/85 backdrop-blur-md border border-white/10 text-white shadow-lg">
-                            <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-wide">Starting</span>
-                            <span className="text-sm sm:text-base font-extrabold text-white tracking-tight">
-                              ₹{price.toLocaleString('en-IN')}
-                            </span>
-                            <span className="text-[10px] font-medium text-slate-400">/mo</span>
-                          </div>
+                          {price === 0 || service?.pricingUnit === 'quote' ? (
+                            <div className="inline-flex items-center px-3 py-1 rounded-xl bg-slate-900/85 backdrop-blur-md border border-white/10 text-white shadow-lg">
+                              <span className="text-xs sm:text-sm font-extrabold text-amber-300 tracking-tight">
+                                Custom Quote
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="inline-flex items-baseline gap-1 px-3 py-1 rounded-xl bg-slate-900/85 backdrop-blur-md border border-white/10 text-white shadow-lg">
+                              {service?.pricingUnit === 'consultation' ? null : (
+                                <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-wide">Starting</span>
+                              )}
+                              <span className="text-sm sm:text-base font-extrabold text-white tracking-tight">
+                                ₹{price.toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-[10px] font-medium text-slate-400">
+                                /{service?.pricingUnit === 'day' ? 'day' : service?.pricingUnit === 'consultation' ? 'consultation' : 'mo'}
+                              </span>
+                            </div>
+                          )}
 
                           <span className="text-[10px] font-semibold text-white/90 bg-white/15 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/20">
                             Flexible Terms
