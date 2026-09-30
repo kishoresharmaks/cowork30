@@ -194,15 +194,25 @@ export default function PricingPage() {
         (Number(plan.priceDaily || 0) > 0 && Number(plan.priceMonthly || 0) === 0 && Number(plan.priceAnnual || 0) === 0);
 
       if (billingMode === 'monthly') {
-        return !isAnnualOnly && !isDailyOnly;
+        return !isAnnualOnly && !isDailyOnly && Number(plan.priceMonthly || 0) > 0;
       }
 
       if (billingMode === 'annual') {
-        return isAnnualOnly || Number(plan.priceAnnual || 0) > 0 || Number(plan.priceMonthly || 0) > 0;
+        const hasExplicitAnnualPrice = Number(plan.priceAnnual || 0) > 0;
+        if (hasExplicitAnnualPrice) return true;
+        if (isAnnualOnly) {
+          const annualAmt = Number(plan.priceAnnual || (plan.priceMonthly ? plan.priceMonthly * 12 : 0));
+          return annualAmt > 0;
+        }
+        return false;
       }
 
       if (billingMode === 'daily') {
-        return !isAnnualOnly && (isDailyOnly || Number(plan.priceDaily || 0) > 0 || Number(plan.priceMonthly || 0) > 0);
+        const hasDailyPrice = Number(plan.priceDaily || 0) > 0;
+        if (isDailyOnly) {
+          return hasDailyPrice;
+        }
+        return !isAnnualOnly && hasDailyPrice;
       }
 
       return true;
