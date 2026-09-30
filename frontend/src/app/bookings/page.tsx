@@ -75,14 +75,23 @@ function formatMeetingTimeSlot(startIso?: string | Date | null, endIso?: string 
 }
 
 function calculateDeskDuration(timeSlot?: string | null, notes?: string | null): string {
-  const t = (timeSlot || '').trim();
+  const t = (timeSlot || '').trim().toLowerCase();
   const n = (notes || '').trim().toLowerCase();
 
-  if (n.includes('monthly') || n.includes('membership') || t.toLowerCase().includes('monthly')) {
+  if (t.includes('annual') || t.includes('yearly') || n.includes('annual') || n.includes('yearly')) {
+    return '1 Year';
+  }
+  if (t.includes('monthly') || n.includes('monthly')) {
     return '1 Month';
   }
-  if (n.includes('weekly') || t.toLowerCase().includes('weekly')) {
+  if (t.includes('weekly') || n.includes('weekly')) {
     return '1 Week';
+  }
+  if (t.includes('daily') || n.includes('daily')) {
+    return '1 Day';
+  }
+  if (n.includes('membership') || t.includes('membership')) {
+    return '1 Month';
   }
 
   // Parse 12-hour time format like "8:00 AM - 8:00 PM" or "10:00 AM - 06:00 PM"
