@@ -512,11 +512,6 @@ export default function PricingPage() {
                     <span className="text-xs text-slate-400">/ month</span>
                   </div>
 
-                  <div className="text-xs text-slate-500 space-y-1 font-medium">
-                    <div>Meeting credits: 0</div>
-                    <div>Desk credits: 0</div>
-                  </div>
-
                   <div className="pt-4 border-t border-slate-100 space-y-2.5 text-xs">
                     <span className="font-bold text-slate-900 block text-[11px] uppercase tracking-wider">Perks:</span>
                     {['Pay-as-you-go desk booking', 'Pay-as-you-go meeting rooms', 'No monthly recurring fee'].map((feature) => (
@@ -529,13 +524,6 @@ export default function PricingPage() {
                 </div>
 
                 <div className="pt-4 grid grid-cols-1 gap-2.5">
-                  <Link
-                    href="/floor-map"
-                    className="w-full py-2.5 rounded-full text-xs font-bold border border-slate-200 text-slate-800 hover:border-slate-300 bg-white shadow-xs flex items-center justify-center gap-1.5"
-                  >
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>Book Desk</span>
-                  </Link>
                   <Link
                     href="/meeting-rooms"
                     className="w-full py-2.5 rounded-full text-xs font-bold border border-slate-200 text-slate-800 hover:border-slate-300 bg-white shadow-xs flex items-center justify-center gap-1.5"
@@ -609,11 +597,6 @@ export default function PricingPage() {
                         )}
                       </div>
 
-                      <div className="text-xs text-slate-600 space-y-1 font-medium">
-                        <div>Meeting credits: <strong>{plan.meetingCreditsIncluded}</strong></div>
-                        <div>Desk credits: <strong>{plan.deskCreditsIncluded}</strong></div>
-                      </div>
-
                       <div className="pt-4 border-t border-slate-100 space-y-2.5 text-xs">
                         <span className="font-bold text-slate-900 block text-[11px] uppercase tracking-wider">Perks:</span>
                         {plan.features?.map((feat) => (
@@ -675,15 +658,15 @@ export default function PricingPage() {
                   <Layers className="w-3.5 h-3.5" />
                   <span>Desk Booking Path</span>
                 </div>
-                <h2 className="text-2xl font-extrabold text-slate-900">Book desks daily or monthly with interactive seat picking</h2>
+                <h2 className="text-2xl font-extrabold text-slate-900">Book desks daily or monthly with flexible workspace options</h2>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Use our interactive 2D floor map to pick your exact seat. Desk credits included with your membership tier will be applied automatically.
+                  Choose from our flexible desk options. Your membership tier provides seamless access to shared lounges and open desk areas.
                 </p>
                 <Link
-                  href="/floor-map"
+                  href="/services"
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold shadow-md"
                 >
-                  <span>Launch Floor Map</span>
+                  <span>Explore Services</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -698,7 +681,7 @@ export default function PricingPage() {
                         <span className="text-indigo-600 font-extrabold">₹{plan.priceMonthly}/mo</span>
                       </div>
                       <p className="text-slate-500">
-                        Desk credits: <strong>{plan.deskCreditsIncluded}</strong> | Meeting credits: <strong>{plan.meetingCreditsIncluded}</strong>
+                        {plan.tagline || 'Flexible coworking membership tier.'}
                       </p>
                     </div>
                   ))}

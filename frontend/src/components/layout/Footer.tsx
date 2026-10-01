@@ -72,11 +72,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/floor-map" className="hover:text-indigo-600 transition-colors">
-                  Interactive Floor Map
-                </Link>
-              </li>
-              <li>
                 <Link href="/gallery" className="hover:text-indigo-600 transition-colors">
                   Photo Gallery
                 </Link>

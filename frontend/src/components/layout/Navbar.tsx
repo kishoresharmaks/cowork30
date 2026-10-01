@@ -63,7 +63,6 @@ export default function Navbar() {
     { href: '/services', label: 'Services', icon: Briefcase },
     { href: '/pricing', label: 'Pricing Plans', icon: Crown },
     { href: '/meeting-rooms', label: 'Meeting Rooms', icon: Presentation },
-    { href: '/floor-map', label: 'Interactive Map', icon: Map },
     { href: '/gallery', label: 'Gallery', icon: Aperture },
   ];
 
@@ -702,7 +701,6 @@ export default function Navbar() {
               ? { href: '/services', label: 'Services', icon: Briefcase }
               : { href: '/', label: 'Home', icon: Home },
             { href: '/pricing', label: 'Pricing', icon: Crown },
-            { href: '/floor-map', label: 'Floor Map', icon: Map },
             { href: '/meeting-rooms', label: 'Rooms', icon: Presentation },
             { href: user ? '/bookings' : '/login', label: user ? 'Bookings' : 'Sign In', icon: user ? CalendarCheck : User },
           ].map((tab) => {

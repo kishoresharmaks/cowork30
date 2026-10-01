@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Calendar,
   Compass,
+  Crown,
   Building2,
   Laptop,
   MailCheck,
@@ -588,11 +589,11 @@ export default function HomePage() {
               </Link>
 
               <Link
-                href="/floor-map"
+                href="/pricing"
                 className="w-full sm:w-auto px-7 py-3.5 text-xs sm:text-sm font-extrabold rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-xl transition-all text-white flex items-center justify-center space-x-2 shadow-lg cursor-pointer"
               >
-                <Compass className="w-4 h-4 text-pink-400" />
-                <span>Explore Interactive Floor Map</span>
+                <Crown className="w-4 h-4 text-pink-400" />
+                <span>See Pricing Plans</span>
               </Link>
             </div>
 
@@ -1088,29 +1089,7 @@ export default function HomePage() {
                       )}
                       <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        <span>Includes 18% GST invoicing & instant credits</span>
-                      </div>
-                    </div>
-
-                    {/* Credits Allowance Box */}
-                    <div className="grid grid-cols-2 gap-2.5 p-3 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs">
-                      <div className="space-y-0.5">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-purple-600" />
-                          <span>Meeting Suite</span>
-                        </span>
-                        <strong className="text-slate-900 font-extrabold block text-sm">
-                          {plan.meetingCreditsIncluded > 0 ? `${plan.meetingCreditsIncluded} hrs/mo` : 'On-Demand'}
-                        </strong>
-                      </div>
-                      <div className="space-y-0.5">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                          <Laptop className="w-3 h-3 text-pink-600" />
-                          <span>Desk Access</span>
-                        </span>
-                        <strong className="text-slate-900 font-extrabold block text-sm">
-                          {plan.deskCreditsIncluded > 0 ? `${plan.deskCreditsIncluded} Passes` : 'Unlimited'}
-                        </strong>
+                        <span>Includes 18% GST invoicing</span>
                       </div>
                     </div>
 
@@ -1186,61 +1165,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Interactive Floor Map Callout Section */}
-      <section className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="bg-white rounded-3xl p-8 sm:p-12 relative overflow-hidden border border-slate-200/90 shadow-sm">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center relative z-10">
-            <div className="space-y-5">
-              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200">
-                <Compass className="w-3.5 h-3.5 text-purple-600" />
-                <span>Live 2D Interactive Desk Picker</span>
-              </div>
-              <h3 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight">
-                Pick Your Exact Seat Before You Arrive
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Experience our real-time interactive floor map. View current desk occupation status (🟢 Available, 🔴 Occupied, 🟡 Reserved), check window views, inspect power outlets, and reserve instantly.
-              </p>
-              <div className="pt-2">
-                <Link
-                  href="/floor-map"
-                  className="px-6 py-3 text-xs font-bold rounded-full text-white bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 transition-all shadow-md inline-flex items-center space-x-2"
-                >
-                  <span>Launch Floor Map</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </div>
 
-            {/* Mock Map Card */}
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <span className="text-xs font-bold text-slate-900">Ground Floor Innovation Map</span>
-                <div className="flex items-center space-x-3 text-[10px] font-semibold">
-                  <span className="flex items-center space-x-1 text-emerald-700"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Available</span>
-                  <span className="flex items-center space-x-1 text-rose-700"><span className="w-2 h-2 rounded-full bg-rose-500" /> Occupied</span>
-                  <span className="flex items-center space-x-1 text-amber-700"><span className="w-2 h-2 rounded-full bg-amber-500" /> Reserved</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 pt-1">
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-center space-y-1">
-                  <span className="text-xs font-bold text-emerald-800">Desk A-101</span>
-                  <span className="block text-[10px] font-semibold text-emerald-600">Available</span>
-                </div>
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-center space-y-1">
-                  <span className="text-xs font-bold text-rose-800">Desk A-102</span>
-                  <span className="block text-[10px] font-semibold text-rose-600">Occupied</span>
-                </div>
-                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-center space-y-1">
-                  <span className="text-xs font-bold text-amber-800">Cabin C-301</span>
-                  <span className="block text-[10px] font-semibold text-amber-600">Reserved</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Testimonials */}
       <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-10">
