@@ -195,8 +195,8 @@ export default function AdminMeetingRoomsPage() {
       description: room.description || '',
       imageUrl: existingImage,
       perSeatPrice: Number(room.perSeatPrice || 150),
-      minSeats: Number(room.minSeats || 1),
-      maxSeats: Number(room.maxSeats || room.capacity || 10),
+      minSeats: Math.max(1, Number(room.minSeats || 1)),
+      maxSeats: Math.max(1, Number(room.maxSeats || room.capacity || 10)),
       hourlyRate: Number(room.hourlyRate || 300),
       dailyRate: Number(room.dailyRate || 2400),
       serviceChargeType: room.serviceChargeType || 'fixed',
@@ -252,11 +252,16 @@ export default function AdminMeetingRoomsPage() {
 
     setSubmitting(true);
     try {
+      const minSeatsVal = Math.max(1, Number(formData.minSeats || 1));
+      const maxSeatsVal = Math.max(minSeatsVal, Number(formData.maxSeats || 1));
+
       const { is24Hours, ...restData } = formData;
       const payload = {
         ...restData,
+        minSeats: minSeatsVal,
+        maxSeats: maxSeatsVal,
+        capacity: maxSeatsVal,
         branchId: Number(formData.branchId || 1),
-        capacity: Number(formData.maxSeats || 10),
         images: formData.imageUrl ? [formData.imageUrl] : [],
         startTime: is24Hours ? null : formData.startTime,
         endTime: is24Hours ? null : formData.endTime,
@@ -442,7 +447,7 @@ export default function AdminMeetingRoomsPage() {
                   <div className="pt-2 border-t border-[#334155] grid grid-cols-2 gap-2 text-xs text-[#CBD5E1]">
                     <span className="flex items-center space-x-1">
                       <Users className="w-3.5 h-3.5 text-[#6366F1]" />
-                      <span>{room.minSeats} - {room.maxSeats || room.capacity} Seats</span>
+                      <span>{Math.max(1, Number(room.minSeats || 1))} - {Math.max(1, Number(room.maxSeats || room.capacity || 1))} Seats</span>
                     </span>
 
                     <span className="flex items-center space-x-1">
@@ -708,9 +713,10 @@ export default function AdminMeetingRoomsPage() {
                   <label className="block text-[#CBD5E1] font-semibold mb-1">Min Seats *</label>
                   <input
                     type="number"
+                    min="1"
                     required
                     value={formData.minSeats}
-                    onChange={(e) => setFormData({ ...formData, minSeats: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, minSeats: Math.max(1, Number(e.target.value)) })}
                     className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3 py-2 text-[#F8FAFC] font-mono focus:border-[#6366F1] focus:outline-none"
                   />
                 </div>
@@ -719,9 +725,10 @@ export default function AdminMeetingRoomsPage() {
                   <label className="block text-[#CBD5E1] font-semibold mb-1">Max Seats Capacity *</label>
                   <input
                     type="number"
+                    min="1"
                     required
                     value={formData.maxSeats}
-                    onChange={(e) => setFormData({ ...formData, maxSeats: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, maxSeats: Math.max(1, Number(e.target.value)) })}
                     className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3 py-2 text-[#F8FAFC] font-mono focus:border-[#6366F1] focus:outline-none"
                   />
                 </div>

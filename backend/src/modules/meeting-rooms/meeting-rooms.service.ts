@@ -1074,10 +1074,10 @@ export class MeetingRoomsService {
             ? { capacity: Number(data.maxSeats) }
             : {}),
         ...(data.minSeats !== undefined
-          ? { minSeats: Number(data.minSeats) }
+          ? { minSeats: Math.max(1, Number(data.minSeats || 1)) }
           : {}),
         ...(data.maxSeats !== undefined
-          ? { maxSeats: Number(data.maxSeats) }
+          ? { maxSeats: Math.max(1, Number(data.maxSeats || 1)) }
           : {}),
         ...(data.perSeatPrice !== undefined
           ? { perSeatPrice: Number(data.perSeatPrice) }
