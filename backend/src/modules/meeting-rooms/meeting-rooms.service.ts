@@ -485,8 +485,9 @@ export class MeetingRoomsService {
 
     const baseRate = Number(room.hourlyRate || 0);
     const perSeatRate = Number(room.perSeatPrice || 0);
+    const additionalSeats = Math.max(0, seatsCount - minSeats);
 
-    const rawBaseSubtotal = (baseRate + perSeatRate * seatsCount) * totalHours;
+    const rawBaseSubtotal = (baseRate + perSeatRate * additionalSeats) * totalHours;
 
     let serviceChargeAmount = 0;
     if (room.serviceChargeType === 'fixed') {

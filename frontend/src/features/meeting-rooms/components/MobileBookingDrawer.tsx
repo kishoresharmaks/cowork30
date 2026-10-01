@@ -56,7 +56,9 @@ export const MobileBookingDrawer: React.FC<MobileBookingDrawerProps> = (props) =
   const totalHours = selectedSlotsCount * 0.5;
   const baseRate = Number(selectedRoom.hourlyRate || 0);
   const perSeatRate = Number(selectedRoom.perSeatPrice || 0);
-  const baseSubtotal = (baseRate + perSeatRate * selectedSeats) * totalHours;
+  const minSeats = Number(selectedRoom.minSeats || 1);
+  const additionalSeats = Math.max(0, selectedSeats - minSeats);
+  const baseSubtotal = (baseRate + perSeatRate * additionalSeats) * totalHours;
 
   let serviceChargeAmount = 0;
   if (selectedRoom.serviceChargeType === 'fixed') {

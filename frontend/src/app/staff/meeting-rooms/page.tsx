@@ -603,8 +603,8 @@ export default function StaffMeetingRoomsPage() {
                   <span className="font-mono font-bold text-[#F8FAFC]">₹{(Number(selectedRoomForBooking.hourlyRate || 0) * pricing.hours).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-[#CBD5E1]">
-                  <span>Per Seat Pricing ({bookingForm.seatsBooked} seat(s) × ₹{selectedRoomForBooking.perSeatPrice}/hr):</span>
-                  <span className="font-mono font-bold text-[#F8FAFC]">₹{(Number(selectedRoomForBooking.perSeatPrice || 0) * bookingForm.seatsBooked * pricing.hours).toLocaleString()}</span>
+                  <span>Additional Seats Pricing ({Math.max(0, bookingForm.seatsBooked - Number(selectedRoomForBooking.minSeats || 1))} extra seat(s) × ₹{selectedRoomForBooking.perSeatPrice}/hr):</span>
+                  <span className="font-mono font-bold text-[#F8FAFC]">₹{(pricing.addOnSubtotal || 0).toLocaleString()}</span>
                 </div>
                 {(pricing.serviceCharge || 0) > 0 && (
                   <div className="flex justify-between text-[#CBD5E1]">
