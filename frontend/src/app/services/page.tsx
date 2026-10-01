@@ -385,7 +385,7 @@ export default function CustomerServicesPage() {
             <p className="text-xs text-slate-500">There are no services in this category currently available for the selected center.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredServices.map((service, idx) => {
               const config = getServiceConfig(service, idx);
               const IconComp = (service.iconClass && ICON_MAP[service.iconClass]) || config.icon;
@@ -468,10 +468,10 @@ export default function CustomerServicesPage() {
                     {/* Card Body */}
                     <div className="p-5 sm:p-6 space-y-4">
                       <div>
-                        <h3 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-purple-600 transition-colors tracking-tight line-clamp-1">
+                        <h3 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-purple-600 transition-colors tracking-tight leading-snug">
                           {service.name}
                         </h3>
-                        <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 mt-1 font-normal">
+                        <p className="text-xs text-slate-500 leading-relaxed mt-1.5 font-normal">
                           {service.shortDescription}
                         </p>
                       </div>
@@ -487,7 +487,7 @@ export default function CustomerServicesPage() {
                               <div className="w-4 h-4 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center shrink-0 mt-0.5">
                                 <Check className="w-2.5 h-2.5 stroke-[3]" />
                               </div>
-                              <span className="text-xs text-slate-600 leading-tight line-clamp-1">{perk}</span>
+                              <span className="text-xs text-slate-600 leading-normal">{perk}</span>
                             </li>
                           ))}
                         </ul>

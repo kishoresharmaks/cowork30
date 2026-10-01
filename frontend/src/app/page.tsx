@@ -60,17 +60,6 @@ const professionalSolutions = [
     whatsappMsg: 'Hi Cowork30, I am interested in learning more about 24/7 Access & Security.',
   },
   {
-    title: 'Podcast / Recording Studio',
-    icon: Mic,
-    description: 'Soundproof, professionally designed space for high-quality audio and video recording.',
-    features: [
-      'XLR microphones & mixer',
-      'Soundproof walls',
-      'Acoustic panels',
-    ],
-    whatsappMsg: 'Hi Cowork30, I am interested in learning more about the Podcast / Recording Studio.',
-  },
-  {
     title: 'Event Space',
     icon: Calendar,
     description: 'Spacious, customizable setups to suit everything from corporate sessions to creative events.',
@@ -710,8 +699,8 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* 4 Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* 3 Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {professionalSolutions.map((item, idx) => {
             const Icon = item.icon;
             return (
@@ -784,14 +773,14 @@ export default function HomePage() {
 
           {/* Dynamic Services Cards */}
           {servicesLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {Array.from({ length: 4 }).map((_, i) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="bg-white rounded-3xl border border-slate-200 shadow-xs h-[460px] animate-pulse" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {(services.length > 0 ? services.slice(0, 8) : []).map((service, idx) => {
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {(services.length > 0 ? services.slice(0, 6) : []).map((service, idx) => {
                 const config = getServiceConfig(service, idx);
                 const IconComp = config.icon;
                 const isLocalBroken =
@@ -871,10 +860,10 @@ export default function HomePage() {
                       {/* Card Body */}
                       <div className="p-5 sm:p-6 space-y-4">
                         <div>
-                          <h3 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-purple-600 transition-colors tracking-tight line-clamp-2 min-h-[3rem] sm:min-h-[3.5rem] flex items-center">
+                          <h3 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-purple-600 transition-colors tracking-tight leading-snug">
                             {service.name}
                           </h3>
-                          <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 mt-1.5 font-normal">
+                          <p className="text-xs text-slate-500 leading-relaxed mt-1.5 font-normal">
                             {service.shortDescription}
                           </p>
                         </div>
@@ -890,7 +879,7 @@ export default function HomePage() {
                                 <div className="w-4 h-4 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center shrink-0 mt-0.5">
                                   <Check className="w-2.5 h-2.5 stroke-[3]" />
                                 </div>
-                                <span className="text-xs text-slate-600 leading-tight line-clamp-1">{perk}</span>
+                                <span className="text-xs text-slate-600 leading-normal">{perk}</span>
                               </li>
                             ))}
                           </ul>
