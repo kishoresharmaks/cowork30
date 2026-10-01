@@ -257,4 +257,29 @@ export class CmsController {
   async deleteBlog(@Param('id', ParseIntPipe) id: number) {
     return this.cmsService.deleteBlog(id);
   }
+
+  // --- BLOG CATEGORY ENDPOINTS ---
+  @Get('categories')
+  @ApiOperation({ summary: 'Get all blog categories with post statistics' })
+  async getCategories() {
+    return this.cmsService.getAllBlogCategories();
+  }
+
+  @Put('admin/categories')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin: Rename blog category across posts' })
+  async renameCategory(@Body() body: { oldName: string; newName: string }) {
+    return this.cmsService.renameBlogCategory(body.oldName, body.newName);
+  }
+
+  @Delete('admin/categories/:name')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin: Delete blog category' })
+  async deleteCategory(@Param('name') name: string) {
+    return this.cmsService.deleteBlogCategory(decodeURIComponent(name));
+  }
 }

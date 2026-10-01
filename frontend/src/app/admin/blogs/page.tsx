@@ -26,6 +26,9 @@ import {
   Quote,
   Code,
   Image as ImageIcon,
+  FolderEdit,
+  FolderPlus,
+  Layers,
 } from 'lucide-react';
 import { apiClient, getMediaUrl } from '@/lib/api-client';
 
@@ -45,17 +48,30 @@ interface BlogPost {
   updatedAt: string;
 }
 
+interface CategoryInfo {
+  name: string;
+  totalCount: number;
+  publishedCount: number;
+}
+
 export default function AdminBlogsPage() {
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
+  const [categoriesList, setCategoriesList] = useState<CategoryInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
 
-  // Modal State
+  // Modal States
   const [showModal, setShowModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingBlog, setEditingBlog] = useState<BlogPost | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Category Edit State inside Category Modal
+  const [editingCategoryName, setEditingCategoryName] = useState<string | null>(null);
+  const [newCategoryInputValue, setNewCategoryInputValue] = useState('');
+  const [addCategoryInputValue, setAddCategoryInputValue] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -70,6 +86,7 @@ export default function AdminBlogsPage() {
 
   useEffect(() => {
     loadBlogs();
+    loadCategories();
   }, []);
 
   const loadBlogs = async () => {
@@ -84,6 +101,17 @@ export default function AdminBlogsPage() {
     }
   };
 
+  const loadCategories = async () => {
+    try {
+      const res = await apiClient.get('/cms/categories');
+      if (res.data?.categories && Array.isArray(res.data.categories)) {
+        setCategoriesList(res.data.categories);
+      }
+    } catch (err) {
+      console.error('Failed to load categories:', err);
+    }
+  };
+
   const openCreateModal = () => {
     setEditingBlog(null);
     setFormData({
@@ -91,7 +119,7 @@ export default function AdminBlogsPage() {
       shortDescription: '',
       featuredImage: 'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?auto=format&fit=crop&w=1200&q=80',
       content: '<h2>The Future of Modern Workspaces</h2><p>Write your detailed blog content here...</p>',
-      category: 'Coworking Trends',
+      category: categoriesList.length > 0 ? categoriesList[0].name : 'Coworking Trends',
       authorName: 'Cowork30 Team',
       status: 'published',
     });
@@ -172,6 +200,7 @@ export default function AdminBlogsPage() {
 
       setShowModal(false);
       loadBlogs();
+      loadCategories();
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Failed to save blog post.';
       alert(Array.isArray(msg) ? msg.join(', ') : msg);
@@ -185,12 +214,60 @@ export default function AdminBlogsPage() {
     try {
       await apiClient.delete(`/cms/admin/blogs/${id}`);
       loadBlogs();
+      loadCategories();
     } catch (err: any) {
       alert('Failed to delete blog post.');
     }
   };
 
-  const categories = ['All', ...Array.from(new Set(blogs.map((b) => b.category)))];
+  // Category Management Handlers
+  const handleAddCategory = async () => {
+    if (!addCategoryInputValue.trim()) return;
+    const catName = addCategoryInputValue.trim();
+    if (categoriesList.some((c) => c.name.toLowerCase() === catName.toLowerCase())) {
+      alert('This category already exists.');
+      return;
+    }
+    setCategoriesList((prev) => [
+      ...prev,
+      { name: catName, totalCount: 0, publishedCount: 0 },
+    ]);
+    setAddCategoryInputValue('');
+  };
+
+  const handleRenameCategorySubmit = async (oldName: string) => {
+    if (!newCategoryInputValue.trim() || newCategoryInputValue.trim() === oldName) {
+      setEditingCategoryName(null);
+      return;
+    }
+    try {
+      await apiClient.put('/cms/admin/categories', {
+        oldName,
+        newName: newCategoryInputValue.trim(),
+      });
+      setEditingCategoryName(null);
+      setNewCategoryInputValue('');
+      loadBlogs();
+      loadCategories();
+    } catch (err: any) {
+      alert('Failed to rename category.');
+    }
+  };
+
+  const handleDeleteCategory = async (categoryName: string) => {
+    if (!confirm(`Are you sure you want to delete category "${categoryName}"? Existing posts will be reassigned to "General".`)) {
+      return;
+    }
+    try {
+      await apiClient.delete(`/cms/admin/categories/${encodeURIComponent(categoryName)}`);
+      loadBlogs();
+      loadCategories();
+    } catch (err: any) {
+      alert('Failed to delete category.');
+    }
+  };
+
+  const categories = ['All', ...Array.from(new Set([...categoriesList.map((c) => c.name), ...blogs.map((b) => b.category)]))];
   const filteredBlogs = blogs.filter((b) => {
     const matchesCategory = selectedCategoryFilter === 'All' || b.category === selectedCategoryFilter;
     const matchesSearch =
@@ -214,18 +291,29 @@ export default function AdminBlogsPage() {
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#F8FAFC]">Blog & Articles Manager</h1>
             <p className="text-xs text-[#94A3B8]">
-              Create, edit, draft, and publish high-quality articles for the Cowork30 platform.
+              Create, edit, delete, draft, and manage blog categories for the Cowork30 platform.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="px-5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 text-xs font-extrabold text-white flex items-center space-x-2 w-fit shadow-md cursor-pointer transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create New Article</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <button
+              type="button"
+              onClick={() => setShowCategoryModal(true)}
+              className="px-4 py-2.5 rounded-full bg-[#1E293B] hover:bg-[#334155] border border-[#334155] text-xs font-bold text-slate-200 flex items-center space-x-2 shadow-sm cursor-pointer transition-all"
+            >
+              <FolderEdit className="w-4 h-4 text-purple-400" />
+              <span>Manage Categories</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 text-xs font-extrabold text-white flex items-center space-x-2 shadow-md cursor-pointer transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create New Article</span>
+            </button>
+          </div>
         </div>
 
         {/* Filter Bar */}
@@ -298,11 +386,11 @@ export default function AdminBlogsPage() {
                       </span>
                     </div>
 
-                    <div className="absolute top-3 right-3">
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                           blog.status === 'published'
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                             : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                         }`}
                       >
@@ -312,51 +400,48 @@ export default function AdminBlogsPage() {
                   </div>
 
                   {/* Body Content */}
-                  <div className="p-5 space-y-2.5">
-                    <h3 className="text-base font-extrabold text-[#F8FAFC] line-clamp-2 leading-snug group-hover:text-[#6366F1] transition-colors">
+                  <div className="p-5 space-y-3">
+                    <h3 className="font-extrabold text-base text-[#F8FAFC] line-clamp-2 leading-snug group-hover:text-purple-400 transition-colors">
                       {blog.title}
                     </h3>
                     <p className="text-xs text-[#94A3B8] line-clamp-2 leading-relaxed">
                       {blog.shortDescription}
                     </p>
-
-                    <div className="pt-2 flex items-center justify-between text-[11px] text-[#64748B]">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-[#6366F1]" />
-                        <span>{blog.readTime || '3 min read'}</span>
-                      </span>
-                      <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
+                    <div className="flex items-center justify-between text-[11px] text-[#64748B] pt-2 border-t border-[#334155]/60">
+                      <span>{blog.authorName || 'Cowork30 Team'}</span>
+                      <span>{blog.readTime || '3 min read'}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Actions Bar */}
-                <div className="p-4 pt-0 border-t border-[#334155]/60 flex items-center justify-between mt-2">
+                {/* Footer Action Buttons (Edit, Delete, Preview) */}
+                <div className="p-4 bg-[#0F172A]/50 border-t border-[#334155] flex items-center justify-between gap-2">
                   <Link
                     href={`/blog/${blog.slug}`}
                     target="_blank"
-                    className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-xl bg-[#1E293B] hover:bg-[#334155] text-xs font-semibold text-slate-300 flex items-center space-x-1.5 transition"
                   >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Preview</span>
+                    <Eye className="w-3.5 h-3.5 text-slate-400" />
+                    <span>View</span>
                   </Link>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center space-x-2">
                     <button
                       type="button"
                       onClick={() => openEditModal(blog)}
-                      className="p-1.5 rounded-lg bg-[#334155]/60 hover:bg-[#6366F1] text-[#CBD5E1] hover:text-white transition-all cursor-pointer"
-                      title="Edit Article"
+                      className="px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 text-xs font-semibold flex items-center space-x-1 border border-purple-500/30 transition cursor-pointer"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
                     </button>
+
                     <button
                       type="button"
                       onClick={() => handleDeleteBlog(blog.id)}
-                      className="p-1.5 rounded-lg bg-[#334155]/60 hover:bg-rose-600 text-[#CBD5E1] hover:text-white transition-all cursor-pointer"
-                      title="Delete Article"
+                      className="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 text-xs font-semibold flex items-center space-x-1 border border-rose-500/30 transition cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
                     </button>
                   </div>
                 </div>
@@ -364,198 +449,314 @@ export default function AdminBlogsPage() {
             ))}
           </div>
         )}
-      </main>
 
-      {/* CREATE / EDIT BLOG MODAL */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
-          <div className="bg-[#1E293B] border border-[#334155] rounded-3xl max-w-3xl w-full p-6 sm:p-8 space-y-6 shadow-2xl relative my-8 max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[#334155] pb-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center font-bold">
-                  <Newspaper className="w-5 h-5" />
+        {/* CATEGORY MANAGEMENT MODAL */}
+        {showCategoryModal && (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-[#1E293B] rounded-3xl border border-[#334155] max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl relative">
+              <div className="flex items-center justify-between border-b border-[#334155] pb-4">
+                <div className="flex items-center space-x-2">
+                  <FolderEdit className="w-5 h-5 text-purple-400" />
+                  <h2 className="text-xl font-extrabold text-[#F8FAFC]">Manage Categories</h2>
                 </div>
-                <div>
-                  <h2 className="text-xl font-extrabold text-[#F8FAFC]">
-                    {editingBlog ? 'Edit Blog Article' : 'Write New Article'}
-                  </h2>
-                  <p className="text-xs text-[#94A3B8]">
-                    Fill in the blog fields, design rich content, and select Draft or Publish.
-                  </p>
-                </div>
+                <button
+                  onClick={() => setShowCategoryModal(false)}
+                  className="p-1.5 text-slate-400 hover:text-white rounded-full bg-slate-800"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="p-2 rounded-full hover:bg-[#334155] text-[#94A3B8] hover:text-white transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Form */}
-            <div className="space-y-4 text-xs">
-              {/* 1. Blog Title */}
-              <div>
-                <label className="block text-[#CBD5E1] font-extrabold mb-1.5">1. Blog Title *</label>
+              {/* Add New Category Input */}
+              <div className="flex items-center space-x-2">
                 <input
                   type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g. 10 Proven Strategies for Maximizing Focus in Coworking Spaces"
-                  className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3.5 py-2.5 text-[#F8FAFC] font-semibold focus:border-[#6366F1] focus:outline-none"
+                  value={addCategoryInputValue}
+                  onChange={(e) => setAddCategoryInputValue(e.target.value)}
+                  placeholder="New Category Name..."
+                  className="flex-1 bg-[#0F172A] border border-[#334155] rounded-xl px-3.5 py-2 text-xs text-white placeholder-[#64748B] focus:border-[#6366F1] focus:outline-none"
                 />
+                <button
+                  type="button"
+                  onClick={handleAddCategory}
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center space-x-1 transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Category</span>
+                </button>
               </div>
 
-              {/* 2. Blog Category & Author */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[#CBD5E1] font-extrabold mb-1.5">2. Blog Category *</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3.5 py-2.5 text-[#F8FAFC] font-medium focus:border-[#6366F1] focus:outline-none"
-                  >
-                    <option value="Coworking Trends">Coworking Trends</option>
-                    <option value="Productivity">Productivity</option>
-                    <option value="Startup Guides">Startup Guides</option>
-                    <option value="Community & Events">Community & Events</option>
-                    <option value="Virtual Office">Virtual Office</option>
-                  </select>
-                </div>
+              {/* Categories List Table */}
+              <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
+                {categoriesList.length === 0 ? (
+                  <p className="text-xs text-[#94A3B8] text-center py-4">No custom categories found.</p>
+                ) : (
+                  categoriesList.map((cat) => (
+                    <div
+                      key={cat.name}
+                      className="flex items-center justify-between p-3 rounded-xl bg-[#0F172A] border border-[#334155]/70"
+                    >
+                      {editingCategoryName === cat.name ? (
+                        <div className="flex items-center space-x-2 flex-1 mr-2">
+                          <input
+                            type="text"
+                            defaultValue={cat.name}
+                            onChange={(e) => setNewCategoryInputValue(e.target.value)}
+                            className="w-full bg-[#1E293B] border border-[#6366F1] rounded-lg px-2.5 py-1 text-xs text-white"
+                          />
+                          <button
+                            onClick={() => handleRenameCategorySubmit(cat.name)}
+                            className="p-1 bg-emerald-600 text-white rounded-lg text-xs"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setEditingCategoryName(null)}
+                            className="p-1 bg-slate-700 text-white rounded-lg text-xs"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <span className="font-bold text-xs text-white">{cat.name}</span>
+                          <span className="ml-2 text-[10px] text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                            {cat.totalCount} articles
+                          </span>
+                        </div>
+                      )}
 
-                <div>
-                  <label className="block text-[#CBD5E1] font-extrabold mb-1.5">Author Name</label>
-                  <input
-                    type="text"
-                    value={formData.authorName}
-                    onChange={(e) => setFormData({ ...formData, authorName: e.target.value })}
-                    placeholder="e.g. Cowork30 Editorial Team"
-                    className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3.5 py-2.5 text-[#F8FAFC] font-medium focus:border-[#6366F1] focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* 3. Blog Description */}
-              <div>
-                <label className="block text-[#CBD5E1] font-extrabold mb-1.5">3. Blog Short Description / Summary *</label>
-                <textarea
-                  rows={2}
-                  required
-                  value={formData.shortDescription}
-                  onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-                  placeholder="Provide a compelling 2-sentence summary that appears on blog cards and search engines..."
-                  className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-3.5 py-2.5 text-[#F8FAFC] focus:border-[#6366F1] focus:outline-none leading-relaxed"
-                />
-              </div>
-
-              {/* 4. Blog Image (Blob / File Upload or Image URL) */}
-              <div className="space-y-2">
-                <label className="block text-[#CBD5E1] font-extrabold">4. Blog Featured Image (Blob Upload to reduce DB size) *</label>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                  <input
-                    type="text"
-                    value={formData.featuredImage}
-                    onChange={(e) => setFormData({ ...formData, featuredImage: e.target.value })}
-                    placeholder="Image URL or upload image file below..."
-                    className="flex-1 bg-[#0F172A] border border-[#334155] rounded-xl px-3.5 py-2 text-[#F8FAFC] focus:border-[#6366F1] focus:outline-none"
-                  />
-                  <label className="px-4 py-2 bg-[#334155] hover:bg-[#475569] text-white font-bold rounded-xl cursor-pointer flex items-center justify-center gap-1.5 shrink-0 transition-colors">
-                    <Upload className="w-4 h-4" />
-                    <span>{uploadingImage ? 'Uploading Blob...' : 'Upload Image File'}</span>
-                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                  </label>
-                </div>
-
-                {formData.featuredImage && (
-                  <div className="relative h-32 w-full max-w-xs rounded-xl overflow-hidden border border-[#334155] bg-slate-900 mt-2">
-                    <img
-                      src={getMediaUrl(formData.featuredImage)}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                      {editingCategoryName !== cat.name && (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => {
+                              setEditingCategoryName(cat.name);
+                              setNewCategoryInputValue(cat.name);
+                            }}
+                            className="p-1.5 text-purple-400 hover:text-purple-300 hover:bg-purple-500/20 rounded-lg transition"
+                            title="Edit Category Name"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCategory(cat.name)}
+                            className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded-lg transition"
+                            title="Delete Category"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))
                 )}
               </div>
 
-              {/* 5. Open-Source Free Rich Text Content Editor */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-[#CBD5E1] font-extrabold">5. Blog Article Content (Rich HTML / Open-Source Editor) *</label>
-                  <span className="text-[10px] text-[#94A3B8]">Supports HTML tags & Formatting Tools</span>
-                </div>
+              <div className="pt-2 text-right">
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(false)}
+                  className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-                {/* Free Open-Source Formatting Toolbar */}
-                <div className="flex items-center gap-1 p-2 rounded-t-xl bg-[#0F172A] border border-b-0 border-[#334155] flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => appendContentFormatting('<h2>', '</h2>')}
-                    className="p-1.5 rounded hover:bg-[#334155] text-[#CBD5E1] hover:text-white transition-colors"
-                    title="Insert Heading H2"
-                  >
-                    <Heading className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => appendContentFormatting('<strong>', '</strong>')}
-                    className="p-1.5 rounded hover:bg-[#334155] text-[#CBD5E1] hover:text-white transition-colors"
-                    title="Bold Text"
-                  >
-                    <Bold className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => appendContentFormatting('<em>', '</em>')}
-                    className="p-1.5 rounded hover:bg-[#334155] text-[#CBD5E1] hover:text-white transition-colors"
-                    title="Italic Text"
-                  >
-                    <Italic className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => appendContentFormatting('<ul><li>Item 1</li><li>Item 2</li></ul>')}
-                    className="p-1.5 rounded hover:bg-[#334155] text-[#CBD5E1] hover:text-white transition-colors"
-                    title="Insert Bullet List"
-                  >
-                    <List className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => appendContentFormatting('<blockquote>', '</blockquote>')}
-                    className="p-1.5 rounded hover:bg-[#334155] text-[#CBD5E1] hover:text-white transition-colors"
-                    title="Insert Quote"
-                  >
-                    <Quote className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => appendContentFormatting('<p>', '</p>')}
-                    className="p-1.5 rounded hover:bg-[#334155] text-[#CBD5E1] hover:text-white transition-colors"
-                    title="Insert Paragraph"
-                  >
-                    <FileText className="w-4 h-4" />
-                  </button>
+        {/* CREATE / EDIT BLOG POST MODAL */}
+        {showModal && (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-[#1E293B] rounded-3xl border border-[#334155] max-w-3xl w-full p-6 sm:p-8 space-y-6 shadow-2xl relative my-8 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-[#334155] pb-4">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="w-5 h-5 text-purple-400" />
+                  <h2 className="text-xl font-extrabold text-[#F8FAFC]">
+                    {editingBlog ? 'Edit Blog Post' : 'Create New Blog Post'}
+                  </h2>
                 </div>
-
-                <textarea
-                  rows={8}
-                  required
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="Write complete article content using formatting toolbar..."
-                  className="w-full bg-[#0F172A] border border-[#334155] rounded-b-xl px-3.5 py-2.5 text-[#F8FAFC] font-mono text-xs focus:border-[#6366F1] focus:outline-none leading-relaxed"
-                />
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="p-1.5 text-slate-400 hover:text-white rounded-full bg-slate-800"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              {/* Action Buttons: Draft vs Publish */}
-              <div className="pt-4 border-t border-[#334155] flex flex-col sm:flex-row items-center justify-end gap-3">
+              <div className="space-y-4">
+                {/* Blog Title */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    1. Blog Title <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g. The Future of Hybrid Coworking in 2026"
+                    className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-2.5 text-xs text-white placeholder-[#64748B] focus:border-[#6366F1] focus:outline-none"
+                  />
+                </div>
+
+                {/* Category & Author Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                      2. Blog Category <span className="text-rose-400">*</span>
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <select
+                        value={formData.category}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
+                        className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-2.5 text-xs text-white focus:border-[#6366F1] focus:outline-none"
+                      >
+                        {categories
+                          .filter((c) => c !== 'All')
+                          .map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        {!categories.includes(formData.category) && (
+                          <option value={formData.category}>{formData.category}</option>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                      Author Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.authorName}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, authorName: e.target.value }))}
+                      placeholder="e.g. Cowork30 Editorial Team"
+                      className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-2.5 text-xs text-white placeholder-[#64748B] focus:border-[#6366F1] focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Short Description */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    3. Blog Description / Summary <span className="text-rose-400">*</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={formData.shortDescription}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, shortDescription: e.target.value }))}
+                    placeholder="Brief summary displayed on article cards & social previews..."
+                    className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-2.5 text-xs text-white placeholder-[#64748B] focus:border-[#6366F1] focus:outline-none"
+                  />
+                </div>
+
+                {/* Featured Image (Blob Upload) */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    4. Blog Featured Image (Blob Upload & WebP Supported)
+                  </label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="text"
+                      value={formData.featuredImage}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, featuredImage: e.target.value }))}
+                      placeholder="Image URL or upload file..."
+                      className="flex-1 bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-2.5 text-xs text-white placeholder-[#64748B] focus:border-[#6366F1] focus:outline-none"
+                    />
+                    <label className="px-4 py-2.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-semibold flex items-center space-x-1.5 cursor-pointer transition">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{uploadingImage ? 'Uploading...' : 'Upload Image'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        disabled={uploadingImage}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Blog Content Rich Toolbar & Editor */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-300">
+                      5. Blog Content <span className="text-rose-400">*</span>
+                    </label>
+                    <span className="text-[10px] text-purple-400">Open-Source HTML Editor</span>
+                  </div>
+
+                  {/* Formatting Toolbar */}
+                  <div className="flex flex-wrap items-center gap-1.5 p-2 bg-[#0F172A] border border-b-0 border-[#334155] rounded-t-xl text-slate-300">
+                    <button
+                      type="button"
+                      onClick={() => appendContentFormatting('<h2>', '</h2>')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-xs font-bold"
+                      title="Heading 2"
+                    >
+                      <Heading className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => appendContentFormatting('<b>', '</b>')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-xs font-bold"
+                      title="Bold"
+                    >
+                      <Bold className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => appendContentFormatting('<i>', '</i>')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-xs"
+                      title="Italic"
+                    >
+                      <Italic className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => appendContentFormatting('<ul><li>Item 1</li><li>Item 2</li></ul>')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-xs"
+                      title="Bullet List"
+                    >
+                      <List className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => appendContentFormatting('<blockquote>', '</blockquote>')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-xs"
+                      title="Quote"
+                    >
+                      <Quote className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => appendContentFormatting('<p>', '</p>')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-xs"
+                      title="Paragraph"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <textarea
+                    rows={10}
+                    value={formData.content}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
+                    placeholder="Enter full HTML formatted article content..."
+                    className="w-full bg-[#0F172A] border border-[#334155] rounded-b-xl px-4 py-3 text-xs text-white font-mono placeholder-[#64748B] focus:border-[#6366F1] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-[#334155]">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-[#334155] text-[#CBD5E1] hover:text-white hover:bg-[#334155] font-bold transition-all cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition"
                 >
                   Cancel
                 </button>
@@ -564,25 +765,24 @@ export default function AdminBlogsPage() {
                   type="button"
                   disabled={submitting}
                   onClick={() => handleSubmit('draft')}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#334155] hover:bg-[#475569] text-amber-300 font-extrabold transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-bold transition cursor-pointer"
                 >
-                  Save as Draft
+                  {submitting ? 'Saving...' : 'Save as Draft'}
                 </button>
 
                 <button
                   type="button"
                   disabled={submitting}
                   onClick={() => handleSubmit('published')}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 text-white font-extrabold transition-all cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-95 text-white text-xs font-extrabold shadow-lg transition cursor-pointer"
                 >
-                  <Globe className="w-4 h-4" />
-                  <span>Publish Article</span>
+                  {submitting ? 'Publishing...' : 'Publish Article'}
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
 }

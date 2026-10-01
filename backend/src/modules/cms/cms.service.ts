@@ -524,4 +524,72 @@ export class CmsService {
       message: 'Blog post deleted successfully',
     };
   }
+
+  // --- CATEGORY MANAGEMENT METHODS ---
+  async getAllBlogCategories() {
+    await this.ensureSampleBlogsExist();
+
+    const posts = await this.prisma.blogPost.findMany({
+      select: { category: true, status: true },
+    });
+
+    const categoryMap: Record<string, { total: number; published: number }> = {};
+
+    posts.forEach((p) => {
+      const cat = p.category || 'General';
+      if (!categoryMap[cat]) {
+        categoryMap[cat] = { total: 0, published: 0 };
+      }
+      categoryMap[cat].total += 1;
+      if (p.status === 'published') {
+        categoryMap[cat].published += 1;
+      }
+    });
+
+    const categories = Object.entries(categoryMap).map(([name, counts]) => ({
+      name,
+      totalCount: counts.total,
+      publishedCount: counts.published,
+    }));
+
+    return {
+      success: true,
+      categories,
+    };
+  }
+
+  async renameBlogCategory(oldName: string, newName: string) {
+    if (!oldName || !newName || !newName.trim()) {
+      throw new BadRequestException('Old category and new category names are required');
+    }
+
+    const trimmedNew = newName.trim();
+    const updated = await this.prisma.blogPost.updateMany({
+      where: { category: oldName },
+      data: { category: trimmedNew },
+    });
+
+    return {
+      success: true,
+      message: `Renamed category "${oldName}" to "${trimmedNew}" across ${updated.count} posts.`,
+      updatedCount: updated.count,
+    };
+  }
+
+  async deleteBlogCategory(categoryName: string) {
+    if (!categoryName) {
+      throw new BadRequestException('Category name is required');
+    }
+
+    const updated = await this.prisma.blogPost.updateMany({
+      where: { category: categoryName },
+      data: { category: 'General' },
+    });
+
+    return {
+      success: true,
+      message: `Deleted category "${categoryName}". ${updated.count} post(s) reassigned to "General".`,
+      reassignedCount: updated.count,
+    };
+  }
 }
