@@ -25,6 +25,7 @@ import {
   ShieldAlert,
   Bell,
   Home,
+  Newspaper,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useBranch } from '@/context/BranchContext';
@@ -64,6 +65,7 @@ export default function Navbar() {
     { href: '/pricing', label: 'Pricing Plans', icon: Crown },
     { href: '/meeting-rooms', label: 'Meeting Rooms', icon: Presentation },
     { href: '/gallery', label: 'Gallery', icon: Aperture },
+    { href: '/blog', label: 'Blog', icon: Newspaper },
   ];
 
   const getBranchTitleParts = (name: string, city?: string) => {

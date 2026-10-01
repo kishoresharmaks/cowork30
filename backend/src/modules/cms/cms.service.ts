@@ -256,4 +256,272 @@ export class CmsService {
       contactId: contact.id,
     };
   }
+
+  // --- BLOG MODULE METHODS ---
+  private async ensureSampleBlogsExist() {
+    const count = await this.prisma.blogPost.count();
+    if (count > 0) return;
+
+    const samplePosts = [
+      {
+        title: 'The Future of Hybrid Coworking: Trends Shaping Workspaces in 2026',
+        slug: 'the-future-of-hybrid-coworking-2026',
+        shortDescription:
+          'Discover how modern flexible workspaces are combining high-speed fiber internet, acoustic pods, and community hubs to power high-performing remote teams.',
+        featuredImage:
+          'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?auto=format&fit=crop&w=1200&q=80',
+        content:
+          '<h2>The Evolution of Modern Workspaces</h2><p>As hybrid work models become the standard for tech startups and enterprises alike, professional coworking spaces are evolving far beyond simple shared desks.</p><p>Today\'s teams demand ergonomic infrastructure, seamless biometric access, high-speed 1Gbps fiber connectivity, and quiet executive suites for confidential client calls.</p><h3>Key Advantages of Flexible Workspaces</h3><ul><li>Zero long-term real estate lock-in</li><li>Instant scalability for expanding teams</li><li>All-inclusive amenities: gourmet espresso, meeting credits, and GST tax invoicing</li></ul>',
+        category: 'Coworking Trends',
+        status: 'published',
+        authorName: 'Cowork30 Editorial Team',
+        readTime: '4 min read',
+        publishedAt: new Date(),
+      },
+      {
+        title: '10 Proven Strategies for Maximizing Focus in a Shared Workspace',
+        slug: '10-proven-strategies-for-maximizing-focus',
+        shortDescription:
+          'Learn how to leverage soundproof booths, structured time slots, and ergonomic lounge zones to double your daily work output.',
+        featuredImage:
+          'https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&w=1200&q=80',
+        content:
+          '<h2>Mastering Deep Work in Coworking Environments</h2><p>Working in a vibrant community environment provides immense networking energy, but deep focus requires intentional daily routines.</p><h3>1. Leverage Dedicated Quiet Zones</h3><p>When working on complex code or financial modeling, step into soundproof phone booths or dedicated quiet zones.</p><h3>2. Block Out Focus Hours</h3><p>Use noise-canceling headphones during your morning deep work block, and save community lounge hours for afternoon coffee and collaboration.</p>',
+        category: 'Productivity',
+        status: 'published',
+        authorName: 'Alex Rivers, Workplace Strategist',
+        readTime: '5 min read',
+        publishedAt: new Date(Date.now() - 86400000),
+      },
+      {
+        title: 'How Virtual Offices Help Startups Build Instant Corporate Credibility',
+        slug: 'how-virtual-offices-help-startups-build-credibility',
+        shortDescription:
+          'Everything you need to know about official GST registration, MCA compliance, and receiving business mail with a prime commercial address.',
+        featuredImage:
+          'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80',
+        content:
+          '<h2>Building Trust from Day One</h2><p>For early-stage startups and independent consultants, registering a business under a prime commercial address creates immediate trust with clients and enterprise partners.</p><h3>Why Virtual Offices Are Essential for Modern Founders</h3><p>With official GST documentation, digital mail scanning, and on-demand access to boardrooms, virtual offices give founders enterprise presence at a fraction of traditional lease costs.</p>',
+        category: 'Startup Guides',
+        status: 'published',
+        authorName: 'Sarah Lin, Startup Advisor',
+        readTime: '3 min read',
+        publishedAt: new Date(Date.now() - 172800000),
+      },
+    ];
+
+    for (const post of samplePosts) {
+      await this.prisma.blogPost.create({ data: post });
+    }
+  }
+
+  async getPublicBlogs(category?: string, search?: string) {
+    await this.ensureSampleBlogsExist();
+
+    const whereClause: any = {
+      status: 'published',
+    };
+
+    if (category && category !== 'All') {
+      whereClause.category = category;
+    }
+
+    if (search && search.trim()) {
+      const query = search.trim();
+      whereClause.OR = [
+        { title: { contains: query } },
+        { shortDescription: { contains: query } },
+        { category: { contains: query } },
+      ];
+    }
+
+    const posts = await this.prisma.blogPost.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const categoriesList = await this.prisma.blogPost.findMany({
+      where: { status: 'published' },
+      select: { category: true },
+      distinct: ['category'],
+    });
+
+    const categories = ['All', ...categoriesList.map((c) => c.category)];
+
+    return {
+      success: true,
+      posts,
+      categories,
+    };
+  }
+
+  async getBlogBySlug(identifier: string) {
+    await this.ensureSampleBlogsExist();
+
+    const isId = !isNaN(Number(identifier));
+    let post = null;
+
+    if (isId) {
+      post = await this.prisma.blogPost.findUnique({
+        where: { id: Number(identifier) },
+      });
+    }
+
+    if (!post) {
+      post = await this.prisma.blogPost.findUnique({
+        where: { slug: identifier },
+      });
+    }
+
+    if (!post) {
+      throw new NotFoundException('Blog post not found');
+    }
+
+    const related = await this.prisma.blogPost.findMany({
+      where: {
+        status: 'published',
+        id: { not: post.id },
+      },
+      take: 3,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return {
+      success: true,
+      post,
+      related,
+    };
+  }
+
+  async getAdminBlogs() {
+    await this.ensureSampleBlogsExist();
+
+    const posts = await this.prisma.blogPost.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return {
+      success: true,
+      posts,
+    };
+  }
+
+  async createBlog(data: any) {
+    if (!data.title || !data.title.trim()) {
+      throw new BadRequestException('Blog Title is required.');
+    }
+    if (!data.shortDescription || !data.shortDescription.trim()) {
+      throw new BadRequestException('Blog Description is required.');
+    }
+    if (!data.content || !data.content.trim()) {
+      throw new BadRequestException('Blog Content is required.');
+    }
+
+    const title = data.title.trim();
+    let slug =
+      data.slug && data.slug.trim()
+        ? data.slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
+        : title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    const existingSlug = await this.prisma.blogPost.findUnique({
+      where: { slug },
+    });
+    if (existingSlug) {
+      slug = `${slug}-${Date.now()}`;
+    }
+
+    const status = data.status === 'published' ? 'published' : 'draft';
+    const wordCount = data.content.replace(/<[^>]*>/g, '').split(/\s+/).length;
+    const readTime = `${Math.max(1, Math.ceil(wordCount / 200))} min read`;
+
+    const post = await this.prisma.blogPost.create({
+      data: {
+        title,
+        slug,
+        shortDescription: data.shortDescription.trim(),
+        featuredImage:
+          data.featuredImage ||
+          'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?auto=format&fit=crop&w=1200&q=80',
+        content: data.content,
+        category: data.category?.trim() || 'Coworking',
+        status,
+        authorName: data.authorName?.trim() || 'Cowork30 Team',
+        readTime,
+        publishedAt: status === 'published' ? new Date() : null,
+      },
+    });
+
+    return {
+      success: true,
+      message: `Blog post ${status === 'published' ? 'published' : 'saved as draft'} successfully.`,
+      post,
+    };
+  }
+
+  async updateBlog(id: number, data: any) {
+    const existing = await this.prisma.blogPost.findUnique({
+      where: { id },
+    });
+    if (!existing) {
+      throw new NotFoundException('Blog post not found');
+    }
+
+    const status = data.status ? (data.status === 'published' ? 'published' : 'draft') : existing.status;
+    let publishedAt = existing.publishedAt;
+    if (status === 'published' && !publishedAt) {
+      publishedAt = new Date();
+    }
+
+    let slug = existing.slug;
+    if (data.title && data.title !== existing.title) {
+      slug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const conflict = await this.prisma.blogPost.findFirst({
+        where: { slug, id: { not: id } },
+      });
+      if (conflict) {
+        slug = `${slug}-${Date.now()}`;
+      }
+    }
+
+    let readTime = existing.readTime;
+    if (data.content) {
+      const wordCount = data.content.replace(/<[^>]*>/g, '').split(/\s+/).length;
+      readTime = `${Math.max(1, Math.ceil(wordCount / 200))} min read`;
+    }
+
+    const updated = await this.prisma.blogPost.update({
+      where: { id },
+      data: {
+        ...(data.title ? { title: data.title.trim(), slug } : {}),
+        ...(data.shortDescription ? { shortDescription: data.shortDescription.trim() } : {}),
+        ...(data.featuredImage !== undefined ? { featuredImage: data.featuredImage } : {}),
+        ...(data.content ? { content: data.content, readTime } : {}),
+        ...(data.category ? { category: data.category.trim() } : {}),
+        status,
+        publishedAt,
+        ...(data.authorName ? { authorName: data.authorName.trim() } : {}),
+      },
+    });
+
+    return {
+      success: true,
+      message: `Blog post ${status === 'published' ? 'published' : 'updated'} successfully.`,
+      post: updated,
+    };
+  }
+
+  async deleteBlog(id: number) {
+    const existing = await this.prisma.blogPost.findUnique({
+      where: { id },
+    });
+    if (!existing) {
+      throw new NotFoundException('Blog post not found');
+    }
+
+    await this.prisma.blogPost.delete({ where: { id } });
+    return {
+      success: true,
+      message: 'Blog post deleted successfully',
+    };
+  }
 }

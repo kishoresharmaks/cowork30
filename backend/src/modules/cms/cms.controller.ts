@@ -202,4 +202,59 @@ export class CmsController {
   async deleteGalleryItem(@Param('id', ParseIntPipe) id: number) {
     return this.cmsService.deleteGalleryItem(id);
   }
+
+  // --- BLOG ENDPOINTS ---
+  @Get('blogs')
+  @ApiOperation({ summary: 'Get published blog posts list with category & search filter' })
+  async getPublicBlogs(
+    @Query('category') category?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.cmsService.getPublicBlogs(category, search);
+  }
+
+  @Get('blogs/:slug')
+  @ApiOperation({ summary: 'Get single blog post details by slug or ID' })
+  async getBlogBySlug(@Param('slug') slug: string) {
+    return this.cmsService.getBlogBySlug(slug);
+  }
+
+  @Get('admin/blogs')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin: Get all blog posts (Drafts & Published)' })
+  async getAdminBlogs() {
+    return this.cmsService.getAdminBlogs();
+  }
+
+  @Post('admin/blogs')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin: Create a new blog post (Draft or Published)' })
+  async createBlog(@Body() body: any) {
+    return this.cmsService.createBlog(body);
+  }
+
+  @Put('admin/blogs/:id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin: Update blog post (Draft or Published)' })
+  async updateBlog(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+  ) {
+    return this.cmsService.updateBlog(id, body);
+  }
+
+  @Delete('admin/blogs/:id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin: Delete blog post' })
+  async deleteBlog(@Param('id', ParseIntPipe) id: number) {
+    return this.cmsService.deleteBlog(id);
+  }
 }
