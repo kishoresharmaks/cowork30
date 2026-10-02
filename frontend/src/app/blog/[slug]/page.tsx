@@ -1,14 +1,21 @@
 import { Metadata } from 'next';
 import BlogSingleClient from './BlogSingleClient';
 
-interface Props {
-  params: { slug: string };
-}
+type PageProps = {
+  params: Promise<{ slug: string }> | { slug: string };
+};
 
-async function getPostData(slug: string) {
+async function getPostData(rawSlug: string) {
   try {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
-    const res = await fetch(`${backendUrl}/cms/blogs/${slug}`, {
+    if (!rawSlug || rawSlug === 'undefined') return null;
+    const slug = decodeURIComponent(rawSlug).trim();
+    const backendUrl =
+      process.env.BACKEND_URL ||
+      process.env.APP_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'http://localhost:4000/api/v1';
+
+    const res = await fetch(`${backendUrl.replace(/\/+$/, '')}/cms/blogs/${encodeURIComponent(slug)}`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return null;
@@ -18,8 +25,17 @@ async function getPostData(slug: string) {
   }
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const data = await getPostData(params.slug);
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const resolvedParams = await props.params;
+  const rawSlug = resolvedParams?.slug;
+  if (!rawSlug || rawSlug === 'undefined') {
+    return {
+      title: 'Article Not Found | Cowork30 Blog',
+      description: 'The requested blog post could not be found.',
+    };
+  }
+
+  const data = await getPostData(rawSlug);
   const post = data?.post;
 
   if (!post) {
@@ -67,8 +83,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function BlogPage({ params }: Props) {
-  const data = await getPostData(params.slug);
+export default async function BlogPage(props: PageProps) {
+  const resolvedParams = await props.params;
+  const rawSlug = resolvedParams?.slug || '';
+  const data = rawSlug && rawSlug !== 'undefined' ? await getPostData(rawSlug) : null;
   const post = data?.post || null;
   const relatedPosts = data?.related || [];
 
@@ -111,7 +129,7 @@ export default async function BlogPage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
-      <BlogSingleClient post={post} relatedPosts={relatedPosts} />
+      <BlogSingleClient post={post} relatedPosts={relatedPosts} slug={rawSlug} />
     </>
   );
 }

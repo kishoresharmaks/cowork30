@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import {
@@ -21,8 +22,9 @@ import {
   MessageCircle,
   Mail,
   Globe,
+  Loader2,
 } from 'lucide-react';
-import { getMediaUrl } from '@/lib/api-client';
+import { apiClient, getMediaUrl } from '@/lib/api-client';
 
 interface BlogPost {
   id: number;
@@ -40,19 +42,72 @@ interface BlogPost {
 }
 
 interface Props {
-  post: BlogPost | null;
-  relatedPosts: BlogPost[];
+  initialPost?: BlogPost | null;
+  initialRelatedPosts?: BlogPost[];
+  post?: BlogPost | null;
+  relatedPosts?: BlogPost[];
+  slug?: string;
 }
 
-export default function BlogSingleClient({ post, relatedPosts }: Props) {
+export default function BlogSingleClient({
+  initialPost,
+  initialRelatedPosts,
+  post: legacyPost,
+  relatedPosts: legacyRelatedPosts,
+  slug: propSlug,
+}: Props) {
+  const params = useParams();
+  const routeSlug = (params?.slug as string) || propSlug || '';
+
+  const [post, setPost] = useState<BlogPost | null>(initialPost || legacyPost || null);
+  const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>(
+    initialRelatedPosts || legacyRelatedPosts || []
+  );
+  const [loading, setLoading] = useState<boolean>(!(initialPost || legacyPost));
   const [copied, setCopied] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+
+  useEffect(() => {
+    // If post already loaded from SSR, use it
+    if (initialPost || legacyPost) {
+      setPost(initialPost || legacyPost || null);
+      setRelatedPosts(initialRelatedPosts || legacyRelatedPosts || []);
+      setLoading(false);
+      return;
+    }
+
+    // Client-side fallback fetch
+    async function fetchPostClient() {
+      if (!routeSlug) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const decoded = decodeURIComponent(routeSlug);
+        const res = await apiClient.get(`/cms/blogs/${encodeURIComponent(decoded)}`);
+        if (res.data?.post) {
+          setPost(res.data.post);
+          setRelatedPosts(res.data.related || []);
+        } else {
+          setPost(null);
+        }
+      } catch (err) {
+        setPost(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchPostClient();
+  }, [routeSlug, initialPost, legacyPost]);
 
   const getArticleUrl = () => {
     if (typeof window !== 'undefined') {
       return window.location.href;
     }
-    return `https://cowork30.com/blog/${post?.slug || ''}`;
+    return `https://cowork30.com/blog/${post?.slug || routeSlug || ''}`;
   };
 
   const handleShareClick = async () => {
@@ -89,6 +144,40 @@ export default function BlogSingleClient({ post, relatedPosts }: Props) {
       year: 'numeric',
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+        <Navbar />
+        <main className="flex-1 pb-20">
+          {/* Skeleton Hero Header */}
+          <section className="bg-slate-950 text-white pt-10 pb-16 relative overflow-hidden">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-6 animate-pulse">
+              <div className="h-4 w-40 bg-slate-800 rounded-md" />
+              <div className="h-6 w-32 bg-purple-900/40 rounded-full" />
+              <div className="h-10 w-3/4 bg-slate-800 rounded-xl" />
+              <div className="h-10 w-1/2 bg-slate-800 rounded-xl" />
+              <div className="h-6 w-48 bg-slate-800 rounded-md pt-4" />
+            </div>
+          </section>
+
+          {/* Skeleton Body */}
+          <section className="max-w-4xl mx-auto px-4 sm:px-6 -mt-8 relative z-20 space-y-8 animate-pulse">
+            <div className="rounded-2xl bg-slate-200 aspect-[16/9] w-full" />
+            <div className="bg-white rounded-2xl p-6 sm:p-10 shadow-sm border border-slate-200 space-y-4">
+              <div className="h-5 w-full bg-slate-100 rounded-md" />
+              <div className="h-5 w-5/6 bg-slate-100 rounded-md" />
+              <div className="h-5 w-4/6 bg-slate-100 rounded-md" />
+              <div className="h-8 w-1/3 bg-slate-200 rounded-lg mt-6" />
+              <div className="h-5 w-full bg-slate-100 rounded-md" />
+              <div className="h-5 w-11/12 bg-slate-100 rounded-md" />
+            </div>
+          </section>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!post) {
     return (
@@ -266,12 +355,12 @@ export default function BlogSingleClient({ post, relatedPosts }: Props) {
             </div>
           )}
 
-          {/* Article HTML Content */}
-          <div className="bg-white rounded-2xl p-6 sm:p-10 shadow-sm border border-slate-200/80 mb-12">
-            <article
-              className="prose prose-purple max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 prose-p:text-slate-700 prose-p:leading-relaxed prose-p:text-base sm:prose-p:text-lg prose-li:text-slate-700 prose-img:rounded-xl prose-img:shadow-md font-sans space-y-6"
-              dangerouslySetInnerHTML={{ __html: post.content }}
-            />
+            {/* Article HTML Content */}
+            <div className="bg-white rounded-2xl p-6 sm:p-10 shadow-sm border border-slate-200/80 mb-12">
+              <article
+                className="blog-rich-content prose prose-purple max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 prose-p:text-slate-700 prose-p:leading-relaxed prose-p:text-base sm:prose-p:text-lg prose-li:text-slate-700 prose-img:rounded-xl prose-img:shadow-md font-sans space-y-6"
+                dangerouslySetInnerHTML={{ __html: post.content }}
+              />
 
             {/* In-Article Share Footer Bar */}
             <div className="mt-12 pt-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

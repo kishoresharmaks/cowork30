@@ -358,18 +358,49 @@ export class CmsService {
   async getBlogBySlug(identifier: string) {
     await this.ensureSampleBlogsExist();
 
-    const isId = !isNaN(Number(identifier));
+    if (!identifier || identifier.trim() === '' || identifier === 'undefined') {
+      throw new NotFoundException('Blog post not found');
+    }
+
+    const raw = identifier.trim();
+    const decoded = decodeURIComponent(raw).trim();
+    const isId = !isNaN(Number(decoded));
     let post = null;
 
     if (isId) {
       post = await this.prisma.blogPost.findUnique({
-        where: { id: Number(identifier) },
+        where: { id: Number(decoded) },
       });
     }
 
     if (!post) {
       post = await this.prisma.blogPost.findUnique({
-        where: { slug: identifier },
+        where: { slug: decoded },
+      });
+    }
+
+    if (!post && decoded !== raw) {
+      post = await this.prisma.blogPost.findUnique({
+        where: { slug: raw },
+      });
+    }
+
+    if (!post) {
+      post = await this.prisma.blogPost.findFirst({
+        where: {
+          slug: { equals: decoded.toLowerCase() },
+        },
+      });
+    }
+
+    if (!post) {
+      post = await this.prisma.blogPost.findFirst({
+        where: {
+          OR: [
+            { slug: { contains: decoded } },
+            { title: { contains: decoded } },
+          ],
+        },
       });
     }
 
