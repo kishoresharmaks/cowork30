@@ -84,6 +84,8 @@ body {
   color: #334155;
   font-size: 1.05rem;
   line-height: 1.85;
+  white-space: pre-line;
+  word-break: break-word;
 }
 
 .blog-rich-content h1,
@@ -97,6 +99,7 @@ body {
   letter-spacing: -0.02em;
   margin-top: 1.75rem;
   margin-bottom: 0.85rem;
+  white-space: normal;
 }
 
 .blog-rich-content h1 {
@@ -116,6 +119,9 @@ body {
 
 .blog-rich-content p {
   margin-bottom: 1.25rem;
+  line-height: 1.85;
+  color: #334155;
+  white-space: pre-line;
 }
 
 .blog-rich-content ul,
@@ -123,6 +129,7 @@ body {
   margin-top: 0.75rem;
   margin-bottom: 1.25rem;
   padding-left: 1.5rem;
+  white-space: normal;
 }
 
 .blog-rich-content ul {
@@ -135,6 +142,7 @@ body {
 
 .blog-rich-content li {
   margin-bottom: 0.5rem;
+  line-height: 1.75;
 }
 
 .blog-rich-content blockquote {
@@ -146,6 +154,7 @@ body {
   background-color: #faf5ff;
   padding: 1rem 1.25rem;
   border-radius: 0 0.75rem 0.75rem 0;
+  white-space: pre-line;
 }
 
 .blog-rich-content img {

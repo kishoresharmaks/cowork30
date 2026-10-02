@@ -54,6 +54,49 @@ interface CategoryInfo {
   publishedCount: number;
 }
 
+function autoFormatToHtml(text: string): string {
+  if (!text) return '';
+  const trimmed = text.trim();
+  if (!trimmed) return '';
+
+  const hasHtml = /<\/?(p|div|h[1-6]|ul|ol|li|table|blockquote|section|article)\b/i.test(trimmed);
+  if (hasHtml) return trimmed;
+
+  const urlRegex = /(https?:\/\/[^\s<>"']+)/g;
+  const withLinks = trimmed.replace(urlRegex, (url) => {
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+  });
+
+  const paragraphs = withLinks.split(/\n{2,}/);
+
+  return paragraphs
+    .map((p) => {
+      const pTrimmed = p.trim();
+      if (!pTrimmed) return '';
+      const lines = pTrimmed.split(/\n+/);
+
+      const isBullet = lines.length > 1 && lines.every((l) => /^[-*•]\s+/.test(l.trim()));
+      if (isBullet) {
+        const items = lines.map((l) => `<li>${l.trim().replace(/^[-*•]\s+/, '')}</li>`).join('');
+        return `<ul>${items}</ul>`;
+      }
+
+      const isNumbered = lines.length > 1 && lines.every((l) => /^\d+[\.\)]\s+/.test(l.trim()));
+      if (isNumbered) {
+        const items = lines.map((l) => `<li>${l.trim().replace(/^\d+[\.\)]\s+/, '')}</li>`).join('');
+        return `<ol>${items}</ol>`;
+      }
+
+      const formattedLines = lines.map((line) => {
+        return line.replace(/^([A-Za-z0-9\s._\-&/|]+:)/, '<strong>$1</strong>');
+      });
+
+      return `<p>${formattedLines.join('<br />')}</p>`;
+    })
+    .filter(Boolean)
+    .join('\n\n');
+}
+
 export default function AdminBlogsPage() {
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [categoriesList, setCategoriesList] = useState<CategoryInfo[]>([]);
@@ -67,6 +110,7 @@ export default function AdminBlogsPage() {
   const [editingBlog, setEditingBlog] = useState<BlogPost | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [editorTab, setEditorTab] = useState<'edit' | 'preview'>('edit');
 
   // Category Edit State inside Category Modal
   const [editingCategoryName, setEditingCategoryName] = useState<string | null>(null);
@@ -188,8 +232,10 @@ export default function AdminBlogsPage() {
 
     setSubmitting(true);
     try {
+      const formattedContent = autoFormatToHtml(formData.content);
       const payload = {
         ...formData,
+        content: formattedContent,
         status: targetStatus,
       };
 
@@ -683,72 +729,118 @@ export default function AdminBlogsPage() {
 
                 {/* Blog Content Rich Toolbar & Editor */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-bold text-slate-300">
                       5. Blog Content <span className="text-rose-400">*</span>
                     </label>
-                    <span className="text-[10px] text-purple-400">Open-Source HTML Editor</span>
+                    <div className="flex items-center space-x-1.5 bg-[#0F172A] p-0.5 rounded-lg border border-[#334155]">
+                      <button
+                        type="button"
+                        onClick={() => setEditorTab('edit')}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition ${
+                          editorTab === 'edit' ? 'bg-[#6366F1] text-white' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Edit Code / Text
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditorTab('preview')}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center space-x-1 ${
+                          editorTab === 'preview' ? 'bg-[#6366F1] text-white' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>Live Preview</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Formatting Toolbar */}
-                  <div className="flex flex-wrap items-center gap-1.5 p-2 bg-[#0F172A] border border-b-0 border-[#334155] rounded-t-xl text-slate-300">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 p-2 bg-[#0F172A] border border-b-0 border-[#334155] rounded-t-xl text-slate-300">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => appendContentFormatting('<h2>', '</h2>')}
+                        className="p-1.5 hover:bg-slate-800 rounded text-xs font-bold"
+                        title="Heading 2"
+                      >
+                        <Heading className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => appendContentFormatting('<b>', '</b>')}
+                        className="p-1.5 hover:bg-slate-800 rounded text-xs font-bold"
+                        title="Bold"
+                      >
+                        <Bold className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => appendContentFormatting('<i>', '</i>')}
+                        className="p-1.5 hover:bg-slate-800 rounded text-xs"
+                        title="Italic"
+                      >
+                        <Italic className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => appendContentFormatting('<ul><li>Item 1</li><li>Item 2</li></ul>')}
+                        className="p-1.5 hover:bg-slate-800 rounded text-xs"
+                        title="Bullet List"
+                      >
+                        <List className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => appendContentFormatting('<blockquote>', '</blockquote>')}
+                        className="p-1.5 hover:bg-slate-800 rounded text-xs"
+                        title="Quote"
+                      >
+                        <Quote className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => appendContentFormatting('<p>', '</p>')}
+                        className="p-1.5 hover:bg-slate-800 rounded text-xs"
+                        title="Paragraph"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
                     <button
                       type="button"
-                      onClick={() => appendContentFormatting('<h2>', '</h2>')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-xs font-bold"
-                      title="Heading 2"
+                      onClick={() => {
+                        const formatted = autoFormatToHtml(formData.content);
+                        setFormData((prev) => ({ ...prev, content: formatted }));
+                      }}
+                      className="px-2.5 py-1 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-lg text-[11px] font-bold flex items-center space-x-1 cursor-pointer transition"
+                      title="Convert plain text & linebreaks into structured HTML paragraphs"
                     >
-                      <Heading className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => appendContentFormatting('<b>', '</b>')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-xs font-bold"
-                      title="Bold"
-                    >
-                      <Bold className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => appendContentFormatting('<i>', '</i>')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-xs"
-                      title="Italic"
-                    >
-                      <Italic className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => appendContentFormatting('<ul><li>Item 1</li><li>Item 2</li></ul>')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-xs"
-                      title="Bullet List"
-                    >
-                      <List className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => appendContentFormatting('<blockquote>', '</blockquote>')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-xs"
-                      title="Quote"
-                    >
-                      <Quote className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => appendContentFormatting('<p>', '</p>')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-xs"
-                      title="Paragraph"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
+                      <Sparkles className="w-3 h-3 text-pink-400" />
+                      <span>✨ Auto-Format Plain Text</span>
                     </button>
                   </div>
 
-                  <textarea
-                    rows={10}
-                    value={formData.content}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
-                    placeholder="Enter full HTML formatted article content..."
-                    className="w-full bg-[#0F172A] border border-[#334155] rounded-b-xl px-4 py-3 text-xs text-white font-mono placeholder-[#64748B] focus:border-[#6366F1] focus:outline-none"
-                  />
+                  {editorTab === 'edit' ? (
+                    <textarea
+                      rows={11}
+                      value={formData.content}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
+                      placeholder="Type or paste your article content here..."
+                      className="w-full bg-[#0F172A] border border-[#334155] rounded-b-xl px-4 py-3 text-xs text-white font-mono placeholder-[#64748B] focus:border-[#6366F1] focus:outline-none leading-relaxed"
+                    />
+                  ) : (
+                    <div className="bg-white rounded-b-xl p-6 border border-[#334155] min-h-[220px] max-h-[380px] overflow-y-auto">
+                      <div
+                        className="blog-rich-content prose prose-purple max-w-none text-slate-800 text-sm leading-relaxed"
+                        dangerouslySetInnerHTML={{
+                          __html: autoFormatToHtml(formData.content) || '<p class="text-slate-400 italic">No content to preview yet.</p>',
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -41,6 +41,63 @@ interface BlogPost {
   createdAt: string;
 }
 
+function formatBlogContent(content?: string | null): string {
+  if (!content) return '';
+  let text = String(content).trim();
+  if (!text) return '';
+
+  const hasHtmlBlocks = /<\/?(p|div|h[1-6]|ul|ol|li|table|blockquote|section|article|pre|code)\b/i.test(text);
+
+  if (!hasHtmlBlocks) {
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    const urlRegex = /(https?:\/\/[^\s<>"']+)/g;
+    const withLinks = escaped.replace(urlRegex, (url) => {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-purple-600 hover:text-purple-800 underline underline-offset-2 break-all font-semibold">${url}</a>`;
+    });
+
+    const paragraphs = withLinks.split(/\n{2,}/);
+
+    return paragraphs
+      .map((p) => {
+        const trimmed = p.trim();
+        if (!trimmed) return '';
+
+        const lines = trimmed.split(/\n+/);
+
+        const isBulletList = lines.length > 1 && lines.every((l) => /^[-*•]\s+/.test(l.trim()));
+        if (isBulletList) {
+          const items = lines.map((l) => `<li class="text-slate-700">${l.trim().replace(/^[-*•]\s+/, '')}</li>`).join('');
+          return `<ul class="list-disc pl-6 space-y-1.5 my-4">${items}</ul>`;
+        }
+
+        const isNumberedList = lines.length > 1 && lines.every((l) => /^\d+[\.\)]\s+/.test(l.trim()));
+        if (isNumberedList) {
+          const items = lines.map((l) => `<li class="text-slate-700">${l.trim().replace(/^\d+[\.\)]\s+/, '')}</li>`).join('');
+          return `<ol class="list-decimal pl-6 space-y-1.5 my-4">${items}</ol>`;
+        }
+
+        const formattedLines = lines.map((line) => {
+          return line.replace(/^([A-Za-z0-9\s._\-&/|]+:)/, '<strong class="text-slate-900 font-bold">$1</strong>');
+        });
+
+        const withBr = formattedLines.join('<br />');
+        return `<p class="mb-5 leading-relaxed text-slate-700 text-base sm:text-lg">${withBr}</p>`;
+      })
+      .filter(Boolean)
+      .join('');
+  }
+
+  const processed = text.replace(/(?<!href=["'])(https?:\/\/[^\s<>"']+)/g, (url) => {
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-purple-600 hover:text-purple-800 underline underline-offset-2 break-all font-semibold">${url}</a>`;
+  });
+
+  return processed;
+}
+
 interface Props {
   initialPost?: BlogPost | null;
   initialRelatedPosts?: BlogPost[];
@@ -359,7 +416,7 @@ export default function BlogSingleClient({
             <div className="bg-white rounded-2xl p-6 sm:p-10 shadow-sm border border-slate-200/80 mb-12">
               <article
                 className="blog-rich-content prose prose-purple max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 prose-p:text-slate-700 prose-p:leading-relaxed prose-p:text-base sm:prose-p:text-lg prose-li:text-slate-700 prose-img:rounded-xl prose-img:shadow-md font-sans space-y-6"
-                dangerouslySetInnerHTML={{ __html: post.content }}
+                dangerouslySetInnerHTML={{ __html: formatBlogContent(post.content) }}
               />
 
             {/* In-Article Share Footer Bar */}
