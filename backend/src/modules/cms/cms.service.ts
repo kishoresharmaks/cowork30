@@ -33,6 +33,11 @@ const DEFAULT_TOPUP_PACKAGES = [
   },
 ];
 
+function sanitizeFeaturedImage(img?: string | null): string {
+  if (!img) return '';
+  return String(img).replace(/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?/i, '');
+}
+
 @Injectable()
 export class CmsService {
   constructor(private prisma: PrismaService) {}
@@ -348,9 +353,14 @@ export class CmsService {
 
     const categories = ['All', ...categoriesList.map((c) => c.category)];
 
+    const sanitizedPosts = posts.map((p) => ({
+      ...p,
+      featuredImage: sanitizeFeaturedImage(p.featuredImage),
+    }));
+
     return {
       success: true,
-      posts,
+      posts: sanitizedPosts,
       categories,
     };
   }
@@ -417,10 +427,20 @@ export class CmsService {
       orderBy: { createdAt: 'desc' },
     });
 
+    const sanitizedPost = {
+      ...post,
+      featuredImage: sanitizeFeaturedImage(post.featuredImage),
+    };
+
+    const sanitizedRelated = related.map((r) => ({
+      ...r,
+      featuredImage: sanitizeFeaturedImage(r.featuredImage),
+    }));
+
     return {
       success: true,
-      post,
-      related,
+      post: sanitizedPost,
+      related: sanitizedRelated,
     };
   }
 
@@ -431,9 +451,14 @@ export class CmsService {
       orderBy: { createdAt: 'desc' },
     });
 
+    const sanitizedPosts = posts.map((p) => ({
+      ...p,
+      featuredImage: sanitizeFeaturedImage(p.featuredImage),
+    }));
+
     return {
       success: true,
-      posts,
+      posts: sanitizedPosts,
     };
   }
 
@@ -471,7 +496,7 @@ export class CmsService {
         slug,
         shortDescription: data.shortDescription.trim(),
         featuredImage:
-          data.featuredImage ||
+          sanitizeFeaturedImage(data.featuredImage) ||
           'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?auto=format&fit=crop&w=1200&q=80',
         content: data.content,
         category: data.category?.trim() || 'Coworking',
@@ -525,7 +550,7 @@ export class CmsService {
       data: {
         ...(data.title ? { title: data.title.trim(), slug } : {}),
         ...(data.shortDescription ? { shortDescription: data.shortDescription.trim() } : {}),
-        ...(data.featuredImage !== undefined ? { featuredImage: data.featuredImage } : {}),
+        ...(data.featuredImage !== undefined ? { featuredImage: sanitizeFeaturedImage(data.featuredImage) } : {}),
         ...(data.content ? { content: data.content, readTime } : {}),
         ...(data.category ? { category: data.category.trim() } : {}),
         status,

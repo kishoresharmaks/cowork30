@@ -38,7 +38,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, getMediaUrl } from '@/lib/api-client';
 import InquiryChatModal from '@/components/ui/InquiryChatModal';
 import MemberSidebar, { MemberTabType } from '@/components/layout/MemberSidebar';
 import { MessageSquare } from 'lucide-react';
@@ -1519,9 +1519,7 @@ function MemberDashboardContent() {
                           .map((inv) => {
                             const dateStr = new Date(inv.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
                             const totalTax = (Number(inv.cgst || 0) + Number(inv.sgst || 0) + Number(inv.igst || 0)).toFixed(2);
-                            const rawApi = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
-                            const apiBase = rawApi.replace(/\/api\/v1\/?$/, '');
-                            const pdfLink = inv.pdfUrl ? (inv.pdfUrl.startsWith('http') ? inv.pdfUrl : `${apiBase}${inv.pdfUrl}`) : `/meeting-rooms/receipt/${inv.invoiceNumber}`;
+                            const pdfLink = inv.pdfUrl ? getMediaUrl(inv.pdfUrl) : `/meeting-rooms/receipt/${inv.invoiceNumber}`;
 
                             return (
                               <tr key={inv.id} className="hover:bg-slate-50">

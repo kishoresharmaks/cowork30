@@ -153,8 +153,9 @@ export default function AdminBlogsPage() {
       });
 
       if (res.data?.relativeUrl || res.data?.url) {
-        const imageUrl = res.data.relativeUrl || res.data.url;
-        setFormData((prev) => ({ ...prev, featuredImage: imageUrl }));
+        const rawUrl = res.data.relativeUrl || res.data.url;
+        const cleanPath = String(rawUrl).replace(/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?/i, '');
+        setFormData((prev) => ({ ...prev, featuredImage: cleanPath }));
       }
     } catch (err: any) {
       alert('Failed to upload image. Please try again.');

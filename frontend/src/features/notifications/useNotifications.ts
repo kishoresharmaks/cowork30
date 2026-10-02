@@ -57,14 +57,31 @@ export function useNotifications() {
 
   // Socket.io Real-time Connection
   useEffect(() => {
-    const socketUrl =
-      process.env.NEXT_PUBLIC_SOCKET_URL ||
-      (process.env.NEXT_PUBLIC_API_URL
-        ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, '')
-        : undefined) ||
-      (typeof window !== 'undefined'
-        ? window.location.origin.replace(':3000', ':4000')
-        : 'http://localhost:4000');
+    let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
+    if (!socketUrl) {
+      if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        const isLocalHost =
+          hostname === 'localhost' ||
+          hostname === '127.0.0.1' ||
+          /^192\.168\.\d+\.\d+$/.test(hostname) ||
+          /^10\.\d+\.\d+\.\d+$/.test(hostname);
+
+        if (isLocalHost) {
+          socketUrl = `http://${hostname}:4000`;
+        } else if (
+          process.env.NEXT_PUBLIC_API_URL &&
+          !process.env.NEXT_PUBLIC_API_URL.includes('localhost') &&
+          !process.env.NEXT_PUBLIC_API_URL.includes('127.0.0.1')
+        ) {
+          socketUrl = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, '');
+        } else {
+          socketUrl = window.location.origin;
+        }
+      } else {
+        socketUrl = 'https://cowork30.com';
+      }
+    }
 
     const socket = io(socketUrl, {
       transports: ['websocket', 'polling'],

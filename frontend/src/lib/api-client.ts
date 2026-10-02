@@ -123,23 +123,35 @@ export function getMediaUrl(url?: string | null): string {
     const origin = window.location.origin;
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
+    const isLocalHost =
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      /^192\.168\.\d+\.\d+$/.test(hostname) ||
+      /^10\.\d+\.\d+\.\d+$/.test(hostname);
 
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      const base = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '');
-      return `${base}${path}`;
+    if (isLocalHost) {
+      return `${protocol}//${hostname}:4000${path}`;
     }
 
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || /^192\.168\.\d+\.\d+$/.test(hostname)) {
-      return `${protocol}//${hostname}:4000${path}`;
+    if (
+      process.env.NEXT_PUBLIC_API_URL &&
+      !process.env.NEXT_PUBLIC_API_URL.includes('localhost') &&
+      !process.env.NEXT_PUBLIC_API_URL.includes('127.0.0.1')
+    ) {
+      const base = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '');
+      return `${base}${path}`;
     }
 
     return `${origin}${path}`;
   }
 
-  const base = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '')
-    : 'http://localhost:4000';
-  return `${base}${path}`;
+  const base =
+    process.env.BACKEND_URL ||
+    process.env.APP_URL ||
+    (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost')
+      ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, '')
+      : 'https://cowork30.com');
+  return `${base.replace(/\/+$/, '')}${path}`;
 }
 
 
