@@ -35,6 +35,8 @@ import {
   Armchair,
   Briefcase,
   Landmark,
+  MapPin,
+  Presentation,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/context/AuthContext';
@@ -46,6 +48,42 @@ function WhatsAppIcon({ className = 'w-4 h-4' }: { className?: string }) {
     </svg>
   );
 }
+
+const fallbackHomepageRooms = [
+  {
+    id: 'room-1',
+    name: 'Executive Boardroom Alpha',
+    category: 'Executive Boardroom',
+    capacity: 12,
+    hourlyRate: 750,
+    startTime: '09:00 AM',
+    endTime: '09:00 PM',
+    imageUrl: 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=800&q=80',
+    branch: { name: 'Ishwarji Cowork 30, Andheri East' },
+  },
+  {
+    id: 'room-2',
+    name: 'Creative Sprint Suite B',
+    category: 'Conference Room',
+    capacity: 6,
+    hourlyRate: 450,
+    startTime: '08:00 AM',
+    endTime: '10:00 PM',
+    imageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
+    branch: { name: 'Ishwarji Cowork 30, Andheri East' },
+  },
+  {
+    id: 'room-3',
+    name: 'Private Podcast & Client Suite C',
+    category: 'Private Suite',
+    capacity: 4,
+    hourlyRate: 350,
+    startTime: '08:00 AM',
+    endTime: '11:00 PM',
+    imageUrl: 'https://images.unsplash.com/photo-1577412647305-991150c7d163?auto=format&fit=crop&w=800&q=80',
+    branch: { name: 'Ishwarji Cowork 30, Andheri East' },
+  },
+];
 
 const professionalSolutions = [
   {
@@ -316,6 +354,10 @@ export default function HomePage() {
   const [publicStats, setPublicStats] = useState<{ availableDesks: number; meetingRooms: number; totalMembers: number; satisfactionRate: number } | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
+  // Dynamic Available Meeting Rooms state
+  const [meetingRooms, setMeetingRooms] = useState<any[]>([]);
+  const [roomsLoading, setRoomsLoading] = useState(true);
+
   // Dynamic Membership Pricing Plans state
   const [plans, setPlans] = useState<any[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
@@ -366,6 +408,24 @@ export default function HomePage() {
     }
     fetchServices();
 
+    async function fetchMeetingRooms() {
+      try {
+        setRoomsLoading(true);
+        const res = await apiClient.get('/meeting-rooms');
+        const list = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.data)
+          ? res.data.data
+          : [];
+        setMeetingRooms(list);
+      } catch (err) {
+        console.error('Failed to load meeting rooms on homepage:', err);
+      } finally {
+        setRoomsLoading(false);
+      }
+    }
+    fetchMeetingRooms();
+
     async function fetchPlans() {
       try {
         setPlansLoading(true);
@@ -396,6 +456,7 @@ export default function HomePage() {
     fetchStats();
   }, []);
 
+  const displayHomepageRooms = meetingRooms.length > 0 ? meetingRooms : fallbackHomepageRooms;
   const displayedPlans = plans.length > 0 ? plans : fallbackPlans;
 
   const filteredHomepagePlans = useMemo(() => {
@@ -570,14 +631,6 @@ export default function HomePage() {
             {/* Action Buttons with Reserve Meeting Suite Button */}
             <div className="pt-2 sm:pt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-start gap-3 sm:gap-4">
               <Link
-                href="/pricing?tab=membership#tour"
-                className="w-full sm:w-auto px-7 py-3.5 text-xs sm:text-sm font-extrabold rounded-2xl text-white bg-gradient-to-r from-fuchsia-600 via-pink-600 to-purple-600 hover:opacity-95 transition-all shadow-xl shadow-fuchsia-600/30 flex items-center justify-center space-x-2.5 group cursor-pointer"
-              >
-                <Compass className="w-4 h-4 text-white group-hover:rotate-45 transition-transform" />
-                <span>Book a Tour</span>
-              </Link>
-
-              <Link
                 href="/meeting-rooms"
                 className="w-full sm:w-auto px-7 py-3.5 text-xs sm:text-sm font-extrabold rounded-2xl bg-white/15 hover:bg-white/25 border border-white/25 backdrop-blur-xl transition-all text-white flex items-center justify-center space-x-2 shadow-lg cursor-pointer group"
               >
@@ -687,6 +740,128 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Real-time Available Meeting Suites & Conference Rooms Section */}
+      <section className="pt-10 pb-16 sm:pt-14 sm:pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full border-b border-slate-200/80">
+        {/* Section Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+          <div className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200 uppercase tracking-wider shadow-xs">
+              <Presentation className="w-3.5 h-3.5 text-purple-600" />
+              <span>REAL-TIME AVAILABILITY</span>
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+              Available{' '}
+              <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 pb-1">
+                Meeting Suites
+                <span className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
+              </span>
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+              Book smart AV-equipped conference rooms, executive boardrooms, and private meeting suites on-demand by the hour.
+            </p>
+          </div>
+
+          <Link
+            href="/meeting-rooms"
+            className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-md transition-all cursor-pointer self-start md:self-auto"
+          >
+            <span>Explore All Rooms</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {/* Meeting Rooms Grid */}
+        {roomsLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-3xl border border-slate-200 shadow-xs h-[380px] animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {displayHomepageRooms.slice(0, 3).map((room: any, idx: number) => {
+              const imageSrc = room.imageUrl || room.featuredImage || 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=800&q=80';
+              const rate = Number(room.hourlyRate || room.price || 500);
+
+              return (
+                <div
+                  key={room.id || idx}
+                  className="group bg-white rounded-3xl p-5 border border-slate-200/90 shadow-xs hover:shadow-xl hover:border-purple-200 transition-all duration-300 flex flex-col justify-between"
+                >
+                  <div className="space-y-4">
+                    {/* Room Image Container */}
+                    <div className="relative h-48 w-full rounded-2xl overflow-hidden bg-slate-100">
+                      <img
+                        src={imageSrc}
+                        alt={room.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=800&q=80';
+                        }}
+                      />
+
+                      {/* Top Badges */}
+                      <div className="absolute top-3 inset-x-3 flex items-center justify-between pointer-events-none">
+                        <span className="text-[10px] font-extrabold px-3 py-1 rounded-full bg-slate-900/90 text-white backdrop-blur-md shadow-xs">
+                          {room.category || 'Conference Room'}
+                        </span>
+                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-xs uppercase tracking-wider">
+                          Ready To Book
+                        </span>
+                      </div>
+
+                      {/* Capacity Pill */}
+                      <div className="absolute bottom-3 left-3 flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-950/80 text-white text-xs font-semibold backdrop-blur-md">
+                        <Users className="w-3.5 h-3.5 text-pink-400" />
+                        <span>{room.capacity || 8} Seats</span>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="space-y-2">
+                      <h3 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-purple-600 transition-colors tracking-tight line-clamp-1">
+                        {room.name}
+                      </h3>
+
+                      <div className="flex items-center space-x-1.5 text-xs text-slate-500">
+                        <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                        <span className="truncate">{room.branch?.name || 'Ishwarji Cowork 30, Andheri East'}</span>
+                      </div>
+
+                      <div className="flex items-center space-x-3 text-xs text-slate-400 font-medium pt-1">
+                        <span className="flex items-center space-x-1 text-slate-600">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{room.startTime && room.endTime ? `${room.startTime} - ${room.endTime}` : '24/7 Access Available'}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pricing & CTA */}
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Hourly Rate</span>
+                      <div className="flex items-baseline space-x-0.5">
+                        <span className="text-base font-extrabold text-slate-900">₹{rate}</span>
+                        <span className="text-[10px] text-slate-500 font-semibold">/ hr</span>
+                      </div>
+                    </div>
+
+                    <Link
+                      href={`/meeting-rooms?room=${room.id}`}
+                      className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 text-white text-xs font-bold shadow-md shadow-pink-500/20 transition-all flex items-center space-x-1.5 cursor-pointer"
+                    >
+                      <span>Reserve Suite</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       {/* 1. Workspace Solutions Section (Focused strictly on Coworking Services) */}
       <section className="pt-8 pb-20 sm:pt-12 sm:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         {/* Section Header */}
@@ -779,28 +954,25 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => setBillingPeriod('monthly')}
-                className={`px-4 py-1.5 rounded-full font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  billingPeriod === 'monthly'
+                className={`px-4 py-1.5 rounded-full font-bold transition-all cursor-pointer flex items-center gap-1.5 ${billingPeriod === 'monthly'
                     ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <span>Monthly</span>
               </button>
               <button
                 type="button"
                 onClick={() => setBillingPeriod('annual')}
-                className={`px-4 py-1.5 rounded-full font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  billingPeriod === 'annual'
+                className={`px-4 py-1.5 rounded-full font-bold transition-all cursor-pointer flex items-center gap-1.5 ${billingPeriod === 'annual'
                     ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <span>Annual</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                    billingPeriod === 'annual' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'
-                  }`}
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${billingPeriod === 'annual' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'
+                    }`}
                 >
                   Save Yearly
                 </span>
@@ -808,11 +980,10 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => setBillingPeriod('daily')}
-                className={`px-4 py-1.5 rounded-full font-bold transition-all cursor-pointer ${
-                  billingPeriod === 'daily'
+                className={`px-4 py-1.5 rounded-full font-bold transition-all cursor-pointer ${billingPeriod === 'daily'
                     ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 Daily Pass
               </button>
@@ -859,8 +1030,8 @@ export default function HomePage() {
                 isAnnualPlan || billingPeriod === 'annual'
                   ? Number(plan.priceAnnual || (plan.priceMonthly ? plan.priceMonthly * 12 : 0))
                   : billingPeriod === 'daily'
-                  ? Number(plan.priceDaily || plan.priceMonthly)
-                  : Number(plan.priceMonthly || (plan.priceAnnual ? Math.round(plan.priceAnnual / 12) : 0));
+                    ? Number(plan.priceDaily || plan.priceMonthly)
+                    : Number(plan.priceMonthly || (plan.priceAnnual ? Math.round(plan.priceAnnual / 12) : 0));
 
               const displayUnit =
                 isAnnualPlan || billingPeriod === 'annual' ? '/ year' : billingPeriod === 'daily' ? '/ day' : '/ month';
@@ -869,11 +1040,10 @@ export default function HomePage() {
                 <div
                   key={plan.id || idx}
                   data-plan-card
-                  className={`w-full max-w-lg mx-auto md:max-w-none md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] md:shrink-0 md:snap-start bg-white rounded-3xl p-6 sm:p-7 border relative transition-all duration-300 flex flex-col justify-between group shadow-xs hover:shadow-xl ${
-                    plan.isPopular || isAnnualPlan
+                  className={`w-full max-w-lg mx-auto md:max-w-none md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] md:shrink-0 md:snap-start bg-white rounded-3xl p-6 sm:p-7 border relative transition-all duration-300 flex flex-col justify-between group shadow-xs hover:shadow-xl ${plan.isPopular || isAnnualPlan
                       ? 'border-2 border-purple-500 ring-4 ring-purple-500/10 hover:border-purple-600'
                       : 'border-slate-200/90 hover:border-purple-200'
-                  }`}
+                    }`}
                 >
                   {/* Top Ribbon / Badge */}
                   {plan.isPopular ? (
@@ -942,11 +1112,10 @@ export default function HomePage() {
                   <div className="pt-6 border-t border-slate-100 space-y-2.5">
                     <Link
                       href={`/pricing?plan=${plan.slug}&billing=${isAnnualPlan ? 'annual' : billingPeriod}`}
-                      className={`w-full py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        plan.isPopular || isAnnualPlan
+                      className={`w-full py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${plan.isPopular || isAnnualPlan
                           ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 text-white shadow-md shadow-pink-500/20'
                           : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs'
-                      }`}
+                        }`}
                     >
                       <span>Get Started</span>
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
@@ -972,11 +1141,10 @@ export default function HomePage() {
                 type="button"
                 onClick={() => scrollToSlide(dotIdx)}
                 aria-label={`Go to slide ${dotIdx + 1}`}
-                className={`transition-all duration-300 cursor-pointer ${
-                  activeSlideIndex === dotIdx
+                className={`transition-all duration-300 cursor-pointer ${activeSlideIndex === dotIdx
                     ? 'w-7 h-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600'
                     : 'w-2 h-2 rounded-full bg-slate-300 hover:bg-slate-400'
-                }`}
+                  }`}
               />
             ))}
           </div>
