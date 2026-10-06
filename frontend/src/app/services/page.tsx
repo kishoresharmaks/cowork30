@@ -216,12 +216,51 @@ function getServiceConfig(service: any, idx: number): ServiceConfig {
   };
 }
 
+const fallbackProfessionalServices = [
+  {
+    id: 101,
+    slug: 'loan-syndicate',
+    name: 'Loan Syndication & Corporate Debt Financing',
+    category: 'professional',
+    shortDescription: 'Customized business term loans, working capital limits, DPR financial modeling, and multi-bank institutional liaisons.',
+    startingPrice: 0,
+    pricingUnit: 'quote',
+    requiresSeats: 'optional',
+    requiresDate: 'flexible',
+    featuredImage: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 102,
+    slug: 'land-promoters',
+    name: 'Real Estate & Land Promoter Liaisons',
+    category: 'professional',
+    shortDescription: 'Title due diligence, DTCP/CMDA layout approvals, commercial acquisitions, and joint-venture developer structuring.',
+    startingPrice: 2500,
+    pricingUnit: 'consultation',
+    requiresSeats: 'none',
+    requiresDate: 'flexible',
+    featuredImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 103,
+    slug: 'tax-experts',
+    name: 'CA Tax Compliance, GST & Statutory Audit',
+    category: 'professional',
+    shortDescription: 'Company incorporation, monthly GST & TDS return filings, statutory CA audits, and Startup India tax exemptions.',
+    startingPrice: 1999,
+    pricingUnit: 'consultation',
+    requiresSeats: 'optional',
+    requiresDate: 'flexible',
+    featuredImage: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=800&q=80',
+  },
+];
+
 export default function CustomerServicesPage() {
   const { user } = useAuth();
   const { activeBranch } = useBranch();
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'workspace' | 'professional'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'loan' | 'land' | 'tax'>('all');
 
   // Modal State
   const [selectedService, setSelectedService] = useState<any>(null);
@@ -234,9 +273,9 @@ export default function CustomerServicesPage() {
     customerEmail: '',
     customerPhone: '',
     companyName: '',
-    isSeatNeeded: true,
-    seatsCount: 1,
-    isDateFlexible: false,
+    isSeatNeeded: false,
+    seatsCount: 0,
+    isDateFlexible: true,
     preferredDate: new Date().toISOString().split('T')[0],
     consultationType: 'in_person',
     notes: '',
@@ -250,9 +289,12 @@ export default function CustomerServicesPage() {
         setLoading(true);
         const url = activeBranch ? `/services?branchId=${activeBranch.id}` : '/services';
         const res = await apiClient.get(url);
-        setServices(res.data || []);
+        const fetched = Array.isArray(res.data) ? res.data : [];
+        const profOnly = fetched.filter((s: any) => s.category === 'professional');
+        setServices(profOnly.length > 0 ? profOnly : fallbackProfessionalServices);
       } catch (err) {
-        console.error('Failed to load services', err);
+        console.error('Failed to load professional services', err);
+        setServices(fallbackProfessionalServices);
       } finally {
         setLoading(false);
       }
@@ -262,9 +304,8 @@ export default function CustomerServicesPage() {
 
   const openReservationModal = (service: any) => {
     const config = getServiceConfig(service, 0);
-    const reqSeats = service.requiresSeats || config.requiresSeats || 'required';
-    const reqDate = service.requiresDate || config.requiresDate || 'required';
-    const isProf = service.category === 'professional';
+    const reqSeats = service.requiresSeats || config.requiresSeats || 'optional';
+    const reqDate = service.requiresDate || config.requiresDate || 'flexible';
 
     setSelectedService(service);
     setSelectedPhoto(service.featuredImage || service.imageUrl || config.defaultImage);
@@ -274,11 +315,11 @@ export default function CustomerServicesPage() {
       customerEmail: user?.email || '',
       customerPhone: user?.phone || '',
       companyName: user?.companyName || '',
-      isSeatNeeded: reqSeats === 'required' ? true : false,
-      seatsCount: reqSeats === 'required' ? 1 : 0,
+      isSeatNeeded: false,
+      seatsCount: 0,
       isDateFlexible: reqDate === 'flexible',
       preferredDate: new Date().toISOString().split('T')[0],
-      consultationType: isProf ? 'in_person' : 'desk_included',
+      consultationType: 'in_person',
       notes: '',
     });
     setShowModal(true);
@@ -298,17 +339,20 @@ export default function CustomerServicesPage() {
         setSubmittedRef(res.data.booking.bookingCode);
       }
     } catch (err) {
-      alert('Failed to submit solution inquiry');
+      alert('Failed to submit advisory inquiry');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Filtered Services List
+  // Filtered Professional Services List
   const filteredServices = services.filter((s) => {
     if (activeTab === 'all') return true;
-    const cat = s.category || 'workspace';
-    return cat === activeTab;
+    const slug = (s.slug || s.name || '').toLowerCase();
+    if (activeTab === 'loan') return slug.includes('loan') || slug.includes('finance') || slug.includes('syndicate');
+    if (activeTab === 'land') return slug.includes('land') || slug.includes('promoter') || slug.includes('real');
+    if (activeTab === 'tax') return slug.includes('tax') || slug.includes('ca') || slug.includes('audit');
+    return true;
   });
 
   return (
@@ -318,15 +362,15 @@ export default function CustomerServicesPage() {
       <main className="pt-6 sm:pt-8 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-grow space-y-8 sm:space-y-10">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3">
-          <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-white border border-slate-200 text-xs font-bold text-indigo-600 shadow-xs">
-            <Layers className="w-3.5 h-3.5" />
-            <span>Integrated Business & Coworking Ecosystem</span>
+          <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700 shadow-xs">
+            <Briefcase className="w-3.5 h-3.5" />
+            <span>Professional & Advisory Hub</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
-            Tailored Solutions & Advisory Services
+            Professional &amp; Advisory Services
           </h1>
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            From agile flexible seating and enterprise cabins to high-impact loan syndication, land promoter liaisons, and certified tax experts.
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl mx-auto">
+            Corporate debt financing &amp; loan syndication, land promoter liaisons, certified CA tax compliance, GST returns, and corporate legal advisory.
           </p>
         </div>
 
@@ -342,31 +386,43 @@ export default function CustomerServicesPage() {
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              All Offerings ({services.length})
+              All Professional Services ({services.length})
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('workspace')}
+              onClick={() => setActiveTab('loan')}
               className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'workspace'
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm'
+                activeTab === 'loan'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>Workspace Solutions</span>
+              <Landmark className="w-3.5 h-3.5" />
+              <span>Debt &amp; Financing</span>
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('professional')}
+              onClick={() => setActiveTab('land')}
               className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'professional'
+                activeTab === 'land'
+                  ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span>Land &amp; Real Estate</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('tax')}
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'tax'
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              <Briefcase className="w-3.5 h-3.5" />
-              <span>Professional & Advisory Services</span>
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>CA Tax &amp; Audit</span>
             </button>
           </div>
         </div>
