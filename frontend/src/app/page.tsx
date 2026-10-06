@@ -571,9 +571,9 @@ export default function HomePage() {
             <div className="pt-2 sm:pt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-start gap-3 sm:gap-4">
               <Link
                 href="/pricing?tab=membership#tour"
-                className="w-full sm:w-auto px-7 py-3.5 text-xs sm:text-sm font-extrabold rounded-2xl text-white bg-gradient-to-r from-fuchsia-600 via-pink-600 to-purple-600 hover:opacity-95 transition-all shadow-xl shadow-fuchsia-600/30 flex items-center justify-center space-x-2 group cursor-pointer"
+                className="w-full sm:w-auto px-7 py-3.5 text-xs sm:text-sm font-extrabold rounded-2xl text-white bg-gradient-to-r from-fuchsia-600 via-pink-600 to-purple-600 hover:opacity-95 transition-all shadow-xl shadow-fuchsia-600/30 flex items-center justify-center space-x-2.5 group cursor-pointer"
               >
-                <span className="text-base">🚀</span>
+                <Compass className="w-4 h-4 text-white group-hover:rotate-45 transition-transform" />
                 <span>Book a Tour</span>
               </Link>
 
@@ -595,23 +595,23 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Trust Perks */}
-            <div className="pt-4 sm:pt-6 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 text-xs font-semibold text-white/90 max-w-xl lg:max-w-2xl">
-              <div className="flex items-center space-x-2 px-3 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
-                <Wifi className="w-4 h-4 text-pink-400 shrink-0" />
-                <span className="truncate">1 Gbps Fiber Wi-Fi</span>
+            {/* Trust Perks Badge Bar */}
+            <div className="pt-6 flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs font-semibold text-white/90 max-w-2xl">
+              <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
+                <Wifi className="w-4 h-4 text-fuchsia-400 shrink-0" />
+                <span>1 Gbps Fiber Wi-Fi</span>
               </div>
-              <div className="flex items-center space-x-2 px-3 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
+              <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
                 <Clock className="w-4 h-4 text-purple-400 shrink-0" />
-                <span className="truncate">24/7 Access</span>
+                <span>24/7 Biometric Access</span>
               </div>
-              <div className="flex items-center space-x-2 px-3 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
+              <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
                 <Coffee className="w-4 h-4 text-pink-400 shrink-0" />
-                <span className="truncate">Artisanal Espresso Bar</span>
+                <span>Artisanal Espresso Bar</span>
               </div>
-              <div className="flex items-center space-x-2 px-3 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
-                <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0" />
-                <span className="truncate">GST Tax Invoicing</span>
+              <div className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 shadow-sm transition-all">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>GST Tax Invoicing</span>
               </div>
             </div>
           </div>

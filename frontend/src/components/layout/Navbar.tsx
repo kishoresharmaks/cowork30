@@ -163,8 +163,8 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* 2. Center Navigation Links */}
-            <nav className="flex items-center space-x-1 sm:space-x-1.5">
+            {/* 2. Center Navigation Links (Horizontal Inline Layout with Professional Icons) */}
+            <nav className="flex items-center space-x-1 sm:space-x-2">
               {navLinks.map((link, idx) => {
                 const Icon = link.icon;
                 const isActive = pathname === link.href;
@@ -173,18 +173,18 @@ export default function Navbar() {
                   <Link
                     key={`${link.href}-${idx}`}
                     href={link.href}
-                    className={`relative flex flex-col items-center justify-center px-3.5 py-1.5 rounded-2xl transition-all duration-200 group ${
+                    className={`relative flex items-center space-x-2 px-3.5 py-2 rounded-xl transition-all duration-200 group ${
                       isActive
                         ? 'bg-slate-900 text-white font-extrabold shadow-sm'
                         : 'hover:bg-slate-100/80 text-slate-600 hover:text-slate-900 font-semibold'
                     }`}
                   >
                     <Icon
-                      className={`w-[18px] h-[18px] transition-all duration-200 group-hover:scale-110 ${
+                      className={`w-4 h-4 transition-transform duration-200 group-hover:scale-110 ${
                         isActive ? 'text-rose-400 stroke-[2.2]' : 'text-slate-500 group-hover:text-slate-900 stroke-[1.9]'
                       }`}
                     />
-                    <span className="text-[11px] leading-tight mt-0.5 whitespace-nowrap">{link.label}</span>
+                    <span className="text-xs leading-none whitespace-nowrap">{link.label}</span>
 
                     {isActive && (
                       <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-gradient-to-r from-rose-500 via-purple-500 to-indigo-500 rounded-full shadow-xs" />
@@ -196,18 +196,18 @@ export default function Navbar() {
               {user && (
                 <Link
                   href="/bookings"
-                  className={`relative flex flex-col items-center justify-center px-3.5 py-1.5 rounded-2xl transition-all duration-200 group ${
+                  className={`relative flex items-center space-x-2 px-3.5 py-2 rounded-xl transition-all duration-200 group ${
                     pathname === '/bookings'
                       ? 'bg-slate-900 text-white font-extrabold shadow-sm'
                       : 'hover:bg-slate-100/80 text-slate-600 hover:text-slate-900 font-semibold'
                   }`}
                 >
                   <CalendarCheck
-                    className={`w-[18px] h-[18px] transition-all duration-200 group-hover:scale-110 ${
+                    className={`w-4 h-4 transition-transform duration-200 group-hover:scale-110 ${
                       pathname === '/bookings' ? 'text-rose-400 stroke-[2.2]' : 'text-slate-500 group-hover:text-slate-900 stroke-[1.9]'
                     }`}
                   />
-                  <span className="text-[11px] leading-tight mt-0.5 whitespace-nowrap">My Bookings</span>
+                  <span className="text-xs leading-none whitespace-nowrap">My Bookings</span>
 
                   {pathname === '/bookings' && (
                     <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-gradient-to-r from-rose-500 via-purple-500 to-indigo-500 rounded-full shadow-xs" />
